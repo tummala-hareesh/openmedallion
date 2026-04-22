@@ -1,75 +1,148 @@
-# local_parquet_demo
+# 📂 local_parquet_demo
 
-Zero-credential quickstart: full silver → gold pipeline reading from a bundled CSV file.
-No cloud account, no database driver, no environment variables required.
+**Zero-credential quickstart — CSV in, gold Parquet out, no cloud account needed.**
 
-## What this demo covers
+This is the simplest possible OpenMedallion pipeline. One table, one UDF, two gold aggregations. Start here if you have never used the library before.
 
-| Step | Command | Result |
-|------|---------|--------|
-| 1. Seed bronze | `python seed.py` | Converts `data/source/orders.csv` → `data/demo/bronze/ORDERS.parquet` |
-| 2. Run silver | `medallion run demo --layer silver` | Renames columns, casts types, adds `is_large_order` flag |
-| 3. Run gold | `medallion run demo --layer gold` | Two aggregations: by customer and by status |
+---
 
-## Prerequisites
+## 🔄 Pipeline Flow
 
-```bash
-pip install openmedallion
+```mermaid
+flowchart LR
+    CSV["📄 orders.csv\n15 rows"]
+
+    subgraph bronze["🟤 Bronze"]
+        B["ORDERS.parquet\nraw column names"]
+    end
+
+    subgraph silver["⚪ Silver"]
+        S["orders.parquet\nrenamed · cast\nis_large_order added"]
+    end
+
+    subgraph gold["🟡 Gold"]
+        G1["orders_by_customer.parquet\ntotal_orders · total_spent"]
+        G2["orders_by_status.parquet\nnum_orders · total_amount"]
+    end
+
+    CSV -->|seed.py| B
+    B   -->|medallion run demo --layer silver| S
+    S   -->|medallion run demo --layer gold| G1
+    S   -->|medallion run demo --layer gold| G2
 ```
 
-## Run the demo
+---
+
+## ⚙️ What Happens at Each Step
+
+### Step 1 — seed.py
+
+Reads the bundled CSV and writes a bronze Parquet file:
+
+| Before (CSV) | After (ORDERS.parquet) |
+| --- | --- |
+| Raw text rows | Columnar Parquet, same column names |
+| `ORDER_ID,CUSTOMER_NAME,...` | `ORDER_ID,CUSTOMER_NAME,...` |
+
+### Step 2 — silver transform
+
+`silver.yaml` applies three transforms in order:
+
+| Transform | What it does |
+| --- | --- |
+| `rename` | `ORDER_ID` → `order_id`, `CUSTOMER_ID` → `customer_id`, etc. |
+| `cast` | `order_id` → `Int64`, `customer_id` → `Int64`, `amount` → `Float64` |
+| `udf` | Calls `flag_large_orders()` — adds `is_large_order` boolean column |
+
+Sample output rows from `orders.parquet`:
+
+| order_id | customer_id | customer_name | amount | status | is_large_order |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 101 | Alice | 250.0 | completed | true |
+| 6 | 102 | Bob | 75.0 | pending | false |
+| 11 | 103 | Charlie | 200.0 | completed | true |
+
+### Step 3 — gold aggregation
+
+Two YAML-declared aggregations run against the silver output:
+
+**`orders_by_customer.parquet`** — group by `customer_id, customer_name`:
+
+| customer_id | customer_name | total_orders | total_spent |
+| --- | --- | --- | --- |
+| 101 | Alice | 4 | 600.0 |
+| 102 | Bob | 3 | 300.5 |
+| 103 | Charlie | 3 | 415.0 |
+
+**`orders_by_status.parquet`** — group by `status`:
+
+| status | num_orders | total_amount |
+| --- | --- | --- |
+| completed | 11 | 2070.5 |
+| pending | 3 | 230.0 |
+| cancelled | 1 | 25.0 |
+
+---
+
+## 🚀 Run the Demo
 
 ```bash
 # From this directory (examples/local_parquet_demo/)
 
-# Step 1 — seed the bronze layer from the bundled CSV
+# Step 1 — seed bronze from the bundled CSV
 python seed.py
 
-# Step 2 — silver transform (reads bronze, applies UDF)
+# Step 2 — silver: rename, cast, flag large orders
 medallion run demo --layer silver
 
-# Step 3 — gold aggregation (reads silver)
+# Step 3 — gold: aggregate by customer and by status
 medallion run demo --layer gold
 ```
 
-## Expected output files
+---
 
-```
+## 📂 Output Files
+
+```text
 data/demo/
 ├── bronze/
-│   └── ORDERS.parquet           # seeded by seed.py (15 rows, raw column names)
+│   └── ORDERS.parquet           # 15 rows, raw column names
 ├── silver/
-│   └── orders.parquet           # renamed, cast, + is_large_order flag
+│   └── orders.parquet           # renamed + cast + is_large_order
 └── gold/
     └── demo/
-        ├── orders_by_customer.parquet   # total_orders, total_spent per customer
-        └── orders_by_status.parquet     # num_orders, total_amount per status
+        ├── orders_by_customer.parquet   # total_orders, total_spent
+        └── orders_by_status.parquet     # num_orders, total_amount
 ```
 
-## Project layout
+---
 
-```
+## 🗂️ Project Layout
+
+```text
 projects/demo/
-├── main.yaml                    # pipeline name + paths
-├── silver.yaml                  # column renames, casts, UDF reference
-├── gold.yaml                    # two aggregation specs
-└── udf/silver/enrich.py         # flags orders where amount >= threshold
+├── main.yaml          # pipeline name + paths
+├── silver.yaml        # rename, cast, udf transforms
+├── gold.yaml          # two group_by aggregations
+└── udf/silver/
+    └── enrich.py      # flag_large_orders(df, threshold) → df
 ```
 
-## Read the results
+---
+
+## 🔍 Read the Results
 
 ```python
 import polars as pl
 
-customers = pl.read_parquet("data/demo/gold/demo/orders_by_customer.parquet")
-print(customers)
-
-status = pl.read_parquet("data/demo/gold/demo/orders_by_status.parquet")
-print(status)
+pl.read_parquet("data/demo/gold/demo/orders_by_customer.parquet").sort("total_spent", descending=True)
+pl.read_parquet("data/demo/gold/demo/orders_by_status.parquet")
 ```
 
-## Explore further
+---
 
-- Edit `gold.yaml` to add a new aggregation metric and re-run step 3.
-- Edit `udf/silver/enrich.py` to change the `threshold` logic and re-run step 2.
-- Try `medallion dag` to see the full Hamilton DAG printed as a text tree.
+## 🔍 Things to Try
+
+- Change the `threshold` arg in `silver.yaml` (currently `100.0`) and re-run silver
+- Add a `mean` metric to `gold.yaml` and re-run gold
+- Run `medallion dag` to print the Hamilton DAG for the full pipeline

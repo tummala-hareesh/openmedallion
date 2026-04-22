@@ -24,3 +24,8 @@ examples/*/data/
 # OS
 .DS_Store
 
+
+# Additional
+CLAUDE.md
+PLAN.md
+graphify-out/*

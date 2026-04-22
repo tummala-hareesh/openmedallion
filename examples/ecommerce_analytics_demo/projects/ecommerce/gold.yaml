@@ -1,0 +1,34 @@
+silver_to_gold:
+  projects:
+    - name: ecommerce
+      aggregations:
+        # Revenue + margin breakdown per product category
+        - source_file: order_lines_enriched.parquet
+          pre_agg_udf:
+            file: projects/ecommerce/udf/gold/metrics.py
+            function: add_metrics
+          group_by: [category]
+          metrics:
+            - {column: line_revenue,  agg: sum,   alias: total_revenue}
+            - {column: margin_amount, agg: sum,   alias: total_margin}
+            - {column: order_id,      agg: count, alias: num_orders}
+          output_file: revenue_by_category.parquet
+
+        # Lifetime value + order count per customer
+        - source_file: order_lines_enriched.parquet
+          group_by: [customer_id, name, region, tier]
+          metrics:
+            - {column: line_revenue, agg: sum,   alias: total_spent}
+            - {column: order_id,     agg: count, alias: num_orders}
+          output_file: top_customers.parquet
+
+        # Month-over-month revenue trend
+        - source_file: order_lines_enriched.parquet
+          pre_agg_udf:
+            file: projects/ecommerce/udf/gold/metrics.py
+            function: add_metrics
+          group_by: [order_month]
+          metrics:
+            - {column: line_revenue, agg: sum,   alias: monthly_revenue}
+            - {column: order_id,     agg: count, alias: num_orders}
+          output_file: monthly_summary.parquet

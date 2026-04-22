@@ -1,0 +1,68 @@
+site_name: OpenMedallion
+site_description: Declarative medallion pipelines — dlt + Polars + Hamilton
+repo_url: https://github.com/your-org/openmedallion
+repo_name: openmedallion
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: amber
+      accent: deep orange
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: amber
+      accent: deep orange
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.annotate
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Concepts:
+    - Architecture: concepts/architecture.md
+    - UDF Guide: concepts/udf-guide.md
+  - Reference:
+    - YAML Schema: reference/yaml-schema.md
+    - CLI: reference/cli.md
+  - API:
+    - Config: api/config.md
+    - Pipeline: api/pipeline.md
+    - Storage: api/storage.md
+    - Helpers: api/helpers.md
+    - Contracts: api/contracts.md
+
+plugins:
+  - search
