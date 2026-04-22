@@ -6,7 +6,7 @@ import polars as pl
 from pathlib import Path
 
 src  = Path("data/source")
-dest = Path("data/ecommerce/bronze")
+dest = Path("ecommerce/data/bronze")
 dest.mkdir(parents=True, exist_ok=True)
 
 for name in ("orders", "products", "customers"):

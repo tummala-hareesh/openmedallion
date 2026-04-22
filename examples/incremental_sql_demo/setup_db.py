@@ -9,7 +9,7 @@ sys.stdout.reconfigure(encoding="utf-8")
 import sqlite3
 from pathlib import Path
 
-DB = Path("data/retail.db")
+DB = Path("retail/data/retail.db")
 DB.parent.mkdir(parents=True, exist_ok=True)
 
 con = sqlite3.connect(DB)

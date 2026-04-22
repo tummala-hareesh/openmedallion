@@ -3,7 +3,7 @@
 Commands
 --------
 medallion init <project>
-    Scaffold a new project under projects/<project>/.
+    Scaffold a new project under <project>/.
 
 medallion run <project> [--layer LAYER] [--projects PATH] [--track]
     Run the pipeline for a project.
@@ -14,7 +14,7 @@ medallion run <project> [--layer LAYER] [--projects PATH] [--track]
                 gold    — bronze + silver + gold  (default)
                 export  — full pipeline including BI export
 
-    --projects  Override the projects root directory (default: ./projects).
+    --projects  Override the project root directory (default: . — current directory).
 
     --track     Start the live status dashboard at http://localhost:8765 and
                 attach the status tracker to the Hamilton DAG.
@@ -172,7 +172,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     # init
     p_init = sub.add_parser("init", help="Scaffold a new project directory")
-    p_init.add_argument("project", help="Project name (creates projects/<project>/)")
+    p_init.add_argument("project", help="Project name (creates <project>/ in current directory)")
 
     # run
     p_run = sub.add_parser("run", help="Execute the pipeline for a project")
@@ -182,8 +182,8 @@ def _build_parser() -> argparse.ArgumentParser:
         help=f"Layer to run up to: {', '.join(LAYERS)} (default: {DEFAULT_LAYER})",
     )
     p_run.add_argument(
-        "--projects", default="projects", metavar="PATH",
-        help="Projects root directory (default: ./projects)",
+        "--projects", default=".", metavar="PATH",
+        help="Parent directory containing the project folder (default: . — current directory)",
     )
     p_run.add_argument(
         "--track", action="store_true",

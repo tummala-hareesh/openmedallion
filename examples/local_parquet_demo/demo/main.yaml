@@ -1,0 +1,13 @@
+pipeline:
+  name: demo
+
+includes:
+  bronze: backend/bronze.yaml
+  silver: backend/silver.yaml
+  gold:   backend/gold.yaml
+
+paths:
+  bronze: "demo/data/bronze"
+  silver: "demo/data/silver"
+  gold:   "demo/data/gold"
+  export: "demo/data/export"

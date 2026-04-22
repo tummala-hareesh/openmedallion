@@ -51,5 +51,5 @@ bronze_to_silver:
   derived_tables:
     - output_file: order_lines_enriched.parquet
       udf:
-        file: projects/ecommerce/udf/silver/enrich.py
+        file: ecommerce/backend/udf/silver/enrich.py
         function: build_order_lines_enriched

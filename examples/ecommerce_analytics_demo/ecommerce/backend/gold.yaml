@@ -5,7 +5,7 @@ silver_to_gold:
         # Revenue + margin breakdown per product category
         - source_file: order_lines_enriched.parquet
           pre_agg_udf:
-            file: projects/ecommerce/udf/gold/metrics.py
+            file: ecommerce/backend/udf/gold/metrics.py
             function: add_metrics
           group_by: [category]
           metrics:
@@ -25,7 +25,7 @@ silver_to_gold:
         # Month-over-month revenue trend
         - source_file: order_lines_enriched.parquet
           pre_agg_udf:
-            file: projects/ecommerce/udf/gold/metrics.py
+            file: ecommerce/backend/udf/gold/metrics.py
             function: add_metrics
           group_by: [order_month]
           metrics:

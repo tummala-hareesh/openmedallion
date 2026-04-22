@@ -1,0 +1,13 @@
+pipeline:
+  name: ecommerce
+
+includes:
+  bronze: backend/bronze.yaml
+  silver: backend/silver.yaml
+  gold:   backend/gold.yaml
+
+paths:
+  bronze: "ecommerce/data/bronze"
+  silver: "ecommerce/data/silver"
+  gold:   "ecommerce/data/gold"
+  export: "ecommerce/data/export"

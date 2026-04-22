@@ -41,18 +41,18 @@ flowchart TD
 
 | order_id | customer_id | amount | created_at |
 | --- | --- | --- | --- |
-| 1 | 101 | 120.00 | 2024-01-10 |
-| 2 | 102 | 340.00 | 2024-02-05 |
-| 3 | 103 | 89.50 | 2024-02-20 |
-| 4 | 101 | 210.00 | 2024-03-01 |
-| 5 | 102 | 55.00 | 2024-03-15 |
+| 1 | 101 | 150.00 | 2024-01-05 |
+| 2 | 102 | 45.50 | 2024-01-06 |
+| 3 | 101 | 300.00 | 2024-01-07 |
+| 4 | 103 | 80.00 | 2024-01-08 |
+| 5 | 102 | 200.00 | 2024-01-09 |
 
 **After delta (`add_delta.py`):**
 
 | Δ | order_id | customer_id | amount | created_at |
 | --- | --- | --- | --- | --- |
-| ➕ new | 6 | 103 | 175.00 | 2024-04-02 |
-| ➕ new | 7 | 101 | 430.00 | 2024-04-10 |
+| ➕ new | 6 | 101 | 90.00 | 2024-02-01 |
+| ➕ new | 7 | 103 | 450.00 | 2024-02-02 |
 
 | Δ | customer_id | name | tier |
 | --- | --- | --- | --- |
@@ -60,7 +60,7 @@ flowchart TD
 
 On the second bronze run:
 
-- `orders`: dlt reads cursor `2024-03-15` and fetches only the 2 new rows
+- `orders`: dlt reads cursor `2024-01-09` and fetches only the 2 new rows
 - `customers`: dlt merges on `customer_id` — Charlie's tier is updated, others unchanged
 
 ---
@@ -82,8 +82,8 @@ medallion run retail
 # Inspect first-run gold output
 python -c "
 import polars as pl
-print(pl.read_parquet('data/retail/gold/retail/customer_summary.parquet').sort('customer_id'))
-print(pl.read_parquet('data/retail/gold/retail/pipeline_totals.parquet'))
+print(pl.read_parquet('retail/data/gold/retail/customer_summary.parquet').sort('customer_id'))
+print(pl.read_parquet('retail/data/gold/retail/pipeline_totals.parquet'))
 "
 ```
 
@@ -104,8 +104,8 @@ medallion run retail
 # Verify: Charlie now shows 2 orders; totals reflect the 2 new rows
 python -c "
 import polars as pl
-print(pl.read_parquet('data/retail/gold/retail/customer_summary.parquet').sort('customer_id'))
-print(pl.read_parquet('data/retail/gold/retail/pipeline_totals.parquet'))
+print(pl.read_parquet('retail/data/gold/retail/customer_summary.parquet').sort('customer_id'))
+print(pl.read_parquet('retail/data/gold/retail/pipeline_totals.parquet'))
 "
 ```
 
@@ -117,28 +117,33 @@ print(pl.read_parquet('data/retail/gold/retail/pipeline_totals.parquet'))
 
 | customer_id | total_orders | total_spent |
 | --- | --- | --- |
-| 101 | 2 | 330.0 |
-| 102 | 2 | 395.0 |
-| 103 | 1 | 89.5 |
+| 101 | 2 | 450.0 |
+| 102 | 2 | 245.5 |
+| 103 | 1 | 80.0 |
 
 ### `pipeline_totals.parquet`
 
 | total_orders | total_revenue |
 | --- | --- |
-| 5 | 814.5 |
+| 5 | 775.5 |
 
-After the delta run: `total_orders = 7`, `total_revenue = 1419.5`, Charlie shows `2` orders.
+After the delta run: `total_orders = 7`, `total_revenue = 1315.5`, Charlie shows `2` orders.
 
 ---
 
 ## 🗂️ Project Layout
 
 ```text
-projects/retail/
-├── main.yaml       # pipeline name + paths
-├── bronze.yaml     # SQLite source + append/merge incremental config
-├── silver.yaml     # type casts for orders and customers
-└── gold.yaml       # customer summary + grand-total aggregations
+retail/
+├── main.yaml          # pipeline name + paths + includes
+├── backend/
+│   ├── bronze.yaml    # SQLite source + append/merge incremental config
+│   ├── silver.yaml    # type casts for orders and customers
+│   └── gold.yaml      # customer summary + grand-total aggregations
+├── frontend/          # dashboard files
+├── data/              # gitignored pipeline outputs (+ retail.db)
+├── catalogue/         # ERD, data dictionary
+└── summary/           # analysis summary
 ```
 
 ---
@@ -148,13 +153,13 @@ projects/retail/
 dlt writes a cursor state file alongside the bronze Parquet shards:
 
 ```text
-data/retail/bronze/bronze/orders/_dlt_loads/
+retail/data/bronze/bronze/orders/_dlt_loads/
 ```
 
 Delete this directory to force a full reload on the next bronze run:
 
 ```bash
-rm -rf data/retail/bronze/bronze/orders/_dlt_loads/
+rm -rf retail/data/bronze/bronze/orders/_dlt_loads/
 ```
 
 ---
@@ -162,5 +167,5 @@ rm -rf data/retail/bronze/bronze/orders/_dlt_loads/
 ## 🔍 Things to Try
 
 - Add a third order in `add_delta.py` and observe that only it is picked up
-- Change `initial_value` in `bronze.yaml` and delete `_dlt_loads/` to reload from a different date
-- Add a `max` metric for `amount` to `gold.yaml` and re-run gold only
+- Change `initial_value` in `backend/bronze.yaml` and delete `_dlt_loads/` to reload from a different date
+- Add a `max` metric for `amount` to `backend/gold.yaml` and re-run gold only

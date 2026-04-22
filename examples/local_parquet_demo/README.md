@@ -46,7 +46,7 @@ Reads the bundled CSV and writes a bronze Parquet file:
 
 ### Step 2 — silver transform
 
-`silver.yaml` applies three transforms in order:
+`backend/silver.yaml` applies three transforms in order:
 
 | Transform | What it does |
 | --- | --- |
@@ -104,7 +104,7 @@ medallion run demo --layer gold
 ## 📂 Output Files
 
 ```text
-data/demo/
+demo/data/
 ├── bronze/
 │   └── ORDERS.parquet           # 15 rows, raw column names
 ├── silver/
@@ -120,12 +120,18 @@ data/demo/
 ## 🗂️ Project Layout
 
 ```text
-projects/demo/
-├── main.yaml          # pipeline name + paths
-├── silver.yaml        # rename, cast, udf transforms
-├── gold.yaml          # two group_by aggregations
-└── udf/silver/
-    └── enrich.py      # flag_large_orders(df, threshold) → df
+demo/
+├── main.yaml              # pipeline name + paths + includes
+├── backend/
+│   ├── bronze.yaml        # placeholder (seed.py handles bronze)
+│   ├── silver.yaml        # rename, cast, udf transforms
+│   ├── gold.yaml          # two group_by aggregations
+│   └── udf/silver/
+│       └── enrich.py      # flag_large_orders(df, threshold) → df
+├── frontend/              # dashboard files
+├── data/                  # gitignored pipeline outputs
+├── catalogue/             # ERD, data dictionary
+└── summary/               # analysis summary
 ```
 
 ---
@@ -135,14 +141,14 @@ projects/demo/
 ```python
 import polars as pl
 
-pl.read_parquet("data/demo/gold/demo/orders_by_customer.parquet").sort("total_spent", descending=True)
-pl.read_parquet("data/demo/gold/demo/orders_by_status.parquet")
+pl.read_parquet("demo/data/gold/demo/orders_by_customer.parquet").sort("total_spent", descending=True)
+pl.read_parquet("demo/data/gold/demo/orders_by_status.parquet")
 ```
 
 ---
 
 ## 🔍 Things to Try
 
-- Change the `threshold` arg in `silver.yaml` (currently `100.0`) and re-run silver
-- Add a `mean` metric to `gold.yaml` and re-run gold
+- Change the `threshold` arg in `backend/silver.yaml` (currently `100.0`) and re-run silver
+- Add a `mean` metric to `backend/gold.yaml` and re-run gold
 - Run `medallion dag` to print the Hamilton DAG for the full pipeline

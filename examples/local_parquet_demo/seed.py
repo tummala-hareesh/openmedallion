@@ -9,7 +9,7 @@ import polars as pl
 from pathlib import Path
 
 src  = Path("data/source/orders.csv")
-dest = Path("data/demo/bronze")
+dest = Path("demo/data/bronze")
 dest.mkdir(parents=True, exist_ok=True)
 
 df = pl.read_csv(src)

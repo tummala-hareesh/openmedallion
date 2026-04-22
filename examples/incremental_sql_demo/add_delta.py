@@ -9,7 +9,7 @@ sys.stdout.reconfigure(encoding="utf-8")
 
 import sqlite3
 
-con = sqlite3.connect("data/retail.db")
+con = sqlite3.connect("retail/data/retail.db")
 cur = con.cursor()
 
 cur.executemany("INSERT OR REPLACE INTO orders VALUES (?,?,?,?)", [

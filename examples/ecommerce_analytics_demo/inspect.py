@@ -13,7 +13,7 @@ def banner(title: str) -> None:
     print("━" * 62)
 
 
-gold = Path("data/ecommerce/gold/ecommerce")
+gold = Path("ecommerce/data/gold/ecommerce")
 
 if not gold.exists():
     print("Gold directory not found. Run the pipeline first:")

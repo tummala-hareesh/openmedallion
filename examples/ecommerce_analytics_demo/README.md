@@ -124,7 +124,7 @@ flowchart LR
 After the 3 base tables are written to silver, a derived UDF reads them back and joins them:
 
 ```python
-# projects/ecommerce/udf/silver/enrich.py
+# ecommerce/backend/udf/silver/enrich.py
 def build_order_lines_enriched(silver_dir):
     orders    = read_parquet(join(silver_dir, "orders.parquet"))
     products  = read_parquet(join(silver_dir, "products.parquet"))
@@ -158,7 +158,7 @@ Sample rows from `order_lines_enriched.parquet`:
 Derives `order_month` (YYYY-MM) from `order_date` so the YAML aggregation can group by month:
 
 ```python
-# projects/ecommerce/udf/gold/metrics.py
+# ecommerce/backend/udf/gold/metrics.py
 def add_metrics(df, silver_dir):
     return df.with_columns(
         pl.col("order_date").str.slice(0, 7).alias("order_month")
@@ -227,32 +227,28 @@ March is the peak month. April dips — no laptop orders.
 ## 🗂️ Project Layout
 
 ```text
-ecommerce_analytics_demo/
-├── seed.py                          # CSV → bronze Parquet
-├── inspect.py                       # prints gold results with totals
-├── data/
-│   └── source/
-│       ├── orders.csv               # 20 orders, Jan–Apr 2024
-│       ├── products.csv             # 8 products, 3 categories
-│       └── customers.csv            # 5 customers, 3 tiers
-└── projects/
-    └── ecommerce/
-        ├── main.yaml                # pipeline name + paths
-        ├── bronze.yaml              # placeholder (seed.py handles bronze)
-        ├── silver.yaml              # 3 base tables + 1 derived join
-        ├── gold.yaml                # 3 aggregations (2 with pre_agg_udf)
-        └── udf/
-            ├── silver/
-            │   └── enrich.py        # build_order_lines_enriched()
-            └── gold/
-                └── metrics.py       # add_metrics() — derives order_month
+ecommerce/
+├── main.yaml                        # pipeline name + paths + includes
+├── backend/
+│   ├── bronze.yaml                  # placeholder (seed.py handles bronze)
+│   ├── silver.yaml                  # 3 base tables + 1 derived join
+│   ├── gold.yaml                    # 3 aggregations (2 with pre_agg_udf)
+│   └── udf/
+│       ├── silver/
+│       │   └── enrich.py            # build_order_lines_enriched()
+│       └── gold/
+│           └── metrics.py           # add_metrics() — derives order_month
+├── frontend/                        # dashboard files
+├── data/                            # gitignored pipeline outputs
+├── catalogue/                       # ERD, data dictionary
+└── summary/                         # analysis summary
 ```
 
 ---
 
 ## 🔍 Things to Try
 
-- Add a `margin_pct` column to `add_metrics()` and aggregate it with `agg: mean` in `gold.yaml`
-- Add a `filter` transform in `silver.yaml` to exclude `status = 'cancelled'` orders
+- Add a `margin_pct` column to `add_metrics()` and aggregate it with `agg: mean` in `backend/gold.yaml`
+- Add a `filter` transform in `backend/silver.yaml` to exclude `status = 'cancelled'` orders
 - Add a new gold aggregation: revenue by `region` grouped from `top_customers`
 - Add a `pre_agg_udf` to `top_customers.parquet` to bucket customers by spend tier

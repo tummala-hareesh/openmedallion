@@ -1,38 +1,46 @@
-"""scaffold/templates.py — scaffold a new project folder with config and UDF stubs.
+"""scaffold/templates.py — scaffold a new project folder with config, UDF stubs, and docs.
 
-Creates in the user's project root:
-  projects/<project>/main.yaml
-  projects/<project>/bronze.yaml
-  projects/<project>/silver.yaml
-  projects/<project>/gold.yaml
-  projects/<project>/udf/silver/base.py
-  projects/<project>/udf/silver/derived.py
-  projects/<project>/udf/gold/transforms.py
+Creates the full project structure under <project>/ in the current directory:
 
-Also creates a matching project folder in tb-frontend (if it exists).
-The frontend root defaults to the ``FRONTEND_ROOT`` environment variable,
-or the ``tb-frontend/`` sibling of the current working directory.
+    <project>/
+    ├── main.yaml                  ← pipeline entry point (required by load_project)
+    ├── backend/
+    │   ├── bronze.yaml            ← source connection, destination, tables, incremental
+    │   ├── silver.yaml            ← bronze_to_silver transforms + derived table UDFs
+    │   ├── gold.yaml              ← silver_to_gold aggregations + pre-agg UDFs
+    │   └── udf/
+    │       ├── silver/
+    │       │   ├── base.py        ← per-table silver UDF stub
+    │       │   └── derived.py     ← derived silver table UDF stub
+    │       └── gold/
+    │           └── transforms.py  ← gold pre-aggregation UDF stub
+    ├── frontend/                  ← BI/dashboard artefacts (Tableau, Power BI, etc.)
+    ├── data/                      ← gitignored pipeline outputs (bronze/silver/gold/export)
+    ├── catalogue/
+    │   ├── erd.md                 ← entity-relationship diagram
+    │   └── data_dictionary.md     ← column definitions and business rules
+    ├── summary/
+    │   └── summary.md             ← analysis summary + dashboard narrative
+    └── README.md                  ← project documentation template
 """
 import os
 import yaml
 from pathlib import Path
 
-# When running as an installed package, look for tb-frontend next to cwd.
-# Developers using an editable install from TB_Gitlab/ will have it as a sibling.
-_DEFAULT_FRONTEND_ROOT = Path(os.environ.get("FRONTEND_ROOT", "")) or (
-    Path.cwd().parent / "tb-frontend"
-)
-
 
 def _main_template(project: str) -> dict:
     return {
         "pipeline": {"name": project},
-        "includes": {"bronze": "bronze.yaml", "silver": "silver.yaml", "gold": "gold.yaml"},
+        "includes": {
+            "bronze": "backend/bronze.yaml",
+            "silver": "backend/silver.yaml",
+            "gold":   "backend/gold.yaml",
+        },
         "paths": {
-            "bronze": f"./data/{project}/bronze",
-            "silver": f"./data/{project}/silver",
-            "gold":   f"./data/{project}/gold",
-            "export": f"./data/{project}/export",
+            "bronze": f"{project}/data/bronze",
+            "silver": f"{project}/data/silver",
+            "gold":   f"{project}/data/gold",
+            "export": f"{project}/data/export",
         },
         "bi_export": {
             "enabled": True,
@@ -63,11 +71,11 @@ def _silver_template(project: str) -> dict:
                     {"type": "rename", "columns": {"MY_ID": "id", "UPDATED_AT": "updated_at"}},
                     {"type": "cast",   "columns": {"id": "Int64"}},
                     {"type": "udf",
-                     "file": f"projects/{project}/udf/silver/base.py",
+                     "file": f"{project}/backend/udf/silver/base.py",
                      "function": "enrich_my_table"},
                 ]}],
             "derived_tables": [{"output_file": "my_derived_table.parquet",
-                "udf": {"file": f"projects/{project}/udf/silver/derived.py",
+                "udf": {"file": f"{project}/backend/udf/silver/derived.py",
                         "function": "build_my_derived_table"}}],
         },
     }
@@ -77,7 +85,7 @@ def _gold_template(project: str) -> dict:
     return {
         "silver_to_gold": {"projects": [{"name": "default", "aggregations": [{
             "source_file": "my_table.parquet",
-            "pre_agg_udf": {"file": f"projects/{project}/udf/gold/transforms.py",
+            "pre_agg_udf": {"file": f"{project}/backend/udf/gold/transforms.py",
                             "function": "prepare_my_table"},
             "group_by": ["id"],
             "metrics": [{"column": "id", "agg": "count", "alias": "total_records"}],
@@ -87,7 +95,7 @@ def _gold_template(project: str) -> dict:
 
 
 def _udf_base(project: str) -> str:
-    return f'''"""projects/{project}/udf/silver/base.py
+    return f'''"""{project}/backend/udf/silver/base.py
 Silver UDF — add columns, filter rows, reshape a single table.
 Signature: (df: pl.DataFrame, **kwargs) -> pl.DataFrame
 """
@@ -101,7 +109,7 @@ def enrich_my_table(df: pl.DataFrame) -> pl.DataFrame:
 
 
 def _udf_derived(project: str) -> str:
-    return f'''"""projects/{project}/udf/silver/derived.py
+    return f'''"""{project}/backend/udf/silver/derived.py
 Silver derived UDF — build a new table by joining silver tables.
 Contract: (silver_dir: str | Path, **kwargs) -> pl.DataFrame
 
@@ -121,7 +129,7 @@ def build_my_derived_table(silver_dir) -> pl.DataFrame:
 
 
 def _udf_gold(project: str) -> str:
-    return f'''"""projects/{project}/udf/gold/transforms.py
+    return f'''"""{project}/backend/udf/gold/transforms.py
 Gold pre-aggregation UDF — joins, filtering before group_by.
 Contract: (df: pl.DataFrame, silver_dir: str | Path, **kwargs) -> pl.DataFrame
 
@@ -144,47 +152,331 @@ def prepare_my_table(df: pl.DataFrame, silver_dir) -> pl.DataFrame:
 '''
 
 
+def _readme_template(project: str) -> str:
+    return f"""# {project}
+
+## Overview
+
+<!-- 1-2 sentences describing what this project analyses and its business purpose. -->
+
+**Data Source:** <!-- e.g. Oracle ERP, REST API, CSV exports -->
+**Refresh Frequency:** <!-- e.g. Daily at 06:00 UTC -->
+**Primary Stakeholders:** <!-- see Stakeholders section -->
+
+---
+
+## Environment Setup
+
+### Prerequisites
+
+- Python 3.11+
+- [`uv`](https://github.com/astral-sh/uv) package manager
+- Access to source database / API (see `.env.example`)
+
+### Steps
+
+```bash
+# 1. Clone and enter the repo
+git clone <repo-url>
+cd <repo-root>
+
+# 2. Install dependencies
+uv sync
+
+# 3. Copy and fill in credentials
+cp .env.example .env
+# Edit .env — add ORACLE_USER, ORACLE_PASSWORD, ORACLE_DSN (or equivalent)
+
+# 4. Verify setup
+medallion --help
+```
+
+---
+
+## Folder Structure
+
+```
+{project}/
+├── main.yaml          ← pipeline entry point
+├── backend/
+│   ├── bronze.yaml    ← source config (connection, tables, incremental mode)
+│   ├── silver.yaml    ← transform config (renames, casts, UDFs)
+│   ├── gold.yaml      ← aggregation config (group_by, metrics)
+│   └── udf/           ← custom Python transform functions
+│       ├── silver/
+│       └── gold/
+├── frontend/          ← dashboard files (.pbix, .twb, etc.)
+├── data/              ← pipeline outputs — gitignored
+├── catalogue/
+│   ├── erd.md         ← entity-relationship diagram
+│   └── data_dictionary.md
+├── summary/
+│   └── summary.md     ← analysis narrative
+└── README.md          ← this file
+```
+
+---
+
+## Design Layout — ETL Pipeline
+
+```
+[Source DB / API]
+       │
+       ▼  bronze  (dlt)
+[Raw Parquet — {project}/data/bronze/]
+       │
+       ▼  silver  (Polars + UDFs)
+[Cleaned Parquet — {project}/data/silver/]
+       │
+       ▼  gold  (Polars group_by + UDFs)
+[Aggregated Parquet — {project}/data/gold/]
+       │
+       ▼  export
+[CSV + Parquet — {project}/data/export/]  →  [BI Tool]
+```
+
+---
+
+## How to Refresh Backend Data
+
+Run the full pipeline from the repo root:
+
+```bash
+medallion run {project}
+```
+
+Run individual layers:
+
+```bash
+medallion run {project} --layer bronze   # ingest only
+medallion run {project} --layer silver   # transform only
+medallion run {project} --layer gold     # aggregate only
+```
+
+Inspect the Hamilton DAG before running:
+
+```bash
+medallion dag {project}
+```
+
+---
+
+## How to Update the Frontend
+
+<!-- Choose whichever applies and delete the rest. -->
+
+**Power BI:** Open `frontend/{project}.pbix` → Home → Refresh → Publish to service.
+
+**Tableau:** Open `frontend/{project}.twb` → Data → Refresh All Extracts → Publish to Tableau Server.
+
+**Automated refresh:** <!-- If the BI tool is connected live, no manual step is needed. Describe the scheduled refresh here. -->
+
+---
+
+## Snapshot of Dashboard Views
+
+<!-- Insert screenshots here.
+Example:
+![Overview Page](catalogue/screenshots/overview.png)
+![Trend Page](catalogue/screenshots/trends.png)
+-->
+
+*Screenshots pending first dashboard publish.*
+
+---
+
+## Additional References
+
+| Resource | Link |
+|---|---|
+| Source system docs | <!-- URL --> |
+| Data warehouse schema | <!-- URL --> |
+| openmedallion docs | https://github.com/tummala-hareesh/openmedallion |
+| Project ticket / epic | <!-- URL --> |
+
+---
+
+## Developers
+
+| Name | Role | Contact |
+|---|---|---|
+| <!-- Name --> | <!-- Lead / Contributor --> | <!-- email --> |
+
+---
+
+## Stakeholders
+
+| Name | Department | Notes |
+|---|---|---|
+| <!-- Name --> | <!-- Dept --> | <!-- e.g. approves requirements --> |
+"""
+
+
+def _erd_template(project: str) -> str:
+    return f"""# {project} — Entity Relationship Diagram
+
+<!-- Paste or embed your ERD here.
+     Tools: dbdiagram.io, Lucidchart, draw.io, Mermaid.
+     Export as PNG/SVG and reference it with:
+     ![ERD]({project}_erd.png)
+
+     Or use Mermaid inline:
+-->
+
+```mermaid
+erDiagram
+    MY_TABLE {{
+        int    id           PK
+        string name
+        date   updated_at
+    }}
+    OTHER_TABLE {{
+        int    id           PK
+        int    my_table_id  FK
+        string category
+    }}
+    MY_TABLE ||--o{{ OTHER_TABLE : has
+```
+
+---
+
+## Notes
+
+<!-- Describe any non-obvious relationships, surrogate keys, or soft deletes here. -->
+"""
+
+
+def _data_dictionary_template(project: str) -> str:
+    return f"""# {project} — Data Dictionary
+
+## my_table (silver)
+
+| Column | Type | Source Column | Description | Example |
+|---|---|---|---|---|
+| id | Int64 | MY_ID | Unique record identifier | 12345 |
+| updated_at | Datetime | UPDATED_AT | Last update timestamp from source | 2024-03-15T08:30:00 |
+| ingested_at | Utf8 | _(derived)_ | Date this row was ingested by the pipeline | 2024-03-16 |
+
+## summary (gold)
+
+| Column | Type | Description | Example |
+|---|---|---|---|
+| id | Int64 | Group key | 12345 |
+| total_records | Int64 | Count of records per id | 42 |
+
+---
+
+## Business Rules
+
+<!-- Document any filtering, imputation, or derivation logic that is not obvious from the code. -->
+
+- **Filter:** <!-- e.g. Rows where status = 'ACTIVE' only -->
+- **Imputation:** <!-- e.g. NULL category defaults to 'unknown' -->
+- **Derived columns:** <!-- e.g. ingested_at is set to the pipeline run date -->
+"""
+
+
+def _summary_template(project: str) -> str:
+    return f"""# {project} — Analysis Summary
+
+## Data Summary
+
+<!-- 1-2 paragraphs describing the dataset: what it contains, its time range,
+     row counts, key dimensions, and any data quality notes. -->
+
+The `{project}` dataset covers ... [time range] ... containing approximately
+[N] records across [M] tables sourced from [system name].
+
+Key dimensions include: ...
+
+Notable data quality observations: ...
+
+---
+
+## Dashboard Summary
+
+<!-- 1-2 paragraphs describing the dashboard: what questions it answers,
+     which metrics are highlighted, and how stakeholders use it. -->
+
+The dashboard provides ... [business teams] ... with visibility into ...
+The primary metrics tracked are ...
+
+Stakeholders use this dashboard to ...
+
+---
+
+## Key Findings
+
+<!-- Bullet list of the top 3-5 insights from the latest analysis run. -->
+
+- ...
+- ...
+- ...
+
+---
+
+## Open Questions / Next Steps
+
+<!-- Items requiring follow-up or future analysis. -->
+
+- [ ] ...
+"""
+
+
 def init_project(
     project: str,
-    projects_root: str | Path = "projects",
-    frontend_root: str | Path | None = None,
+    projects_root: str | Path = ".",
 ) -> None:
-    """Scaffold a new project directory with YAML configs and UDF stubs.
+    """Scaffold a new project directory with full structure.
+
+    Creates <project>/ under ``projects_root`` (defaults to the current directory):
+
+      <project>/main.yaml
+      <project>/backend/{bronze,silver,gold}.yaml + udf stubs
+      <project>/frontend/
+      <project>/data/          (gitignored)
+      <project>/catalogue/     (erd.md, data_dictionary.md)
+      <project>/summary/       (summary.md)
+      <project>/README.md
 
     Args:
         project: Name of the new project — used as the folder name and in
             generated config templates.
-        projects_root: Parent directory where the backend project folder is created.
-            Defaults to ``"projects"``.
-        frontend_root: Root of the tb-frontend repo. Defaults to the
-            ``FRONTEND_ROOT`` env var, falling back to the ``tb-frontend/``
-            sibling of the current directory.
+        projects_root: Parent directory where the project folder is created.
+            Defaults to ``"."`` (current working directory).
     """
     project_dir = Path(projects_root) / project
-    udf_silver  = project_dir / "udf" / "silver"
-    udf_gold    = project_dir / "udf" / "gold"
+    backend_dir = project_dir / "backend"
+    udf_silver  = backend_dir / "udf" / "silver"
+    udf_gold    = backend_dir / "udf" / "gold"
 
     if project_dir.exists():
         print(f"❌  [init] '{project}' already exists — aborting.")
         print(f"    delete {project_dir}/ to reinitialise.")
         return
 
-    # config YAMLs
+    # --- main.yaml at project root (required by load_project) ---
     project_dir.mkdir(parents=True)
+    main_path = project_dir / "main.yaml"
+    with open(main_path, "w") as f:
+        yaml.dump(_main_template(project), f, default_flow_style=False, sort_keys=False)
+    print(f"🏗️   [init] created {main_path}")
+
+    # --- backend/ layer YAMLs ---
+    backend_dir.mkdir(parents=True)
     for path, data in [
-        (project_dir / "main.yaml",   _main_template(project)),
-        (project_dir / "bronze.yaml", _bronze_template()),
-        (project_dir / "silver.yaml", _silver_template(project)),
-        (project_dir / "gold.yaml",   _gold_template(project)),
+        (backend_dir / "bronze.yaml", _bronze_template()),
+        (backend_dir / "silver.yaml", _silver_template(project)),
+        (backend_dir / "gold.yaml",   _gold_template(project)),
     ]:
         with open(path, "w") as f:
             yaml.dump(data, f, default_flow_style=False, sort_keys=False)
         print(f"🏗️   [init] created {path}")
 
-    # UDF stubs
+    # --- backend/ UDF stubs ---
     udf_silver.mkdir(parents=True)
     udf_gold.mkdir(parents=True)
-    for pkg in [project_dir, project_dir / "udf", udf_silver, udf_gold]:
+    for pkg in [backend_dir, backend_dir / "udf", udf_silver, udf_gold]:
         (pkg / "__init__.py").touch()
 
     for path, content in [
@@ -196,23 +488,46 @@ def init_project(
             f.write(content)
         print(f"🏗️   [init] created {path}")
 
-    # frontend project folder (optional)
-    fe_root = Path(
-        frontend_root
-        if frontend_root is not None
-        else os.environ.get("FRONTEND_ROOT", str(_DEFAULT_FRONTEND_ROOT))
-    )
-    fe_project_dir = fe_root / "projects" / project
-    if fe_project_dir.exists():
-        print(f"⏭️   [init] frontend '{fe_project_dir}' already exists — skipped.")
-    elif not fe_root.exists():
-        print(f"⚠️   [init] frontend root not found: {fe_root}")
-        print(f"    Set FRONTEND_ROOT env var to create the frontend project folder.")
-    else:
-        fe_project_dir.mkdir(parents=True)
-        print(f"🏗️   [init] created {fe_project_dir}")
+    # --- frontend/ ---
+    fe_dir = project_dir / "frontend"
+    fe_dir.mkdir()
+    (fe_dir / ".gitkeep").touch()
+    print(f"🏗️   [init] created {fe_dir}/")
+
+    # --- data/ (gitignored) ---
+    data_dir = project_dir / "data"
+    data_dir.mkdir()
+    with open(data_dir / ".gitignore", "w") as f:
+        f.write("# Pipeline outputs — never commit data\n*\n!.gitignore\n")
+    print(f"🏗️   [init] created {data_dir}/ (gitignored)")
+
+    # --- catalogue/ ---
+    cat_dir = project_dir / "catalogue"
+    cat_dir.mkdir()
+    for path, content in [
+        (cat_dir / "erd.md",             _erd_template(project)),
+        (cat_dir / "data_dictionary.md", _data_dictionary_template(project)),
+    ]:
+        with open(path, "w") as f:
+            f.write(content)
+    print(f"🏗️   [init] created {cat_dir}/")
+
+    # --- summary/ ---
+    sum_dir = project_dir / "summary"
+    sum_dir.mkdir()
+    with open(sum_dir / "summary.md", "w") as f:
+        f.write(_summary_template(project))
+    print(f"🏗️   [init] created {sum_dir}/")
+
+    # --- README.md ---
+    readme_path = project_dir / "README.md"
+    with open(readme_path, "w") as f:
+        f.write(_readme_template(project))
+    print(f"🏗️   [init] created {readme_path}")
 
     print(f"\n✅  Project '{project}' initialised.")
-    print(f"   Backend   : projects/{project}/")
-    print(f"   Frontend  : {fe_project_dir}")
+    print(f"   Backend   : {project}/backend/")
+    print(f"   Frontend  : {project}/frontend/")
+    print(f"   Catalogue : {project}/catalogue/")
+    print(f"   Summary   : {project}/summary/")
     print(f"   Run       : medallion run {project}")
