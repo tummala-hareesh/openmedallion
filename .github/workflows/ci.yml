@@ -1,10 +1,10 @@
-name: CI
+name: OpenMedallian CI checks
 
 on:
   push:
-    branches: ["main", "develop"]
+    branches: ["develop"]
   pull_request:
-    branches: ["main"]
+    branches: ["master","develop"]
 
 jobs:
   test:

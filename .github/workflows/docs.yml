@@ -1,7 +1,9 @@
-name: Docs
+name: OpenMedallian Documentation
 
 on:
-  push:
+  push: 
+    branches: ["develop"]
+  pull_request:
     branches: ["master"]
   workflow_dispatch:
 

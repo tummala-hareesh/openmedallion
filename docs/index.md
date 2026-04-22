@@ -1,4 +1,2 @@
 <!-- markdownlint-disable MD041 -->
-{%
-  include-markdown "../README.md"
-%}
+--8<-- "README.md"
