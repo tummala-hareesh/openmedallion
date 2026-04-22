@@ -130,7 +130,6 @@ demo/
 │       └── enrich.py      # flag_large_orders(df, threshold) → df
 ├── frontend/              # dashboard files
 ├── data/                  # gitignored pipeline outputs
-├── catalogue/             # ERD, data dictionary
 └── summary/               # analysis summary
 ```
 

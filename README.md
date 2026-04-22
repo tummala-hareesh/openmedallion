@@ -74,13 +74,18 @@ When you run `medallion init my_project`, you get:
 
 ```text
 my_project/
-├── main.yaml           # pipeline name + layer includes + paths
-├── bronze.yaml         # source connection + incremental config
-├── silver.yaml         # table transforms (rename, cast, filter, UDFs)
-├── gold.yaml           # aggregations (group_by + metrics + window fns)
-└── udf/
-    ├── silver/         # Python UDFs called from silver.yaml
-    └── gold/           # Python UDFs called from gold.yaml
+├── main.yaml                    # pipeline name + layer includes + paths
+├── backend/
+│   ├── bronze.yaml              # source connection + incremental config
+│   ├── silver.yaml              # table transforms (rename, cast, filter, UDFs)
+│   ├── gold.yaml                # aggregations (group_by + metrics + window fns)
+│   └── udf/
+│       ├── silver/              # Python UDFs called from silver.yaml
+│       └── gold/                # Python UDFs called from gold.yaml
+├── frontend/                    # dashboard files (Tableau, Power BI, etc.)
+├── data/                        # gitignored pipeline outputs
+├── summary/                     # analysis write-ups
+└── README.md                    # pre-filled project documentation template
 ```
 
 ---
@@ -265,25 +270,28 @@ It is a **focused convention** that makes medallion pipelines easier to build, e
 
 | Item | Status |
 | --- | --- |
-| Bronze / Silver / Gold pipeline | ✅ v0.1 |
-| Hamilton DAG + live tracker | ✅ v0.1 |
-| Local Parquet + S3 storage | ✅ v0.1 |
-| Incremental append + merge | ✅ v0.1 |
-| CLI scaffolding (`medallion init`) | ✅ v0.1 |
-| LazyFrame UDF contract | 🔜 v0.2 |
-| Schema contract enforcement | 🔜 v0.3 |
-| Lineage + metadata helpers | 🔜 v0.3 |
-| PyPI publish | 🔜 post v0.1 |
-| Additional cloud destinations | 🔜 post v0.1 |
+| Bronze / Silver / Gold pipeline | ✅ 2026.4.1 |
+| Hamilton DAG + live tracker | ✅ 2026.4.1 |
+| Local Parquet + S3 storage | ✅ 2026.4.1 |
+| Incremental append + merge | ✅ 2026.4.1 |
+| CLI scaffolding (`medallion init`) | ✅ 2026.4.1 |
+| PyPI publish (OIDC trusted publishing) | ✅ 2026.4.1 |
+| LazyFrame UDF contract | 🔜 2026.5 |
+| Schema contract enforcement | 🔜 2026.6 |
+| Lineage + metadata helpers | 🔜 2026.6 |
+| Additional cloud destinations | 🔜 2026.6 |
 
 ---
 
 ## 📂 Examples
 
-| Example | What it shows |
-| --- | --- |
-| [`examples/local_parquet_demo/`](examples/local_parquet_demo/) | Zero-credential quickstart: full Bronze → Silver → Gold with Parquet files |
-| [`examples/incremental_sql_demo/`](examples/incremental_sql_demo/) | Incremental append + merge with a SQLite source; delta load simulation |
+Three self-contained examples runnable with no cloud credentials. See [`examples/README.md`](examples/README.md) for a side-by-side comparison.
+
+| Example | Tables | What it shows |
+| --- | --- | --- |
+| [`local_parquet_demo/`](examples/local_parquet_demo/) | 1 | Zero-credential quickstart: full Bronze → Silver → Gold with Parquet files |
+| [`incremental_sql_demo/`](examples/incremental_sql_demo/) | 2 | Incremental append + merge with a SQLite source; delta load simulation |
+| [`ecommerce_analytics_demo/`](examples/ecommerce_analytics_demo/) | 3 | Multi-table joins, margin analysis, and monthly trends — most complete example |
 
 ---
 

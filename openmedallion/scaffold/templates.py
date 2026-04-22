@@ -16,9 +16,6 @@ Creates the full project structure under <project>/ in the current directory:
     │           └── transforms.py  ← gold pre-aggregation UDF stub
     ├── frontend/                  ← BI/dashboard artefacts (Tableau, Power BI, etc.)
     ├── data/                      ← gitignored pipeline outputs (bronze/silver/gold/export)
-    ├── catalogue/
-    │   ├── erd.md                 ← entity-relationship diagram
-    │   └── data_dictionary.md     ← column definitions and business rules
     ├── summary/
     │   └── summary.md             ← analysis summary + dashboard narrative
     └── README.md                  ← project documentation template
@@ -207,9 +204,6 @@ medallion --help
 │       └── gold/
 ├── frontend/          ← dashboard files (.pbix, .twb, etc.)
 ├── data/              ← pipeline outputs — gitignored
-├── catalogue/
-│   ├── erd.md         ← entity-relationship diagram
-│   └── data_dictionary.md
 ├── summary/
 │   └── summary.md     ← analysis narrative
 └── README.md          ← this file
@@ -277,8 +271,8 @@ medallion dag {project}
 
 <!-- Insert screenshots here.
 Example:
-![Overview Page](catalogue/screenshots/overview.png)
-![Trend Page](catalogue/screenshots/trends.png)
+![Overview Page](summary/screenshots/overview.png)
+![Trend Page](summary/screenshots/trends.png)
 -->
 
 *Screenshots pending first dashboard publish.*
@@ -309,70 +303,6 @@ Example:
 | Name | Department | Notes |
 |---|---|---|
 | <!-- Name --> | <!-- Dept --> | <!-- e.g. approves requirements --> |
-"""
-
-
-def _erd_template(project: str) -> str:
-    return f"""# {project} — Entity Relationship Diagram
-
-<!-- Paste or embed your ERD here.
-     Tools: dbdiagram.io, Lucidchart, draw.io, Mermaid.
-     Export as PNG/SVG and reference it with:
-     ![ERD]({project}_erd.png)
-
-     Or use Mermaid inline:
--->
-
-```mermaid
-erDiagram
-    MY_TABLE {{
-        int    id           PK
-        string name
-        date   updated_at
-    }}
-    OTHER_TABLE {{
-        int    id           PK
-        int    my_table_id  FK
-        string category
-    }}
-    MY_TABLE ||--o{{ OTHER_TABLE : has
-```
-
----
-
-## Notes
-
-<!-- Describe any non-obvious relationships, surrogate keys, or soft deletes here. -->
-"""
-
-
-def _data_dictionary_template(project: str) -> str:
-    return f"""# {project} — Data Dictionary
-
-## my_table (silver)
-
-| Column | Type | Source Column | Description | Example |
-|---|---|---|---|---|
-| id | Int64 | MY_ID | Unique record identifier | 12345 |
-| updated_at | Datetime | UPDATED_AT | Last update timestamp from source | 2024-03-15T08:30:00 |
-| ingested_at | Utf8 | _(derived)_ | Date this row was ingested by the pipeline | 2024-03-16 |
-
-## summary (gold)
-
-| Column | Type | Description | Example |
-|---|---|---|---|
-| id | Int64 | Group key | 12345 |
-| total_records | Int64 | Count of records per id | 42 |
-
----
-
-## Business Rules
-
-<!-- Document any filtering, imputation, or derivation logic that is not obvious from the code. -->
-
-- **Filter:** <!-- e.g. Rows where status = 'ACTIVE' only -->
-- **Imputation:** <!-- e.g. NULL category defaults to 'unknown' -->
-- **Derived columns:** <!-- e.g. ingested_at is set to the pipeline run date -->
 """
 
 
@@ -435,7 +365,6 @@ def init_project(
       <project>/backend/{bronze,silver,gold}.yaml + udf stubs
       <project>/frontend/
       <project>/data/          (gitignored)
-      <project>/catalogue/     (erd.md, data_dictionary.md)
       <project>/summary/       (summary.md)
       <project>/README.md
 
@@ -501,17 +430,6 @@ def init_project(
         f.write("# Pipeline outputs — never commit data\n*\n!.gitignore\n")
     print(f"🏗️   [init] created {data_dir}/ (gitignored)")
 
-    # --- catalogue/ ---
-    cat_dir = project_dir / "catalogue"
-    cat_dir.mkdir()
-    for path, content in [
-        (cat_dir / "erd.md",             _erd_template(project)),
-        (cat_dir / "data_dictionary.md", _data_dictionary_template(project)),
-    ]:
-        with open(path, "w") as f:
-            f.write(content)
-    print(f"🏗️   [init] created {cat_dir}/")
-
     # --- summary/ ---
     sum_dir = project_dir / "summary"
     sum_dir.mkdir()
@@ -528,6 +446,5 @@ def init_project(
     print(f"\n✅  Project '{project}' initialised.")
     print(f"   Backend   : {project}/backend/")
     print(f"   Frontend  : {project}/frontend/")
-    print(f"   Catalogue : {project}/catalogue/")
     print(f"   Summary   : {project}/summary/")
     print(f"   Run       : medallion run {project}")

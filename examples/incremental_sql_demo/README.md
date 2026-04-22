@@ -142,7 +142,6 @@ retail/
 │   └── gold.yaml      # customer summary + grand-total aggregations
 ├── frontend/          # dashboard files
 ├── data/              # gitignored pipeline outputs (+ retail.db)
-├── catalogue/         # ERD, data dictionary
 └── summary/           # analysis summary
 ```
 

@@ -9,16 +9,18 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+
 - GitHub Actions CI workflow (multi-Python matrix, lint)
 - GitHub Actions publish workflow (TestPyPI → PyPI via OIDC trusted publishing)
 - Expanded `medallion init` scaffold: `backend/`, `frontend/`, `data/` (gitignored),
-  `catalogue/` (ERD + data dictionary), `summary/`, and full `README.md` template
+  `summary/`, and full `README.md` template
 
 ---
 
-## [0.1.0] — 2026-04-22
+## [2026.4.1] — 2026-04-22
 
 ### Added
+
 - `openmedallion.config` — `load_project`, `expand_env_str`, `_deep_merge`, `_validate_config`
 - `openmedallion.contracts.udf` — `load_udf`, `check_return`
 - `openmedallion.pipeline` — `BronzeLoader`, `SilverTransformer`, `GoldAggregator`, `BIExporter`
@@ -39,5 +41,5 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - S3 support via `openmedallion[s3]` optional extra (s3fs + boto3)
 - LocalStack compatibility via `AWS_ENDPOINT_URL` environment variable
 
-[Unreleased]: https://github.com/tummala-hareesh/openmedallion/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/tummala-hareesh/openmedallion/releases/tag/v0.1.0
+[Unreleased]: https://github.com/tummala-hareesh/openmedallion/compare/v2026.4.1...HEAD
+[2026.4.1]: https://github.com/tummala-hareesh/openmedallion/releases/tag/v2026.4.1

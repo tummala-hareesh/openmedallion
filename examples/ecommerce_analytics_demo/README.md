@@ -240,7 +240,6 @@ ecommerce/
 │           └── metrics.py           # add_metrics() — derives order_month
 ├── frontend/                        # dashboard files
 ├── data/                            # gitignored pipeline outputs
-├── catalogue/                       # ERD, data dictionary
 └── summary/                         # analysis summary
 ```
 
