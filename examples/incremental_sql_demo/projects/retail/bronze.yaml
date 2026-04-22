@@ -1,0 +1,24 @@
+source:
+  type: sql_database
+  dialect: sqlite
+  connection_string: "sqlite:///data/retail.db"
+
+  tables:
+    # Append mode: only rows newer than the last cursor value are loaded.
+    # Re-running picks up only new orders.
+    - name: orders
+      incremental:
+        mode: append
+        cursor_column: created_at
+        initial_value: "2024-01-01"
+
+    # Merge mode: upserts on primary key.
+    # Re-running overwrites changed customer rows in-place.
+    - name: customers
+      incremental:
+        mode: merge
+        primary_key: customer_id
+
+destination:
+  type: filesystem
+  bucket_url: "./data/retail/bronze"

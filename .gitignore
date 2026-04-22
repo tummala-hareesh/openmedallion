@@ -1,0 +1,26 @@
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+dist/
+build/
+
+# Data (generated outputs)
+data/
+examples/*/data/
+*.parquet
+*.csv
+!examples/*/data/source/*.csv
+
+# dlt state
+.dlt/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+

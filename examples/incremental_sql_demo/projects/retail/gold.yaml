@@ -1,0 +1,17 @@
+silver_to_gold:
+  projects:
+    - name: retail
+      aggregations:
+        - source_file: orders.parquet
+          group_by: [customer_id]
+          metrics:
+            - {column: order_id, agg: count, alias: total_orders}
+            - {column: amount,   agg: sum,   alias: total_spent}
+          output_file: customer_summary.parquet
+
+        - source_file: orders.parquet
+          group_by: []
+          metrics:
+            - {column: order_id, agg: count, alias: total_orders}
+            - {column: amount,   agg: sum,   alias: total_revenue}
+          output_file: pipeline_totals.parquet
