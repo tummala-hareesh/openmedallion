@@ -130,7 +130,8 @@ demo/
 │       └── enrich.py      # flag_large_orders(df, threshold) → df
 ├── frontend/              # dashboard files
 ├── data/                  # gitignored pipeline outputs
-└── summary/               # analysis summary
+├── summary/               # analysis summary
+└── kestra_flow.yml        # Kestra orchestration flow — copy to flows/ to activate
 ```
 
 ---

@@ -142,7 +142,8 @@ retail/
 │   └── gold.yaml      # customer summary + grand-total aggregations
 ├── frontend/          # dashboard files
 ├── data/              # gitignored pipeline outputs (+ retail.db)
-└── summary/           # analysis summary
+├── summary/           # analysis summary
+└── kestra_flow.yml    # Kestra orchestration flow — copy to flows/ to activate
 ```
 
 ---

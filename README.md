@@ -85,6 +85,7 @@ my_project/
 ├── frontend/                    # dashboard files (Tableau, Power BI, etc.)
 ├── data/                        # gitignored pipeline outputs
 ├── summary/                     # analysis write-ups
+├── kestra_flow.yml              # Kestra orchestration flow — copy to flows/ to activate
 └── README.md                    # pre-filled project documentation template
 ```
 
@@ -229,6 +230,62 @@ source:
 ```
 
 dlt tracks state automatically. Re-running bronze only pulls the delta.
+
+---
+
+## ⏱️ Scheduling with Kestra
+
+`medallion init` generates a `kestra_flow.yml` inside every new project. This file is a ready-to-use [Kestra](https://kestra.io) flow that orchestrates bronze → silver → gold in sequence with per-task observability and retry support.
+
+### 1. Start a local Kestra server
+
+```bash
+# from the repo root — requires Docker
+make kestra-up
+# UI available at http://localhost:8080
+```
+
+### 2. Activate a project flow
+
+```bash
+# copy the generated flow into the flows/ directory that Kestra watches
+cp my_project/kestra_flow.yml flows/my_project.yml
+```
+
+Kestra auto-loads flows from `flows/` — no restart needed.
+
+### 3. Run the flow
+
+Trigger manually from the UI at `http://localhost:8080`, or via the API:
+
+```bash
+curl -X POST \
+  http://localhost:8080/api/v1/executions/openmedallion.projects/my_project
+```
+
+### 4. Enable a scheduled refresh
+
+Uncomment the `triggers:` block in `kestra_flow.yml`:
+
+```yaml
+triggers:
+  - id: daily_refresh
+    type: io.kestra.plugin.core.trigger.Schedule
+    cron: "0 6 * * *"   # every day at 06:00 UTC
+```
+
+Copy the updated file to `flows/` — Kestra picks up the change immediately.
+
+### Kestra vs GitHub Actions
+
+| | Kestra | GitHub Actions |
+| --- | --- | --- |
+| Best for | Recurring pipeline runs, local/on-prem data | CI tests + PyPI publish on tag push |
+| Scheduling | Cron + backfill | Cron only, no backfill |
+| Observability | Per-task logs, run history, retry from failed task | Flat job log |
+| Infrastructure | Self-hosted Docker | GitHub-managed runners |
+
+**Recommended split:** GitHub Actions for CI + publish; Kestra for pipeline scheduling.
 
 ---
 

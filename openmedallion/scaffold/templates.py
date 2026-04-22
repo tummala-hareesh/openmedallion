@@ -18,6 +18,7 @@ Creates the full project structure under <project>/ in the current directory:
     ├── data/                      ← gitignored pipeline outputs (bronze/silver/gold/export)
     ├── summary/
     │   └── summary.md             ← analysis summary + dashboard narrative
+    ├── kestra_flow.yml            ← Kestra orchestration flow (copy to flows/ to activate)
     └── README.md                  ← project documentation template
 """
 import os
@@ -306,6 +307,47 @@ Example:
 """
 
 
+def _kestra_flow_template(project: str) -> str:
+    return f"""\
+id: {project}
+namespace: openmedallion.projects
+description: "Bronze → Silver → Gold pipeline for {project}."
+
+tasks:
+
+  - id: run_bronze
+    type: io.kestra.plugin.scripts.python.Commands
+    warningOnStdErr: false
+    commands:
+      - medallion run {project} --layer bronze
+    workingDirectory: /app/{project}
+
+  - id: run_silver
+    type: io.kestra.plugin.scripts.python.Commands
+    warningOnStdErr: false
+    commands:
+      - medallion run {project} --layer silver
+    workingDirectory: /app/{project}
+    dependsOn:
+      - run_bronze
+
+  - id: run_gold
+    type: io.kestra.plugin.scripts.python.Commands
+    warningOnStdErr: false
+    commands:
+      - medallion run {project} --layer gold
+    workingDirectory: /app/{project}
+    dependsOn:
+      - run_silver
+
+# Uncomment to enable a scheduled refresh:
+# triggers:
+#   - id: daily_refresh
+#     type: io.kestra.plugin.core.trigger.Schedule
+#     cron: "0 6 * * *"   # every day at 06:00 UTC
+"""
+
+
 def _summary_template(project: str) -> str:
     return f"""# {project} — Analysis Summary
 
@@ -366,6 +408,7 @@ def init_project(
       <project>/frontend/
       <project>/data/          (gitignored)
       <project>/summary/       (summary.md)
+      <project>/kestra_flow.yml
       <project>/README.md
 
     Args:
@@ -443,8 +486,15 @@ def init_project(
         f.write(_readme_template(project))
     print(f"🏗️   [init] created {readme_path}")
 
+    # --- kestra_flow.yml ---
+    kestra_path = project_dir / "kestra_flow.yml"
+    with open(kestra_path, "w") as f:
+        f.write(_kestra_flow_template(project))
+    print(f"🏗️   [init] created {kestra_path}")
+
     print(f"\n✅  Project '{project}' initialised.")
     print(f"   Backend   : {project}/backend/")
     print(f"   Frontend  : {project}/frontend/")
     print(f"   Summary   : {project}/summary/")
+    print(f"   Kestra    : copy {project}/kestra_flow.yml → flows/ to activate")
     print(f"   Run       : medallion run {project}")
