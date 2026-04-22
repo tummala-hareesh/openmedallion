@@ -1,24 +1,23 @@
-# 🥇 OpenMedallion
+# OpenMedallion
 
 **Declarative medallion pipelines in pure open-source Python — local first, cloud portable, fast by default.**
+
+[![PyPI version](https://img.shields.io/pypi/v/openmedallion?color=gold&label=PyPI)](https://pypi.org/project/openmedallion/)
+[![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![CI](https://github.com/tummalaahri/openmedallion/actions/workflows/ci.yml/badge.svg)](https://github.com/tummalaahri/openmedallion/actions)
 
 OpenMedallion is an opinionated open-source library for building **Bronze → Silver → Gold** data warehouse and lakehouse pipelines using **dlt**, **Polars**, and **Hamilton** — without depending on expensive enterprise platforms or proprietary tooling.
 
 ---
 
-## 🤔 Why OpenMedallion?
+## Why OpenMedallion?
 
 Modern open-source data tools are individually excellent — but combining them into a production-ready medallion architecture is still fragmented.
 
-You already have great tools for ingestion, transformation, loading, orchestration, and validation. But you still have to stitch everything together yourself.
-
-That usually means writing glue code, defining your own project structure, creating naming conventions, managing layer boundaries manually, and maintaining all of it over time.
+You already have great tools for ingestion, transformation, loading, orchestration, and validation. But you still have to stitch everything together yourself — writing glue code, defining project structure, creating naming conventions, managing layer boundaries, and maintaining all of it over time.
 
 **OpenMedallion exists to reduce that friction.**
-
----
-
-## 🎯 What Problem does it solve ?
 
 | Without OpenMedallion | With OpenMedallion |
 | --- | --- |
@@ -30,32 +29,46 @@ That usually means writing glue code, defining your own project structure, creat
 
 ---
 
-## ⚡ Key Features
+## Quickstart
 
-- 🗂️ **Declarative YAML config** — define your pipeline layers without writing boilerplate
-- 🔁 **Incremental loads** — append and merge modes via dlt cursor columns and primary keys
-- 🧱 **Composable UDFs** — drop Python functions into `udf/silver/` or `udf/gold/` — no framework to learn
-- 📊 **Live DAG tracker** — Hamilton-powered web UI to visualise and monitor pipeline execution
-- 🪶 **Local first** — run the full pipeline against Parquet files with zero cloud credentials
-- ☁️ **Cloud portable** — swap `filesystem` for S3 in one line; logic stays unchanged
-- 🔌 **Source agnostic** — any dlt source: SQL databases, REST APIs, filesystems, and more
-- 🚀 **Fast by default** — Polars for all transforms; no pandas bottlenecks
+```bash
+pip install openmedallion
+
+medallion init my_project       # scaffold: YAML configs + UDF stubs + kestra_flow.yml
+medallion run my_project        # Bronze → Silver → Gold in one command
+medallion run my_project --layer silver   # re-run a single layer
+medallion dag                   # print the Hamilton DAG
+medallion serve                 # launch the live pipeline tracker UI
+```
 
 ---
 
-## 🔬 How It Works?
+## Key Features
 
-OpenMedallion wires together three best-in-class open-source tools under a unified declarative config:
+- **Declarative YAML config** — define pipeline layers without writing boilerplate
+- **Incremental loads** — append and merge modes via dlt cursor columns and primary keys
+- **Composable UDFs** — drop Python functions into `udf/silver/` or `udf/gold/`; no new framework to learn
+- **Live DAG tracker** — Hamilton-powered web UI to visualise and monitor execution
+- **Local first** — run the full pipeline against Parquet files with zero cloud credentials
+- **Cloud portable** — swap `filesystem` for S3 in one line; logic stays unchanged
+- **Source agnostic** — any dlt source: SQL databases, REST APIs, filesystems, and more
+- **Fast by default** — Polars for all transforms; no pandas bottlenecks
+
+---
+
+## How It Works
+
+OpenMedallion wires three best-in-class open-source tools under a unified declarative config:
 
 ```text
 YAML config
     │
     ▼
-Hamilton DAG          ← orchestrates which layer runs and in what order
+Hamilton DAG           ← orchestrates which layer runs and in what order
     │
-    ├── Bronze (dlt)  ← ingests raw data from any source into Parquet
-    ├── Silver (Polars) ← typed UDF transforms: rename, cast, filter, enrich
-    └── Gold (Polars) ← YAML-declared group-by aggregations + window metrics
+    ├── Bronze  (dlt)     ← ingests raw data from any source into Parquet
+    ├── Silver  (Polars)  ← typed UDF transforms: rename, cast, filter, enrich
+    └── Gold    (Polars)  ← YAML-declared group-by aggregations + window metrics
 ```
 
 | Layer | Tool | Role |
@@ -68,9 +81,26 @@ Hamilton DAG          ← orchestrates which layer runs and in what order
 
 ---
 
-## 🏗️ Project Structure
+## Installation
 
-When you run `medallion init my_project`, you get:
+```bash
+pip install openmedallion
+```
+
+Optional extras:
+
+```bash
+pip install "openmedallion[s3]"    # S3 support via s3fs + boto3
+pip install "openmedallion[viz]"   # DAG visualisation via graphviz
+```
+
+> Requires Python 3.11+
+
+---
+
+## Project Structure
+
+`medallion init my_project` generates a complete, ready-to-run project:
 
 ```text
 my_project/
@@ -91,47 +121,9 @@ my_project/
 
 ---
 
-## 📦 Installation
+## Configuration
 
-```bash
-pip install openmedallion
-```
-
-Optional extras:
-
-```bash
-pip install "openmedallion[s3]"    # S3 support via s3fs + boto3
-pip install "openmedallion[viz]"   # DAG visualisation via graphviz
-```
-
-> Requires Python 3.11+
-
----
-
-## 🚀 Quickstart
-
-```bash
-# 1. Scaffold a new project
-medallion init my_project
-
-# 2. Run the full Bronze → Silver → Gold pipeline
-medallion run my_project
-
-# 3. Run only the Silver layer (assumes Bronze already ran)
-medallion run my_project --layer silver
-
-# 4. Print the Hamilton DAG structure
-medallion dag
-
-# 5. Launch the live pipeline tracker UI
-medallion serve
-```
-
----
-
-## 🔧 Configuration Example
-
-**`main.yaml`** — declare your layers and paths:
+**`main.yaml`** — declare your layers and data paths:
 
 ```yaml
 pipeline:
@@ -163,8 +155,8 @@ bronze_to_silver:
             CUSTOMER_ID: customer_id
         - type: cast
           columns:
-            order_id:    Int64
-            amount:      Float64
+            order_id: Int64
+            amount:   Float64
         - type: udf
           file: udf/silver/enrich.py
           function: flag_large_orders
@@ -189,9 +181,9 @@ silver_to_gold:
 
 ---
 
-## 🧩 Python UDFs
+## Python UDFs
 
-Business logic stays in plain Python. No custom DSL. No magic.
+Business logic stays in plain Python — no custom DSL, no magic.
 
 ```python
 # udf/silver/enrich.py
@@ -203,13 +195,13 @@ def flag_large_orders(df: pl.DataFrame, threshold: float = 500.0) -> pl.DataFram
     )
 ```
 
-Drop this file next to your config, reference it in `silver.yaml`, done.
+Drop the file next to your config, reference it in `silver.yaml`, done.
 
 ---
 
-## 🔄 Incremental Loads
+## Incremental Loads
 
-OpenMedallion supports dlt's native incremental strategies:
+OpenMedallion supports dlt's native incremental strategies out of the box:
 
 ```yaml
 # bronze.yaml
@@ -229,13 +221,13 @@ source:
         primary_key: customer_id
 ```
 
-dlt tracks state automatically. Re-running bronze only pulls the delta.
+dlt tracks cursor state automatically. Re-running bronze only pulls the delta.
 
 ---
 
-## ⏱️ Scheduling with Kestra
+## Scheduling with Kestra
 
-`medallion init` generates a `kestra_flow.yml` inside every new project. This file is a ready-to-use [Kestra](https://kestra.io) flow that orchestrates bronze → silver → gold in sequence with per-task observability and retry support.
+`medallion init` generates a `kestra_flow.yml` inside every new project — a ready-to-use [Kestra](https://kestra.io) flow that orchestrates bronze → silver → gold with per-task observability and retry support.
 
 ### 1. Start a local Kestra server
 
@@ -247,24 +239,24 @@ make kestra-up
 
 ### 2. Register a project flow
 
-Add one line to the `kestra` volumes section in `docker-compose.yml`:
+Add one volume mount to the `kestra` service in `docker-compose.yml`:
 
 ```yaml
 - ./my_project/kestra_flow.yml:/app/flows/my_project.yml
 ```
 
-Kestra picks up the file automatically on next `make kestra-up` — no copying needed.
+Kestra picks up the file automatically on the next `make kestra-up` — no copying needed.
 
-### 3. Run the flow
+### 3. Trigger a run
 
-Trigger manually from the UI at `http://localhost:8080`, or via the API:
+From the UI at `http://localhost:8080`, or via the API:
 
 ```bash
 curl -X POST \
   http://localhost:8080/api/v1/executions/openmedallion.projects/my_project
 ```
 
-### 4. Enable a scheduled refresh
+### 4. Enable scheduled refresh
 
 Uncomment the `triggers:` block in `kestra_flow.yml`:
 
@@ -275,7 +267,7 @@ triggers:
     cron: "0 6 * * *"   # every day at 06:00 UTC
 ```
 
-Copy the updated file to `flows/` — Kestra picks up the change immediately.
+Restart with `make kestra-up` and Kestra picks up the change immediately.
 
 ### Kestra vs GitHub Actions
 
@@ -290,41 +282,48 @@ Copy the updated file to `flows/` — Kestra picks up the change immediately.
 
 ---
 
-## ✅ When to Use OpenMedallion
+## Examples
 
-OpenMedallion is a great fit if you:
+Three self-contained examples — no cloud credentials required. See [`examples/README.md`](examples/README.md) for a side-by-side comparison.
 
-- ✅ Want a **standard medallion project layout** without inventing one from scratch
-- ✅ Prefer **YAML-first config** with Python escape hatches for complex logic
-- ✅ Need **local-first development** that can scale to S3 with minimal changes
-- ✅ Want **full ownership** of your code and infrastructure
-- ✅ Are building on a **tight budget** without enterprise platform procurement
-
----
-
-## 🚫 What OpenMedallion Is Not
-
-- ❌ A full enterprise data platform (Databricks, Snowflake, BigQuery)
-- ❌ A no-code or low-code ETL tool
-- ❌ A replacement for dlt, Polars, or Hamilton individually
-- ❌ A universal framework for every possible pipeline architecture
-
-It is a **focused convention** that makes medallion pipelines easier to build, extend, and maintain.
+| Example | Tables | What it demonstrates |
+| --- | --- | --- |
+| [`local_parquet_demo/`](examples/local_parquet_demo/) | 1 | Zero-credential quickstart: full Bronze → Silver → Gold with local Parquet files |
+| [`incremental_sql_demo/`](examples/incremental_sql_demo/) | 2 | Incremental append + merge from SQLite; delta load simulation |
+| [`ecommerce_analytics_demo/`](examples/ecommerce_analytics_demo/) | 3 | Multi-table joins, margin analysis, and monthly trends — most complete example |
 
 ---
 
-## ⚖️ Tradeoffs
+## When to Use OpenMedallion
+
+A great fit if you:
+
+- Want a **standard medallion project layout** without inventing one from scratch
+- Prefer **YAML-first config** with Python escape hatches for complex logic
+- Need **local-first development** that can scale to S3 with minimal changes
+- Want **full ownership** of your code and infrastructure
+- Are building on a **tight budget** without enterprise platform procurement
+
+**Not a fit if you need:**
+
+- A full enterprise data platform (Databricks, Snowflake, BigQuery)
+- A no-code or drag-and-drop ETL tool
+- A universal framework for every possible pipeline architecture
+
+---
+
+## Tradeoffs
 
 | You get | You accept |
 | --- | --- |
-| Lower cost (fully open-source) | More engineering responsibility than a managed platform |
-| Full control over code and infra | Initial setup and config learning curve |
+| Lower cost — fully open-source | More engineering responsibility than a managed platform |
+| Full control over code and infrastructure | Initial setup and config learning curve |
 | No vendor lock-in | You own the infrastructure decisions |
 | Transparent, inspectable pipeline | Not a drag-and-drop tool |
 
 ---
 
-## 🗺️ Roadmap
+## Roadmap
 
 | Item | Status |
 | --- | --- |
@@ -341,39 +340,25 @@ It is a **focused convention** that makes medallion pipelines easier to build, e
 
 ---
 
-## 📂 Examples
+## Contributing
 
-Three self-contained examples runnable with no cloud credentials. See [`examples/README.md`](examples/README.md) for a side-by-side comparison.
+Contributions are welcome. Good areas to contribute:
 
-| Example | Tables | What it shows |
-| --- | --- | --- |
-| [`local_parquet_demo/`](examples/local_parquet_demo/) | 1 | Zero-credential quickstart: full Bronze → Silver → Gold with Parquet files |
-| [`incremental_sql_demo/`](examples/incremental_sql_demo/) | 2 | Incremental append + merge with a SQLite source; delta load simulation |
-| [`ecommerce_analytics_demo/`](examples/ecommerce_analytics_demo/) | 3 | Multi-table joins, margin analysis, and monthly trends — most complete example |
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome. Good contributions include:
-
-- 🐛 Bug fixes
-- 📖 Documentation improvements
-- 🧪 Tests and coverage
-- 💡 New pipeline templates or examples
-- 🔌 New source or destination adapters
-- ⚙️ CLI enhancements
+- Bug fixes and edge-case handling
+- Documentation improvements and example additions
+- Tests and coverage
+- New pipeline templates
+- New source or destination adapters
+- CLI enhancements
 
 If you are interested in open-source data architecture, your help is appreciated.
 
 ---
 
-## 📄 License
+## License
 
 [MIT](LICENSE) — free to use, modify, and distribute.
 
 ---
 
-## ⭐ Star the Project
-
-If OpenMedallion looks useful to you, consider starring the repo — it helps others find it.
+> If OpenMedallion looks useful, consider starring the repo — it helps others find it.

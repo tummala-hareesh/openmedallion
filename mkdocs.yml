@@ -1,6 +1,6 @@
 site_name: OpenMedallion
 site_description: Declarative medallion pipelines — dlt + Polars + Hamilton
-repo_url: https://github.com/your-org/openmedallion
+repo_url: https://github.com/tummala-hareesh/openmedallion
 repo_name: openmedallion
 
 theme:
@@ -54,6 +54,8 @@ nav:
   - Concepts:
     - Architecture: concepts/architecture.md
     - UDF Guide: concepts/udf-guide.md
+  - Guides:
+    - Scheduling with Kestra: guides/kestra.md
   - Reference:
     - YAML Schema: reference/yaml-schema.md
     - CLI: reference/cli.md
@@ -66,3 +68,4 @@ nav:
 
 plugins:
   - search
+  - include-markdown
