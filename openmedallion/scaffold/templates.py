@@ -18,7 +18,7 @@ Creates the full project structure under <project>/ in the current directory:
     ├── data/                      ← gitignored pipeline outputs (bronze/silver/gold/export)
     ├── summary/
     │   └── summary.md             ← analysis summary + dashboard narrative
-    ├── kestra_flow.yml            ← Kestra orchestration flow (copy to flows/ to activate)
+    ├── kestra_flow.yml            ← Kestra orchestration flow (mount via docker-compose.yml)
     └── README.md                  ← project documentation template
 """
 import os
@@ -496,5 +496,5 @@ def init_project(
     print(f"   Backend   : {project}/backend/")
     print(f"   Frontend  : {project}/frontend/")
     print(f"   Summary   : {project}/summary/")
-    print(f"   Kestra    : copy {project}/kestra_flow.yml → flows/ to activate")
+    print(f"   Kestra    : add {project}/kestra_flow.yml to docker-compose.yml volumes to activate")
     print(f"   Run       : medallion run {project}")

@@ -131,7 +131,7 @@ demo/
 ├── frontend/              # dashboard files
 ├── data/                  # gitignored pipeline outputs
 ├── summary/               # analysis summary
-└── kestra_flow.yml        # Kestra orchestration flow — copy to flows/ to activate
+└── kestra_flow.yml        # Kestra orchestration flow — mount via docker-compose.yml
 ```
 
 ---

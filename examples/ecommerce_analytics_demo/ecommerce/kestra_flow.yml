@@ -1,0 +1,45 @@
+id: ecommerce
+namespace: openmedallion.projects
+description: "Bronze → Silver → Gold pipeline for ecommerce."
+
+tasks:
+
+  - id: run_bronze
+    type: io.kestra.plugin.scripts.python.Commands
+    warningOnStdErr: false
+    commands:
+      - medallion run ecommerce --layer bronze
+    workingDirectory: /app/examples/ecommerce_analytics_demo
+
+  - id: run_silver
+    type: io.kestra.plugin.scripts.python.Commands
+    warningOnStdErr: false
+    commands:
+      - medallion run ecommerce --layer silver
+    workingDirectory: /app/examples/ecommerce_analytics_demo
+    dependsOn:
+      - run_bronze
+
+  - id: run_gold
+    type: io.kestra.plugin.scripts.python.Commands
+    warningOnStdErr: false
+    commands:
+      - medallion run ecommerce --layer gold
+    workingDirectory: /app/examples/ecommerce_analytics_demo
+    dependsOn:
+      - run_silver
+
+  - id: inspect_results
+    type: io.kestra.plugin.scripts.python.Commands
+    warningOnStdErr: false
+    commands:
+      - python inspect.py
+    workingDirectory: /app/examples/ecommerce_analytics_demo
+    dependsOn:
+      - run_gold
+
+# Uncomment to enable a scheduled refresh:
+# triggers:
+#   - id: daily_refresh
+#     type: io.kestra.plugin.core.trigger.Schedule
+#     cron: "0 6 * * *"   # every day at 06:00 UTC

@@ -1,4 +1,4 @@
-.PHONY: help build test lint clean publish release
+.PHONY: help build test lint clean publish release kestra-up kestra-down kestra-logs
 
 # Accept v=2026.5.1 or v=v2026.5.1 — VER is always the bare number
 VER := $(patsubst v%,%,$(v))
@@ -13,6 +13,9 @@ help:
 	@echo "  make clean               Remove build artefacts"
 	@echo "  make publish v=2026.5.1  Bump version, commit, tag, push → triggers PyPI"
 	@echo "  make release v=2026.5.1  Tag + push only (version already bumped)"
+	@echo "  make kestra-up           Start Kestra + Postgres via Docker Compose"
+	@echo "  make kestra-down         Stop and remove Kestra containers"
+	@echo "  make kestra-logs         Tail Kestra container logs"
 	@echo ""
 
 # ── Dev ───────────────────────────────────────────────────────────────────────
@@ -50,3 +53,15 @@ release:
 	git tag v$(VER)
 	git push origin v$(VER)
 	@echo "✅  Pushed tag v$(VER) — publish workflow triggered."
+
+# ── Kestra ────────────────────────────────────────────────────────────────────
+
+kestra-up:
+	docker compose up -d
+	@echo "✅  Kestra UI → http://localhost:8080"
+
+kestra-down:
+	docker compose down
+
+kestra-logs:
+	docker compose logs -f kestra

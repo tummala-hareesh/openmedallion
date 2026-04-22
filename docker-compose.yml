@@ -1,0 +1,62 @@
+services:
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB:       kestra
+      POSTGRES_USER:     kestra
+      POSTGRES_PASSWORD: kestra
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kestra"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kestra:
+    image: kestra/kestra:latest
+    pull_policy: always
+    command: server standalone --worker-thread=128
+    user: "root"
+    environment:
+      KESTRA_CONFIGURATION: |
+        datasources:
+          postgres:
+            url: jdbc:postgresql://postgres:5432/kestra
+            driverClassName: org.postgresql.Driver
+            username: kestra
+            password: kestra
+        kestra:
+          repository:
+            type: postgres
+          storage:
+            type: local
+            local:
+              base-path: "/app/storage"
+          queue:
+            type: postgres
+          tasks:
+            tmp-dir:
+              path: /tmp/kestra-wd
+          url: http://localhost:8080/
+    volumes:
+      - kestra_storage:/app/storage
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp/kestra-wd:/tmp/kestra-wd
+      - ./examples:/app/examples   # all examples accessible inside Kestra
+      # Each project's kestra_flow.yml is mounted directly — no copying needed.
+      # Add a line here for every new project: ./<project>/kestra_flow.yml:/app/flows/<project>.yml
+      - ./examples/local_parquet_demo/demo/kestra_flow.yml:/app/flows/demo.yml
+      - ./examples/incremental_sql_demo/retail/kestra_flow.yml:/app/flows/retail.yml
+      - ./examples/ecommerce_analytics_demo/ecommerce/kestra_flow.yml:/app/flows/ecommerce.yml
+    ports:
+      - "8080:8080"   # Kestra UI
+      - "8081:8081"   # Kestra API
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  kestra_storage:

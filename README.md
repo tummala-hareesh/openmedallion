@@ -85,7 +85,7 @@ my_project/
 ├── frontend/                    # dashboard files (Tableau, Power BI, etc.)
 ├── data/                        # gitignored pipeline outputs
 ├── summary/                     # analysis write-ups
-├── kestra_flow.yml              # Kestra orchestration flow — copy to flows/ to activate
+├── kestra_flow.yml              # Kestra orchestration flow — mount via docker-compose.yml
 └── README.md                    # pre-filled project documentation template
 ```
 
@@ -245,14 +245,15 @@ make kestra-up
 # UI available at http://localhost:8080
 ```
 
-### 2. Activate a project flow
+### 2. Register a project flow
 
-```bash
-# copy the generated flow into the flows/ directory that Kestra watches
-cp my_project/kestra_flow.yml flows/my_project.yml
+Add one line to the `kestra` volumes section in `docker-compose.yml`:
+
+```yaml
+- ./my_project/kestra_flow.yml:/app/flows/my_project.yml
 ```
 
-Kestra auto-loads flows from `flows/` — no restart needed.
+Kestra picks up the file automatically on next `make kestra-up` — no copying needed.
 
 ### 3. Run the flow
 
