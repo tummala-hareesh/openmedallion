@@ -48,6 +48,8 @@ markdown_extensions:
   - tables
   - toc:
       permalink: true
+  - pymdownx.snippets:
+      base_path: ["."]
 
 nav:
   - Home: index.md
@@ -68,4 +70,3 @@ nav:
 
 plugins:
   - search
-  - include-markdown
