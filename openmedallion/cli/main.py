@@ -96,12 +96,16 @@ def cmd_run(args: argparse.Namespace) -> None:
     overrides: dict = {}
 
     if args.layer in ("silver", "gold"):
-        overrides["bronze"] = _discover_bronze_paths(cfg)
-        print("⏭️   Bronze   : skipped (using existing files)")
+        bronze_paths = _discover_bronze_paths(cfg)
+        if bronze_paths:
+            overrides["bronze"] = bronze_paths
+            print("⏭️   Bronze   : skipped (using existing files)")
 
     if args.layer == "gold":
-        overrides["silver"] = _discover_silver_paths(cfg)
-        print("⏭️   Silver   : skipped (using existing files)")
+        silver_paths = _discover_silver_paths(cfg)
+        if silver_paths:
+            overrides["silver"] = silver_paths
+            print("⏭️   Silver   : skipped (using existing files)")
 
     dr.execute(final_vars=final_vars, inputs=inputs, overrides=overrides)
     print(f"\n✅  {label} complete.")

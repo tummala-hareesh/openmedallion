@@ -1,6 +1,6 @@
 """config/validator.py — structural validation for a merged project config dict."""
 
-_VALID_SOURCE_TYPES    = {"sql_database", "rest_api", "filesystem"}
+_VALID_SOURCE_TYPES    = {"sql_database", "rest_api", "filesystem", "local_files"}
 _VALID_TRANSFORM_TYPES = {"rename", "cast", "drop", "udf"}
 
 
