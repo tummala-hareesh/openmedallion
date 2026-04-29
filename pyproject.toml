@@ -16,7 +16,7 @@ keywords = [
     "medallion",
     "pipeline",
     "polars",
-    "dlt",
+    "dlt[parquet]",
     "hamilton",
     "data lakehouse",
     "bronze silver gold",

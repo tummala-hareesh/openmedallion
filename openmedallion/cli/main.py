@@ -67,7 +67,10 @@ DEFAULT_LAYER = "gold"
 # ---------------------------------------------------------------------------
 
 def cmd_init(args: argparse.Namespace) -> None:
-    print(f"🏗️  Scaffolding project '{args.project}' ...")
+    _W = 58
+    print(f"\n{'━' * _W}")
+    print(f"  medallion  ·  init  ·  {args.project}")
+    print(f"{'━' * _W}\n")
     init_project(
         project=args.project,
         path_project=args.path_project,
@@ -77,10 +80,13 @@ def cmd_init(args: argparse.Namespace) -> None:
 
 def cmd_run(args: argparse.Namespace) -> None:
     final_vars, label = LAYERS[args.layer]
+    _W = 58
+
+    print(f"\n{'━' * _W}")
+    print(f"  medallion  ·  {args.project}  ·  {label}")
+    print(f"{'━' * _W}\n")
 
     cfg = load_project(args.project, args.projects)
-    print(f"🚀  Project  : {cfg['pipeline']['name']}")
-    print(f"📋  Layer    : {label}")
 
     builder = driver.Builder().with_modules(pipeline_nodes)
     if args.track:
@@ -99,16 +105,19 @@ def cmd_run(args: argparse.Namespace) -> None:
         bronze_paths = _discover_bronze_paths(cfg)
         if bronze_paths:
             overrides["bronze"] = bronze_paths
-            print("⏭️   Bronze   : skipped (using existing files)")
+            print("\n  ⏭️  bronze  skipped (existing files)")
 
     if args.layer == "gold":
         silver_paths = _discover_silver_paths(cfg)
         if silver_paths:
             overrides["silver"] = silver_paths
-            print("⏭️   Silver   : skipped (using existing files)")
+            print("  ⏭️  silver  skipped (existing files)")
 
     dr.execute(final_vars=final_vars, inputs=inputs, overrides=overrides)
-    print(f"\n✅  {label} complete.")
+
+    print(f"\n{'━' * _W}")
+    print(f"  ✅  {label} complete.")
+    print(f"{'━' * _W}\n")
 
 
 def cmd_dag(_: argparse.Namespace) -> None:
@@ -153,7 +162,7 @@ def cmd_status(args: argparse.Namespace) -> None:
 def _discover_bronze_paths(cfg: dict) -> dict[str, Path]:
     bronze_dir = Path(cfg["paths"]["bronze"])
     if not bronze_dir.exists():
-        print(f"⚠️   Bronze directory not found: {bronze_dir}")
+        print(f"⚠️   [bronze] directory not found: {bronze_dir}")
         return {}
     return {p.stem: p for p in bronze_dir.glob("*.parquet")}
 
@@ -161,7 +170,7 @@ def _discover_bronze_paths(cfg: dict) -> dict[str, Path]:
 def _discover_silver_paths(cfg: dict) -> dict[str, Path]:
     silver_dir = Path(cfg["paths"]["silver"])
     if not silver_dir.exists():
-        print(f"⚠️   Silver directory not found: {silver_dir}")
+        print(f"⚠️   [silver] directory not found: {silver_dir}")
         return {}
     return {p.name: p for p in silver_dir.glob("*.parquet")}
 

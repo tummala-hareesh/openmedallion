@@ -143,7 +143,7 @@ def load_project(project: str, projects_root: str | Path = "projects") -> dict:
         with open(layer_path) as f:
             _deep_merge(cfg, yaml.safe_load(f) or {})
 
-        print(f"📋  [config] loaded {layer:6s}: {layer_path}")
+        print(f"📋  [config] {layer:6s}: {layer_path}")
 
     _expand_env_vars(cfg)
     _validate_config(cfg)

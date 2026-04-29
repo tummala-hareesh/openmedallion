@@ -90,12 +90,14 @@ class BronzeLoader:
         src_type = self.src.get("type")
 
         if src_type == "local_files":
+            print(f"\n── Bronze {'─' * 49}")
             return self._local_files_load()
 
         if not src_type:
             # No source configured — discover any pre-existing bronze parquets.
             return self._discover_existing()
 
+        print(f"\n── Bronze {'─' * 49}")
         pipeline = self._build_pipeline()
         sources  = self._build_sources()
         info = pipeline.run(sources, loader_file_format="parquet")
@@ -120,7 +122,7 @@ class BronzeLoader:
                 raise ValueError(f"[bronze] unsupported local file format: {path}")
             out = storage.join(self.bronze_path, f"{name}.parquet")
             storage.write_parquet(df, out)
-            print(f"📥  [bronze] local   {path} → {out}  ({len(df)} rows)")
+            print(f"📥  [bronze] {path} → {out}  ({len(df)} rows)")
             results[name] = out
         return results
 

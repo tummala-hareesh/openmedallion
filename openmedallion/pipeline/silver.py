@@ -37,6 +37,7 @@ class SilverTransformer:
     def transform(self) -> dict[str, str]:
         """Run both silver phases and return paths for all written files."""
         storage.mkdir(self.silver_path)
+        print(f"\n── Silver {'─' * 49}")
         results = {}
 
         # phase 1: base tables
