@@ -1,14 +1,14 @@
 id: demo
-namespace: openmedallion.projects
-description: "Bronze → Silver → Gold pipeline for demo."
+namespace: openmedallion.examples
+description: "Bronze → Silver → Gold pipeline for the local_parquet_demo."
 
 tasks:
 
-  - id: run_bronze
+  - id: seed_bronze
     type: io.kestra.plugin.scripts.python.Commands
     warningOnStdErr: false
     commands:
-      - medallion run demo --layer bronze
+      - python seed.py
     workingDirectory: /app/examples/local_parquet_demo
 
   - id: run_silver
@@ -18,7 +18,7 @@ tasks:
       - medallion run demo --layer silver
     workingDirectory: /app/examples/local_parquet_demo
     dependsOn:
-      - run_bronze
+      - seed_bronze
 
   - id: run_gold
     type: io.kestra.plugin.scripts.python.Commands

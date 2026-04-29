@@ -1,0 +1,14 @@
+# Bronze layer is pre-seeded by seed.py for this demo.
+# Run `python seed.py` then `medallion run demo --layer silver` to start from bronze.
+#
+# To wire up a real source (e.g. filesystem CSV reader), uncomment and fill in:
+#
+# source:
+#   type: filesystem
+#   bucket_url: "./data/source"
+#   file_glob: "*.csv"
+#   format: csv
+#
+# destination:
+#   type: filesystem
+#   bucket_url: "demo/data/bronze"

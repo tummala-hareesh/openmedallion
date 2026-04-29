@@ -41,7 +41,6 @@ bronze_to_silver:
           columns:
             CUSTOMER_ID: customer_id
             NAME:        name
-            EMAIL:       email
             REGION:      region
             TIER:        tier
         - type: cast

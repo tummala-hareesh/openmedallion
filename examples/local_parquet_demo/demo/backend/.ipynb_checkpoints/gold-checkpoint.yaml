@@ -1,0 +1,17 @@
+silver_to_gold:
+  projects:
+    - name: demo
+      aggregations:
+        - source_file: orders.parquet
+          group_by: [customer_id, customer_name]
+          metrics:
+            - {column: order_id, agg: count, alias: total_orders}
+            - {column: amount,   agg: sum,   alias: total_spent}
+          output_file: orders_by_customer.parquet
+
+        - source_file: orders.parquet
+          group_by: [status]
+          metrics:
+            - {column: order_id, agg: count, alias: num_orders}
+            - {column: amount,   agg: sum,   alias: total_amount}
+          output_file: orders_by_status.parquet

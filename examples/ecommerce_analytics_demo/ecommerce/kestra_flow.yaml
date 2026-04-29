@@ -1,14 +1,14 @@
 id: ecommerce
-namespace: openmedallion.projects
-description: "Bronze → Silver → Gold pipeline for ecommerce."
+namespace: openmedallion.examples
+description: "Bronze → Silver → Gold pipeline for the ecommerce_analytics_demo."
 
 tasks:
 
-  - id: run_bronze
+  - id: seed_bronze
     type: io.kestra.plugin.scripts.python.Commands
     warningOnStdErr: false
     commands:
-      - medallion run ecommerce --layer bronze
+      - python seed.py
     workingDirectory: /app/examples/ecommerce_analytics_demo
 
   - id: run_silver
@@ -18,7 +18,7 @@ tasks:
       - medallion run ecommerce --layer silver
     workingDirectory: /app/examples/ecommerce_analytics_demo
     dependsOn:
-      - run_bronze
+      - seed_bronze
 
   - id: run_gold
     type: io.kestra.plugin.scripts.python.Commands

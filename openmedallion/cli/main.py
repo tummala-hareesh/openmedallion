@@ -68,7 +68,11 @@ DEFAULT_LAYER = "gold"
 
 def cmd_init(args: argparse.Namespace) -> None:
     print(f"🏗️  Scaffolding project '{args.project}' ...")
-    init_project(project=args.project)
+    init_project(
+        project=args.project,
+        path_project=args.path_project,
+        path_data=args.path_data or None,
+    )
 
 
 def cmd_run(args: argparse.Namespace) -> None:
@@ -172,7 +176,15 @@ def _build_parser() -> argparse.ArgumentParser:
 
     # init
     p_init = sub.add_parser("init", help="Scaffold a new project directory")
-    p_init.add_argument("project", help="Project name (creates <project>/ in current directory)")
+    p_init.add_argument("project", help="Project name (used as the folder name)")
+    p_init.add_argument(
+        "--path-project", default=".", metavar="PATH",
+        help="Directory where <project>/ folder is created (default: . — current directory)",
+    )
+    p_init.add_argument(
+        "--path-data", default="", metavar="PATH",
+        help="Base data directory written into main.yaml paths (default: 'data')",
+    )
 
     # run
     p_run = sub.add_parser("run", help="Execute the pipeline for a project")

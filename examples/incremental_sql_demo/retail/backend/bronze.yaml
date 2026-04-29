@@ -1,7 +1,7 @@
 source:
   type: sql_database
   dialect: sqlite
-  connection_string: "sqlite:///retail/data/retail.db"
+  connection_string: "sqlite:///data/retail.db"
 
   tables:
     # Append mode: only rows newer than the last cursor value are loaded.
@@ -21,4 +21,4 @@ source:
 
 destination:
   type: filesystem
-  bucket_url: "retail/data/bronze"
+  bucket_url: "data/bronze"

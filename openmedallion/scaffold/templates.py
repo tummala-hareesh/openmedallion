@@ -1,8 +1,8 @@
 """scaffold/templates.py — scaffold a new project folder with config, UDF stubs, and docs.
 
-Creates the full project structure under <project>/ in the current directory:
+Creates the full project structure under <path_project>/<project>/:
 
-    <project>/
+    <path_project>/<project>/
     ├── main.yaml                  ← pipeline entry point (required by load_project)
     ├── backend/
     │   ├── bronze.yaml            ← source connection, destination, tables, incremental
@@ -14,19 +14,23 @@ Creates the full project structure under <project>/ in the current directory:
     │       │   └── derived.py     ← derived silver table UDF stub
     │       └── gold/
     │           └── transforms.py  ← gold pre-aggregation UDF stub
-    ├── frontend/                  ← BI/dashboard artefacts (Tableau, Power BI, etc.)
-    ├── data/                      ← gitignored pipeline outputs (bronze/silver/gold/export)
-    ├── summary/
-    │   └── summary.md             ← analysis summary + dashboard narrative
-    ├── kestra_flow.yml            ← Kestra orchestration flow (mount via docker-compose.yml)
+    ├── frontend/
+    │   ├── tableau/               ← Tableau workbook files (.twb, .twbx)
+    │   └── powerbi/               ← Power BI files (.pbix)
+    ├── ipynb/
+    │   └── walkthrough.ipynb      ← step-by-step notebook for the project
+    ├── kestra_flow.yaml           ← Kestra orchestration flow
     └── README.md                  ← project documentation template
+
+Data outputs go to <path_data>/ (outside the project folder, gitignored separately).
 """
+import json
 import os
 import yaml
 from pathlib import Path
 
 
-def _main_template(project: str) -> dict:
+def _main_template(project: str, path_data: str = "data") -> dict:
     return {
         "pipeline": {"name": project},
         "includes": {
@@ -35,10 +39,10 @@ def _main_template(project: str) -> dict:
             "gold":   "backend/gold.yaml",
         },
         "paths": {
-            "bronze": f"{project}/data/bronze",
-            "silver": f"{project}/data/silver",
-            "gold":   f"{project}/data/gold",
-            "export": f"{project}/data/export",
+            "bronze": f"{path_data}/bronze",
+            "silver": f"{path_data}/silver",
+            "gold":   f"{path_data}/gold",
+            "export": f"{path_data}/export",
         },
         "bi_export": {
             "enabled": True,
@@ -57,7 +61,7 @@ def _bronze_template() -> dict:
                 "mode": "append", "cursor_column": "UPDATED_AT",
                 "initial_value": "2024-01-01T00:00:00"}}],
         },
-        "destination": {"type": "filesystem", "bucket_url": "./data/bronze"},
+        "destination": {"type": "filesystem", "bucket_url": "data/bronze"},
     }
 
 
@@ -150,7 +154,7 @@ def prepare_my_table(df: pl.DataFrame, silver_dir) -> pl.DataFrame:
 '''
 
 
-def _readme_template(project: str) -> str:
+def _readme_template(project: str, path_data: str = "data") -> str:
     return f"""# {project}
 
 ## Overview
@@ -203,11 +207,18 @@ medallion --help
 │   └── udf/           ← custom Python transform functions
 │       ├── silver/
 │       └── gold/
-├── frontend/          ← dashboard files (.pbix, .twb, etc.)
-├── data/              ← pipeline outputs — gitignored
-├── summary/
-│   └── summary.md     ← analysis narrative
-└── README.md          ← this file
+├── frontend/
+│   ├── tableau/       ← Tableau workbook files
+│   └── powerbi/       ← Power BI files
+├── ipynb/
+│   └── walkthrough.ipynb  ← end-to-end pipeline walkthrough
+└── kestra_flow.yaml   ← Kestra orchestration (mount in docker-compose.yml)
+
+{path_data}/           ← pipeline outputs (outside project folder, gitignored)
+├── bronze/
+├── silver/
+├── gold/
+└── export/
 ```
 
 ---
@@ -218,23 +229,23 @@ medallion --help
 [Source DB / API]
        │
        ▼  bronze  (dlt)
-[Raw Parquet — {project}/data/bronze/]
+[Raw Parquet — {path_data}/bronze/]
        │
        ▼  silver  (Polars + UDFs)
-[Cleaned Parquet — {project}/data/silver/]
+[Cleaned Parquet — {path_data}/silver/]
        │
        ▼  gold  (Polars group_by + UDFs)
-[Aggregated Parquet — {project}/data/gold/]
+[Aggregated Parquet — {path_data}/gold/]
        │
        ▼  export
-[CSV + Parquet — {project}/data/export/]  →  [BI Tool]
+[CSV + Parquet — {path_data}/export/]  →  [BI Tool]
 ```
 
 ---
 
 ## How to Refresh Backend Data
 
-Run the full pipeline from the repo root:
+Run the full pipeline from the example root:
 
 ```bash
 medallion run {project}
@@ -248,11 +259,7 @@ medallion run {project} --layer silver   # transform only
 medallion run {project} --layer gold     # aggregate only
 ```
 
-Inspect the Hamilton DAG before running:
-
-```bash
-medallion dag {project}
-```
+Or open `ipynb/walkthrough.ipynb` in Jupyter for a step-by-step guided run.
 
 ---
 
@@ -260,11 +267,9 @@ medallion dag {project}
 
 <!-- Choose whichever applies and delete the rest. -->
 
-**Power BI:** Open `frontend/{project}.pbix` → Home → Refresh → Publish to service.
+**Power BI:** Open `frontend/powerbi/{project}.pbix` → Home → Refresh → Publish to service.
 
-**Tableau:** Open `frontend/{project}.twb` → Data → Refresh All Extracts → Publish to Tableau Server.
-
-**Automated refresh:** <!-- If the BI tool is connected live, no manual step is needed. Describe the scheduled refresh here. -->
+**Tableau:** Open `frontend/tableau/{project}.twb` → Data → Refresh All Extracts → Publish to Tableau Server.
 
 ---
 
@@ -272,8 +277,7 @@ medallion dag {project}
 
 <!-- Insert screenshots here.
 Example:
-![Overview Page](summary/screenshots/overview.png)
-![Trend Page](summary/screenshots/trends.png)
+![Overview Page](frontend/screenshots/overview.png)
 -->
 
 *Screenshots pending first dashboard publish.*
@@ -285,7 +289,6 @@ Example:
 | Resource | Link |
 |---|---|
 | Source system docs | <!-- URL --> |
-| Data warehouse schema | <!-- URL --> |
 | openmedallion docs | https://github.com/tummala-hareesh/openmedallion |
 | Project ticket / epic | <!-- URL --> |
 
@@ -307,7 +310,7 @@ Example:
 """
 
 
-def _kestra_flow_template(project: str) -> str:
+def _kestra_flow_template(project: str, working_dir: str = "/app") -> str:
     return f"""\
 id: {project}
 namespace: openmedallion.projects
@@ -320,14 +323,14 @@ tasks:
     warningOnStdErr: false
     commands:
       - medallion run {project} --layer bronze
-    workingDirectory: /app/{project}
+    workingDirectory: {working_dir}
 
   - id: run_silver
     type: io.kestra.plugin.scripts.python.Commands
     warningOnStdErr: false
     commands:
       - medallion run {project} --layer silver
-    workingDirectory: /app/{project}
+    workingDirectory: {working_dir}
     dependsOn:
       - run_bronze
 
@@ -336,7 +339,7 @@ tasks:
     warningOnStdErr: false
     commands:
       - medallion run {project} --layer gold
-    workingDirectory: /app/{project}
+    workingDirectory: {working_dir}
     dependsOn:
       - run_silver
 
@@ -348,76 +351,142 @@ tasks:
 """
 
 
-def _summary_template(project: str) -> str:
-    return f"""# {project} — Analysis Summary
+def _walkthrough_notebook(project: str, path_data: str = "data") -> str:
+    """Return a generic Jupyter notebook JSON string for ipynb/walkthrough.ipynb."""
 
-## Data Summary
+    def code(source_lines: list[str]) -> dict:
+        return {
+            "cell_type": "code",
+            "execution_count": None,
+            "metadata": {},
+            "outputs": [],
+            "source": source_lines,
+        }
 
-<!-- 1-2 paragraphs describing the dataset: what it contains, its time range,
-     row counts, key dimensions, and any data quality notes. -->
+    def md(source_lines: list[str]) -> dict:
+        return {
+            "cell_type": "markdown",
+            "metadata": {},
+            "source": source_lines,
+        }
 
-The `{project}` dataset covers ... [time range] ... containing approximately
-[N] records across [M] tables sourced from [system name].
+    cells = [
+        md([
+            f"# {project} — Pipeline Walkthrough\n",
+            "\n",
+            "Run cells top to bottom to execute the full **Bronze → Silver → Gold** pipeline.\n",
+            "\n",
+            "| Layer | What happens |\n",
+            "|-------|--------------|\n",
+            "| Bronze | Raw data is ingested and written as Parquet |\n",
+            "| Silver | Renames, casts, UDFs produce clean Parquet files |\n",
+            "| Gold | Group-by aggregations produce BI-ready summaries |\n",
+        ]),
+        md(["## Setup\n", "\n", "Navigate to the example root (parent of this project folder).\n"]),
+        code([
+            "import os, sys\n",
+            "from pathlib import Path\n",
+            "\n",
+            "# Two levels up: ipynb/ → project/ → example_root/\n",
+            "example_root = Path(os.getcwd()).parent.parent\n",
+            "os.chdir(example_root)\n",
+            "print(f'Working directory: {os.getcwd()}')",
+        ]),
+        md([
+            "## Step 1 — Bronze\n",
+            "\n",
+            "Seed the bronze layer from your source data.  \n",
+            "Uncomment the option that matches your source:\n",
+        ]),
+        code([
+            "# Option A: filesystem demo (runs seed.py in the example root)\n",
+            "# exec(open('seed.py').read())\n",
+            "#\n",
+            "# Option B: SQL demo (creates the database)\n",
+            "# exec(open('setup_db.py').read())\n",
+            "#\n",
+            "# Option C: dlt-managed bronze source\n",
+            f"# !medallion run {project} --layer bronze",
+        ]),
+        md([
+            "## Step 2 — Silver\n",
+            "\n",
+            "Apply rename, cast, and UDF transforms declared in `backend/silver.yaml`.\n",
+        ]),
+        code([f"!medallion run {project} --layer silver"]),
+        code([
+            "import polars as pl\n",
+            "\n",
+            f"silver_dir = Path('{path_data}/silver')\n",
+            "for f in sorted(silver_dir.glob('*.parquet')):\n",
+            "    print(f'\\n── {{f.name}} ──')\n",
+            "    print(pl.read_parquet(f).head(5))",
+        ]),
+        md([
+            "## Step 3 — Gold\n",
+            "\n",
+            "Run group-by aggregations declared in `backend/gold.yaml`.\n",
+        ]),
+        code([f"!medallion run {project} --layer gold"]),
+        code([
+            f"gold_dir = Path('{path_data}/gold/{project}')\n",
+            "for f in sorted(gold_dir.glob('*.parquet')):\n",
+            "    print(f'\\n── {{f.name}} ──')\n",
+            "    print(pl.read_parquet(f))",
+        ]),
+    ]
 
-Key dimensions include: ...
+    nb = {
+        "nbformat": 4,
+        "nbformat_minor": 5,
+        "metadata": {
+            "kernelspec": {
+                "display_name": "py312_oma",
+                "language": "python",
+                "name": "venv",
+            },
+            "language_info": {
+                "name": "python",
+                "version": "3.12.0",
+            },
+        },
+        "cells": cells,
+    }
 
-Notable data quality observations: ...
-
----
-
-## Dashboard Summary
-
-<!-- 1-2 paragraphs describing the dashboard: what questions it answers,
-     which metrics are highlighted, and how stakeholders use it. -->
-
-The dashboard provides ... [business teams] ... with visibility into ...
-The primary metrics tracked are ...
-
-Stakeholders use this dashboard to ...
-
----
-
-## Key Findings
-
-<!-- Bullet list of the top 3-5 insights from the latest analysis run. -->
-
-- ...
-- ...
-- ...
-
----
-
-## Open Questions / Next Steps
-
-<!-- Items requiring follow-up or future analysis. -->
-
-- [ ] ...
-"""
+    return json.dumps(nb, indent=1, ensure_ascii=False)
 
 
 def init_project(
     project: str,
-    projects_root: str | Path = ".",
+    path_project: str | Path = ".",
+    path_data: str | None = None,
 ) -> None:
     """Scaffold a new project directory with full structure.
-
-    Creates <project>/ under ``projects_root`` (defaults to the current directory):
-
-      <project>/main.yaml
-      <project>/backend/{bronze,silver,gold}.yaml + udf stubs
-      <project>/frontend/
-      <project>/data/          (gitignored)
-      <project>/summary/       (summary.md)
-      <project>/kestra_flow.yml
-      <project>/README.md
 
     Args:
         project: Name of the new project — used as the folder name and in
             generated config templates.
-        projects_root: Parent directory where the project folder is created.
-            Defaults to ``"."`` (current working directory).
+        path_project: Parent directory where ``<project>/`` folder is created.
+            Defaults to the current working directory.
+        path_data: Base path (relative to ``path_project``) where pipeline
+            outputs (bronze/silver/gold/export) are written.  Defaults to
+            ``"data"``, placing outputs at ``<path_project>/data/``.
+
+    Creates::
+
+        <path_project>/<project>/
+            main.yaml
+            README.md
+            kestra_flow.yaml
+            backend/{bronze,silver,gold}.yaml + udf stubs
+            frontend/tableau/
+            frontend/powerbi/
+            ipynb/walkthrough.ipynb
     """
-    project_dir = Path(projects_root) / project
+    if path_data is None:
+        path_data = "data"
+
+    project_dir = Path(path_project) / project
     backend_dir = project_dir / "backend"
     udf_silver  = backend_dir / "udf" / "silver"
     udf_gold    = backend_dir / "udf" / "gold"
@@ -431,7 +500,7 @@ def init_project(
     project_dir.mkdir(parents=True)
     main_path = project_dir / "main.yaml"
     with open(main_path, "w") as f:
-        yaml.dump(_main_template(project), f, default_flow_style=False, sort_keys=False)
+        yaml.dump(_main_template(project, path_data), f, default_flow_style=False, sort_keys=False)
     print(f"🏗️   [init] created {main_path}")
 
     # --- backend/ layer YAMLs ---
@@ -460,41 +529,37 @@ def init_project(
             f.write(content)
         print(f"🏗️   [init] created {path}")
 
-    # --- frontend/ ---
-    fe_dir = project_dir / "frontend"
-    fe_dir.mkdir()
-    (fe_dir / ".gitkeep").touch()
-    print(f"🏗️   [init] created {fe_dir}/")
+    # --- frontend/ with BI subdirs ---
+    for bi_dir in [project_dir / "frontend" / "tableau",
+                   project_dir / "frontend" / "powerbi"]:
+        bi_dir.mkdir(parents=True)
+        (bi_dir / ".gitkeep").touch()
+    print(f"🏗️   [init] created {project_dir / 'frontend'}/")
 
-    # --- data/ (gitignored) ---
-    data_dir = project_dir / "data"
-    data_dir.mkdir()
-    with open(data_dir / ".gitignore", "w") as f:
-        f.write("# Pipeline outputs — never commit data\n*\n!.gitignore\n")
-    print(f"🏗️   [init] created {data_dir}/ (gitignored)")
-
-    # --- summary/ ---
-    sum_dir = project_dir / "summary"
-    sum_dir.mkdir()
-    with open(sum_dir / "summary.md", "w") as f:
-        f.write(_summary_template(project))
-    print(f"🏗️   [init] created {sum_dir}/")
+    # --- ipynb/ walkthrough notebook ---
+    ipynb_dir = project_dir / "ipynb"
+    ipynb_dir.mkdir()
+    nb_path = ipynb_dir / "walkthrough.ipynb"
+    with open(nb_path, "w", encoding="utf-8") as f:
+        f.write(_walkthrough_notebook(project, path_data))
+    print(f"🏗️   [init] created {nb_path}")
 
     # --- README.md ---
     readme_path = project_dir / "README.md"
     with open(readme_path, "w") as f:
-        f.write(_readme_template(project))
+        f.write(_readme_template(project, path_data))
     print(f"🏗️   [init] created {readme_path}")
 
-    # --- kestra_flow.yml ---
-    kestra_path = project_dir / "kestra_flow.yml"
+    # --- kestra_flow.yaml ---
+    kestra_path = project_dir / "kestra_flow.yaml"
     with open(kestra_path, "w") as f:
         f.write(_kestra_flow_template(project))
     print(f"🏗️   [init] created {kestra_path}")
 
-    print(f"\n✅  Project '{project}' initialised.")
+    print(f"\n✅  Project '{project}' initialised at {project_dir}/")
     print(f"   Backend   : {project}/backend/")
-    print(f"   Frontend  : {project}/frontend/")
-    print(f"   Summary   : {project}/summary/")
-    print(f"   Kestra    : add {project}/kestra_flow.yml to docker-compose.yml volumes to activate")
+    print(f"   Frontend  : {project}/frontend/tableau|powerbi/")
+    print(f"   Notebook  : {project}/ipynb/walkthrough.ipynb")
+    print(f"   Data      : {path_data}/  (bronze · silver · gold · export)")
+    print(f"   Kestra    : add {project}/kestra_flow.yaml to your Kestra flows volume")
     print(f"   Run       : medallion run {project}")

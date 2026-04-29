@@ -7,7 +7,7 @@ includes:
   gold:   backend/gold.yaml
 
 paths:
-  bronze: "ecommerce/data/bronze"
-  silver: "ecommerce/data/silver"
-  gold:   "ecommerce/data/gold"
-  export: "ecommerce/data/export"
+  bronze: "data/bronze"
+  silver: "data/silver"
+  gold:   "data/gold"
+  export: "data/export"
