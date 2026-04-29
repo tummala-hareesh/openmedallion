@@ -21,8 +21,8 @@ source:
 
 destination:
   type: filesystem
-  # dlt appends /<dataset_name>/<table>/ to bucket_url automatically.
+  # bucket_url is the root; dlt appends /<dataset_name>/<table>/ automatically.
   # dataset_name is hardcoded as "bronze" in bronze.py, so shards land at:
   #   data/bronze/<table>/*.parquet
-  # bronze.py merges shards into data/bronze/<table>.parquet (paths.bronze = "data/bronze")
+  # bronze.py then merges these into data/<table>.parquet (paths.bronze = "data")
   bucket_url: "data"

@@ -52,7 +52,7 @@ class BronzeLoader:
         """Run the dlt pipeline and return a path for every loaded table."""
         pipeline = self._build_pipeline()
         sources  = self._build_sources()
-        info = pipeline.run(sources, loader_file_format="parquet")
+        info = pipeline.run(sources)
         print(f"📥  [bronze] dlt pipeline complete: {info}")
         return self._collect_parquets()
 
@@ -152,11 +152,7 @@ class BronzeLoader:
             table_names = [self.src["resource"]]
 
         for name in table_names:
-            _bp = self.bronze_path.rstrip("/").rstrip("\\")
-            if _bp.split("/")[-1] == "bronze" or _bp.split("\\")[-1] == "bronze":
-                shard_dir = storage.join(self.bronze_path, name)
-            else:
-                shard_dir = storage.join(self.bronze_path, "bronze", name)
+            shard_dir = storage.join(self.bronze_path, "bronze", name)
             shards    = storage.ls_parquets(shard_dir)
             if not shards:
                 print(f"⚠️   [bronze] no parquet shards found for '{name}' at {shard_dir}")

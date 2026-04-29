@@ -117,16 +117,16 @@ Or open `ipynb/walkthrough.ipynb` for a guided two-run comparison.
 
 ## How Incremental State Is Tracked
 
-dlt writes cursor state alongside the bronze Parquet shards:
+dlt writes cursor state alongside the raw Parquet shards:
 
 ```text
-data/bronze/bronze/orders/_dlt_loads/
+data/bronze/orders/_dlt_loads/
 ```
 
-Delete this directory to force a full reload:
+Delete the shard directory to force a full reload on the next bronze run:
 
 ```bash
-rm -rf data/bronze/bronze/orders/_dlt_loads/
+rm -rf data/bronze/
 ```
 
 ---
@@ -149,11 +149,25 @@ retail/                            ← project root
     └── powerbi/                   ← Power BI files
 
 data/                              ← pipeline outputs (gitignored, outside project folder)
-├── retail.db                      ← SQLite database
-├── bronze/                        ← raw Parquet + dlt cursor state
+├── retail.db                      ← SQLite database (created by setup_db.py)
+├── bronze/
+│   ├── orders/                    ← dlt raw shards (append mode)
+│   ├── customers/                 ← dlt raw shards (merge mode)
+│   ├── orders.parquet             ← merged by bronze.py  ← silver reads this
+│   └── customers.parquet          ← merged by bronze.py  ← silver reads this
 ├── silver/                        ← cast Parquet files
-└── gold/retail/                   ← customer_summary + pipeline_totals
+│   ├── orders.parquet
+│   └── customers.parquet
+└── gold/retail/                   ← aggregated outputs
+    ├── customer_summary.parquet
+    └── pipeline_totals.parquet
 ```
+
+> **How paths align:** `bucket_url = "data"` in `bronze.yaml`; dlt appends `/{dataset_name}/{table}/`
+> with `dataset_name = "bronze"`, so shards land at `data/bronze/{table}/`.
+> `paths.bronze = "data/bronze"` in `main.yaml`; bronze.py merges shards into
+> `data/bronze/{table}.parquet`, which silver reads directly.
+> Delete `data/bronze/` to force a full reload on the next bronze run.
 
 ---
 

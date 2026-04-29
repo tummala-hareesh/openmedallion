@@ -1,0 +1,15 @@
+pipeline:
+  name: retail
+
+includes:
+  bronze: backend/bronze.yaml
+  silver: backend/silver.yaml
+  gold:   backend/gold.yaml
+
+paths:
+  # bronze_path = "data" so dlt shards land at data/bronze/{table}/
+  # and _collect_parquets merges them to data/{table}.parquet (no double-nesting)
+  bronze: "data/bronze"
+  silver: "data/silver"
+  gold:   "data/gold"
+  export: "data/export"
