@@ -16,7 +16,8 @@ Creates the full project structure under <path_project>/<project>/:
     │           └── transforms.py  ← gold pre-aggregation UDF stub
     ├── frontend/
     │   ├── tableau/               ← Tableau workbook files (.twb, .twbx)
-    │   └── powerbi/               ← Power BI files (.pbix)
+    │   ├── powerbi/               ← Power BI files (.pbix)
+    │   └── streamlit/             ← Streamlit dashboard (app.py + dashboard.yaml)
     ├── ipynb/
     │   └── walkthrough.ipynb      ← step-by-step notebook for the project
     ├── kestra_flow.yaml           ← Kestra orchestration flow
@@ -529,7 +530,7 @@ def init_project(
             f.write(content)
         print(f"🏗️   [init] created {path}")
 
-    # --- frontend/ with BI subdirs ---
+    # --- frontend/ ---
     for bi_dir in [project_dir / "frontend" / "tableau",
                    project_dir / "frontend" / "powerbi"]:
         bi_dir.mkdir(parents=True)

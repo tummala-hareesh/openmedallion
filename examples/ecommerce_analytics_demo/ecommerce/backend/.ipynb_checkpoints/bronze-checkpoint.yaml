@@ -1,3 +1,0 @@
-# Bronze is pre-seeded by seed.py — no dlt source needed for this demo.
-# Run:  python seed.py
-# Then: medallion run ecommerce --layer silver

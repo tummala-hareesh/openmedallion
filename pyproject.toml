@@ -16,7 +16,7 @@ keywords = [
     "medallion",
     "pipeline",
     "polars",
-    "dlt[parquet]",
+    "dlt",
     "hamilton",
     "data lakehouse",
     "bronze silver gold",
@@ -36,7 +36,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
-    "dlt[filesystem,sql_database]>=1.4",
+    "dlt[filesystem,sql_database,parquet]>=1.4",
     "sf-hamilton>=1.82",
     "polars>=1.0",
     "pyyaml>=6.0",
