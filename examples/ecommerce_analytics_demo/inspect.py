@@ -13,13 +13,14 @@ def banner(title: str) -> None:
     print("━" * 62)
 
 
-gold = Path("ecommerce/data/gold/ecommerce")
+gold = Path("data/gold/ecommerce")
 
 if not gold.exists():
     print("Gold directory not found. Run the pipeline first:")
     print("  python seed.py")
     print("  medallion run ecommerce --layer silver")
     print("  medallion run ecommerce --layer gold")
+    print("  (or open ecommerce/ipynb/walkthrough.ipynb)")
     sys.exit(1)
 
 banner("📊  REVENUE BY CATEGORY")

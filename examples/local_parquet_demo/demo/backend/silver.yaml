@@ -10,7 +10,6 @@ bronze_to_silver:
             CUSTOMER_NAME: customer_name
             AMOUNT:        amount
             STATUS:        status
-            CREATED_AT:    created_at
 
         - type: cast
           columns:

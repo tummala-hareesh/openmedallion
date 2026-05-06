@@ -1,0 +1,39 @@
+id: retail
+namespace: openmedallion.examples
+description: "Incremental Bronze → Silver → Gold pipeline for the incremental_sql_demo."
+
+tasks:
+
+  - id: setup_database
+    type: io.kestra.plugin.scripts.python.Commands
+    warningOnStdErr: false
+    commands:
+      - python setup_db.py
+    workingDirectory: /app/examples/incremental_sql_demo
+
+  - id: run_bronze
+    type: io.kestra.plugin.scripts.python.Commands
+    warningOnStdErr: false
+    commands:
+      - medallion run retail --layer bronze
+    workingDirectory: /app/examples/incremental_sql_demo
+    dependsOn:
+      - setup_database
+
+  - id: run_silver_gold
+    type: io.kestra.plugin.scripts.python.Commands
+    warningOnStdErr: false
+    commands:
+      - medallion run retail
+    workingDirectory: /app/examples/incremental_sql_demo
+    dependsOn:
+      - run_bronze
+
+# On subsequent runs, comment out setup_database and just run bronze + silver/gold:
+# The cursor state in data/bronze/bronze/orders/_dlt_loads/ ensures only new rows are loaded.
+
+# Uncomment to enable a scheduled refresh:
+# triggers:
+#   - id: daily_refresh
+#     type: io.kestra.plugin.core.trigger.Schedule
+#     cron: "0 6 * * *"   # every day at 06:00 UTC

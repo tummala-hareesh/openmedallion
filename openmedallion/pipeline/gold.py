@@ -43,6 +43,7 @@ class GoldAggregator:
     def aggregate(self) -> dict[str, list[str]]:
         """Run all gold aggregations and return the paths written."""
         results = {}
+        print(f"\n── Gold {'─' * 51}")
         for project in self.projects:
             name    = project["name"]
             out_dir = storage.join(self.gold_root, name)
@@ -59,7 +60,7 @@ class GoldAggregator:
 
                 out = storage.join(out_dir, agg["output_file"])
                 storage.write_parquet(df, out)
-                print(f"📊  [gold/{name}] {len(df)} rows → {agg['output_file']}")
+                print(f"📊  [gold/{name}] {agg['output_file']}  ({len(df)} rows)")
                 paths.append(out)
 
             results[name] = paths

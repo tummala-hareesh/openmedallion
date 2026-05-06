@@ -9,7 +9,7 @@ sys.stdout.reconfigure(encoding="utf-8")
 import sqlite3
 from pathlib import Path
 
-DB = Path("retail/data/retail.db")
+DB = Path("data/retail.db")
 DB.parent.mkdir(parents=True, exist_ok=True)
 
 con = sqlite3.connect(DB)
@@ -59,3 +59,5 @@ print()
 print("Then simulate a delta load:")
 print("  python add_delta.py")
 print("  medallion run retail --layer bronze   # only new rows loaded")
+print()
+print("Or open retail/ipynb/walkthrough.ipynb for a guided run.")

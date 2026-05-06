@@ -1,3 +1,9 @@
-# Bronze is pre-seeded by seed.py — no dlt source needed for this demo.
-# Run:  python seed.py
-# Then: medallion run ecommerce --layer silver
+source:
+  type: local_files
+  tables:
+    - name: orders
+      path: "data/source/orders.csv"
+    - name: products
+      path: "data/source/products.csv"
+    - name: customers
+      path: "data/source/customers.csv"

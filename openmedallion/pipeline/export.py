@@ -22,6 +22,7 @@ class BIExporter:
         if not self.enabled:
             return
 
+        print(f"\n── Export {'─' * 49}")
         for project in self.projects:
             name    = project["name"]
             src_dir = storage.join(self.gold_root,   name)

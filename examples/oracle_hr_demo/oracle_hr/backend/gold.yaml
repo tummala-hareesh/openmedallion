@@ -1,0 +1,33 @@
+silver_to_gold:
+  projects:
+    - name: oracle_hr
+      aggregations:
+        # ── Headcount & payroll per department ────────────────────────────────
+        - source_file: employees_enriched.parquet
+          group_by: [department_name]
+          metrics:
+            - {column: employee_id, agg: count, alias: headcount}
+            - {column: salary,      agg: sum,   alias: total_payroll}
+            - {column: salary,      agg: mean,  alias: avg_salary}
+          output_file: headcount_by_department.parquet
+
+        # ── Salary range utilisation per job title ────────────────────────────
+        - source_file: employees_enriched.parquet
+          group_by: [job_title]
+          metrics:
+            - {column: employee_id, agg: count, alias: employee_count}
+            - {column: salary,      agg: min,   alias: min_actual_salary}
+            - {column: salary,      agg: max,   alias: max_actual_salary}
+            - {column: salary,      agg: mean,  alias: avg_actual_salary}
+          output_file: salary_by_job.parquet
+
+        # ── Salary as % of job-band maximum — pre-agg UDF adds the column ─────
+        - source_file: employees_enriched.parquet
+          pre_agg_udf:
+            file: oracle_hr/backend/udf/gold/metrics.py
+            function: add_salary_metrics
+          group_by: [department_name, job_title]
+          metrics:
+            - {column: salary_pct_of_max, agg: mean, alias: avg_salary_pct_of_max}
+            - {column: employee_id,       agg: count, alias: headcount}
+          output_file: salary_utilization.parquet

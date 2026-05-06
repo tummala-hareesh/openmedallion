@@ -101,6 +101,58 @@ python inspect.py            # prints all 3 gold tables with totals
 
 ---
 
+---
+
+## 4. 🏢 [oracle_hr_demo](oracle_hr_demo/)
+
+**Best for:** anyone connecting to a relational database (Oracle, Postgres, MySQL) who needs to filter rows at the source before they enter the lake.
+
+```mermaid
+flowchart LR
+    subgraph oracle["Oracle DB (or SQLite)"]
+        E["EMPLOYEES"] & D["DEPARTMENTS"] & J["JOBS"]
+    end
+    subgraph bronze["🟤 Bronze\n(SQL filter at source)"]
+        BE["employees\n12 / 15 rows"]
+        BD["departments"]
+        BJ["jobs"]
+    end
+    subgraph silver["⚪ Silver"]
+        EN["employees_enriched\n(3-table join)"]
+    end
+    subgraph gold["🟡 Gold"]
+        G1["headcount_by_department"]
+        G2["salary_by_job"]
+        G3["salary_utilization\n(pre-agg UDF)"]
+    end
+
+    E -->|"filter: dept + status"| BE
+    D --> BD
+    J --> BJ
+    BE & BD & BJ -->|"udf: build_employees_enriched"| EN
+    EN --> G1 & G2
+    EN -->|"pre_agg_udf: add_salary_metrics"| G3
+```
+
+| What it shows | Details |
+| --- | --- |
+| Bronze SQL filter | `filter:` field pushes `WHERE` clause to dlt — rows excluded at source |
+| Incremental append | `employees` loaded with `cursor_column: hire_date` |
+| Incremental merge | `departments` and `jobs` upserted on primary key |
+| Silver derived table | UDF joins 3 tables into one enriched Parquet |
+| Gold pre-agg UDF | Computes `salary_pct_of_max` before `group_by` |
+| Real Oracle swap | Set `ORACLE_CONN_STR` env var — no code changes |
+
+```bash
+cd examples/oracle_hr_demo
+python setup_db.py
+medallion run oracle_hr --projects . --layer bronze
+medallion run oracle_hr --projects . --layer silver
+medallion run oracle_hr --projects .
+```
+
+---
+
 ## Progression
 
 | Example | Tables | Bronze | Silver UDF | Gold UDF | Incremental |
@@ -108,3 +160,4 @@ python inspect.py            # prints all 3 gold tables with totals
 | local_parquet_demo | 1 | pre-seeded | inline flag | — | — |
 | incremental_sql_demo | 2 | dlt + SQLite | cast only | — | append + merge |
 | ecommerce_analytics_demo | 3 | pre-seeded | derived join | pre_agg_udf | — |
+| oracle_hr_demo | 3 | dlt + SQL filter | derived join | pre_agg_udf | append + merge |

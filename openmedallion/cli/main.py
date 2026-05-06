@@ -67,16 +67,26 @@ DEFAULT_LAYER = "gold"
 # ---------------------------------------------------------------------------
 
 def cmd_init(args: argparse.Namespace) -> None:
-    print(f"🏗️  Scaffolding project '{args.project}' ...")
-    init_project(project=args.project)
+    _W = 58
+    print(f"\n{'━' * _W}")
+    print(f"  medallion  ·  init  ·  {args.project}")
+    print(f"{'━' * _W}\n")
+    init_project(
+        project=args.project,
+        path_project=args.path_project,
+        path_data=args.path_data or None,
+    )
 
 
 def cmd_run(args: argparse.Namespace) -> None:
     final_vars, label = LAYERS[args.layer]
+    _W = 58
+
+    print(f"\n{'━' * _W}")
+    print(f"  medallion  ·  {args.project}  ·  {label}")
+    print(f"{'━' * _W}\n")
 
     cfg = load_project(args.project, args.projects)
-    print(f"🚀  Project  : {cfg['pipeline']['name']}")
-    print(f"📋  Layer    : {label}")
 
     builder = driver.Builder().with_modules(pipeline_nodes)
     if args.track:
@@ -92,15 +102,22 @@ def cmd_run(args: argparse.Namespace) -> None:
     overrides: dict = {}
 
     if args.layer in ("silver", "gold"):
-        overrides["bronze"] = _discover_bronze_paths(cfg)
-        print("⏭️   Bronze   : skipped (using existing files)")
+        bronze_paths = _discover_bronze_paths(cfg)
+        if bronze_paths:
+            overrides["bronze"] = bronze_paths
+            print("\n  ⏭️  bronze  skipped (existing files)")
 
     if args.layer == "gold":
-        overrides["silver"] = _discover_silver_paths(cfg)
-        print("⏭️   Silver   : skipped (using existing files)")
+        silver_paths = _discover_silver_paths(cfg)
+        if silver_paths:
+            overrides["silver"] = silver_paths
+            print("  ⏭️  silver  skipped (existing files)")
 
     dr.execute(final_vars=final_vars, inputs=inputs, overrides=overrides)
-    print(f"\n✅  {label} complete.")
+
+    print(f"\n{'━' * _W}")
+    print(f"  ✅  {label} complete.")
+    print(f"{'━' * _W}\n")
 
 
 def cmd_dag(_: argparse.Namespace) -> None:
@@ -145,7 +162,7 @@ def cmd_status(args: argparse.Namespace) -> None:
 def _discover_bronze_paths(cfg: dict) -> dict[str, Path]:
     bronze_dir = Path(cfg["paths"]["bronze"])
     if not bronze_dir.exists():
-        print(f"⚠️   Bronze directory not found: {bronze_dir}")
+        print(f"⚠️   [bronze] directory not found: {bronze_dir}")
         return {}
     return {p.stem: p for p in bronze_dir.glob("*.parquet")}
 
@@ -153,7 +170,7 @@ def _discover_bronze_paths(cfg: dict) -> dict[str, Path]:
 def _discover_silver_paths(cfg: dict) -> dict[str, Path]:
     silver_dir = Path(cfg["paths"]["silver"])
     if not silver_dir.exists():
-        print(f"⚠️   Silver directory not found: {silver_dir}")
+        print(f"⚠️   [silver] directory not found: {silver_dir}")
         return {}
     return {p.name: p for p in silver_dir.glob("*.parquet")}
 
@@ -172,7 +189,15 @@ def _build_parser() -> argparse.ArgumentParser:
 
     # init
     p_init = sub.add_parser("init", help="Scaffold a new project directory")
-    p_init.add_argument("project", help="Project name (creates <project>/ in current directory)")
+    p_init.add_argument("project", help="Project name (used as the folder name)")
+    p_init.add_argument(
+        "--path-project", default=".", metavar="PATH",
+        help="Directory where <project>/ folder is created (default: . — current directory)",
+    )
+    p_init.add_argument(
+        "--path-data", default="", metavar="PATH",
+        help="Base data directory written into main.yaml paths (default: 'data')",
+    )
 
     # run
     p_run = sub.add_parser("run", help="Execute the pipeline for a project")

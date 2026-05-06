@@ -1,0 +1,18 @@
+id: oracle_hr
+namespace: openmedallion.examples
+description: "Incremental Bronze → Silver → Gold pipeline against Oracle HR schema"
+
+tasks:
+  - id: run_bronze
+    type: io.kestra.plugin.scripts.python.Commands
+    commands:
+      - export $(grep -v '^#' .env | xargs) && medallion run oracle_hr --layer bronze
+    workingDirectory: /app/examples/oracle_hr_demo
+
+  - id: run_silver_gold
+    type: io.kestra.plugin.scripts.python.Commands
+    commands:
+      - export $(grep -v '^#' .env | xargs) && medallion run oracle_hr
+    workingDirectory: /app/examples/oracle_hr_demo
+    dependsOn:
+      - run_bronze
