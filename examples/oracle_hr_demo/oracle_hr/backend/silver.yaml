@@ -1,0 +1,37 @@
+bronze_to_silver:
+  # ── Phase 1: base table type casts ──────────────────────────────────────────
+  tables:
+    - source_file: employees.parquet
+      output_file: employees.parquet
+      transforms:
+        - type: cast
+          columns:
+            employee_id:   Int64
+            manager_id:    Int64
+            department_id: Int64
+            salary:        Float64
+
+    - source_file: departments.parquet
+      output_file: departments.parquet
+      transforms:
+        - type: cast
+          columns:
+            department_id: Int64
+            manager_id:    Int64
+
+    - source_file: jobs.parquet
+      output_file: jobs.parquet
+      transforms:
+        - type: cast
+          columns:
+            min_salary: Float64
+            max_salary: Float64
+
+  # ── Phase 2: derived tables via UDF ─────────────────────────────────────────
+  # build_employees_enriched joins employees + departments + jobs into one wide
+  # table used by all three gold aggregations.
+  derived_tables:
+    - udf:
+        file: oracle_hr/backend/udf/silver/enrich.py
+        function: build_employees_enriched
+      output_file: employees_enriched.parquet

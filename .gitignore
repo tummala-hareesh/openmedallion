@@ -26,6 +26,10 @@ examples/*/data/
 .vscode/
 .idea/
 
+# Secrets
+.env
+secrets.yaml
+
 # OS
 .DS_Store
 

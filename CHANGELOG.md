@@ -14,6 +14,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - GitHub Actions publish workflow (TestPyPI → PyPI via OIDC trusted publishing)
 - Expanded `medallion init` scaffold: `backend/`, `frontend/`, `data/` (gitignored),
   `summary/`, and full `README.md` template
+- `oracle_hr_demo` example — Oracle HR schema (employees/departments/jobs), bronze SQL
+  filter, silver three-table join UDF, gold salary analytics (headcount, salary bands,
+  salary utilisation with pre-agg UDF)
+- `bronze.yaml` `filter` field — SQL WHERE clause pushed to dlt ingestion via
+  `query_adapter_callback`; rows excluded at source before entering the data lake
+- `openmedallion[oracle]` optional extra (`oracledb>=1.0`) for real Oracle connections
 
 ---
 

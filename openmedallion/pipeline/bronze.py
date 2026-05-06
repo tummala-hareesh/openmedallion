@@ -177,7 +177,7 @@ class BronzeLoader:
         from dlt.sources.sql_database import sql_table
 
         conn = expand_env_str(self.src["connection_string"])
-        schema = self.src.get("schema")
+        schema = self.src.get("schema") or None
         tables_cfg = self.src.get("tables", [])
 
         resources = []
@@ -199,6 +199,13 @@ class BronzeLoader:
             elif mode == "merge":
                 kwargs["write_disposition"] = "merge"
                 kwargs["primary_key"]       = inc["primary_key"]
+
+            filter_clause = tbl.get("filter")
+            if filter_clause:
+                from sqlalchemy import text as _sa_text
+                kwargs["query_adapter_callback"] = (
+                    lambda sel, _t, _sql=filter_clause: sel.where(_sa_text(_sql))
+                )
 
             resources.append(sql_table(**kwargs))
 

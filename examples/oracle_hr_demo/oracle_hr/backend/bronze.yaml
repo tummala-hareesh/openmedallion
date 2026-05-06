@@ -1,0 +1,39 @@
+source:
+  type: sql_database
+
+  # ── Connection ─────────────────────────────────────────────────────────────
+  # Demo default: SQLite (no Oracle install required).
+  # Real Oracle: export ORACLE_CONN_STR=oracle+oracledb://USER:PASS@HOST:PORT/SERVICE
+  # If your Oracle tables live in a non-default schema, add: schema: HR
+  connection_string: "${ORACLE_CONN_STR:-sqlite:///data/oracle_hr.db}"
+
+  tables:
+    # ── employees ─────────────────────────────────────────────────────────────
+    # filter: push a SQL WHERE clause to the dlt ingestion step so that only
+    #   ACTIVE employees in the five target departments are loaded into bronze.
+    #   Rows in dept 30 (Purchasing), 50 (Shipping), or with status='INACTIVE'
+    #   are excluded at source — they never enter the data lake.
+    - name: employees
+      filter: "department_id IN (10, 20, 60, 80, 90) AND status = 'ACTIVE'"
+      incremental:
+        mode: append
+        cursor_column: hire_date
+        initial_value: "2000-01-01"
+
+    # ── departments ───────────────────────────────────────────────────────────
+    - name: departments
+      incremental:
+        mode: merge
+        primary_key: department_id
+
+    # ── jobs ──────────────────────────────────────────────────────────────────
+    - name: jobs
+      incremental:
+        mode: merge
+        primary_key: job_id
+
+destination:
+  type: filesystem
+  # dlt appends /bronze/<table>/ automatically; bronze.py merges shards into
+  # oracle_hr/data/bronze/<table>.parquet  (paths.bronze = oracle_hr/data/bronze)
+  bucket_url: "data"
