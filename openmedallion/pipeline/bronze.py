@@ -187,6 +187,11 @@ class BronzeLoader:
             mode = inc.get("mode", "replace")
             select_cols = tbl.get("select")
             filter_clause = tbl.get("filter")
+            cursor_col = inc.get("cursor_column")
+
+            # Guard: ensure cursor column is always included in select_cols
+            if select_cols and cursor_col and cursor_col not in select_cols:
+                select_cols = select_cols + [cursor_col]
 
             kwargs = dict(
                 credentials=conn,
@@ -196,7 +201,7 @@ class BronzeLoader:
 
             if mode == "append":
                 kwargs["incremental"] = dlt.sources.incremental(
-                    inc["cursor_column"],
+                    cursor_col,
                     initial_value=inc.get("initial_value"),
                 )
             elif mode == "merge":
@@ -204,16 +209,19 @@ class BronzeLoader:
                 kwargs["primary_key"] = inc["primary_key"]
 
             if select_cols or filter_clause:
-                def adapter(sel, table_obj, _cols=select_cols, _sql=filter_clause):
-                    if _cols:
-                        sel = sel.with_only_columns(
-                            *[table_obj.c[c] for c in _cols]
-                        )
-                    if _sql:
-                        sel = sel.where(_sa_text(_sql))
-                    return sel
+                # Capture loop vars explicitly — avoids closure bug
+                def make_adapter(_cols, _sql):
+                    def adapter(query, table):
+                        if _cols:
+                            query = query.with_only_columns(
+                                *[table.c[c] for c in _cols]
+                            )
+                        if _sql:
+                            query = query.where(_sa_text(_sql))
+                        return query
+                    return adapter
 
-                kwargs["query_adapter_callback"] = adapter
+                kwargs["query_adapter_callback"] = make_adapter(select_cols, filter_clause)
 
             resources.append(sql_table(**kwargs))
 
