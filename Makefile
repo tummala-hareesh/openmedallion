@@ -1,6 +1,6 @@
 .PHONY: help build test lint clean publish release kestra-up kestra-down kestra-logs
 
-# Accept v=2026.5.1 or v=v2026.5.1 — VER is always the bare number
+# Accept v=2026.5.2 or v=v2026.5.2 — VER is always the bare number
 VER := $(patsubst v%,%,$(v))
 
 # ── Help ──────────────────────────────────────────────────────────────────────
@@ -11,8 +11,8 @@ help:
 	@echo "  make test                Run test suite"
 	@echo "  make lint                Run ruff linter"
 	@echo "  make clean               Remove build artefacts"
-	@echo "  make publish v=2026.5.1  Bump version, commit, tag, push → triggers PyPI"
-	@echo "  make release v=2026.5.1  Tag + push only (version already bumped)"
+	@echo "  make publish v=2026.5.2  Bump version, commit, tag, push → triggers PyPI"
+	@echo "  make release v=2026.5.2  Tag + push only (version already bumped)"
 	@echo "  make kestra-up           Start Kestra + Postgres via Docker Compose"
 	@echo "  make kestra-down         Stop and remove Kestra containers"
 	@echo "  make kestra-logs         Tail Kestra container logs"
@@ -37,7 +37,7 @@ clean:
 # ── Release ───────────────────────────────────────────────────────────────────
 
 publish:
-	@[ -n "$(v)" ] || (echo "Usage: make publish v=2026.5.1"; exit 1)
+	@[ -n "$(v)" ] || (echo "Usage: make publish v=2026.5.2"; exit 1)
 	@echo "→ Bumping version to $(VER)"
 	sed -i 's/^version = ".*"/version = "$(VER)"/' pyproject.toml
 	sed -i 's/^__version__ = ".*"/__version__ = "$(VER)"/' openmedallion/__init__.py
@@ -49,7 +49,7 @@ publish:
 	@echo "✅  Tagged v$(VER) and pushed — publish workflow triggered."
 
 release:
-	@[ -n "$(v)" ] || (echo "Usage: make release v=2026.5.1"; exit 1)
+	@[ -n "$(v)" ] || (echo "Usage: make release v=2026.5.2"; exit 1)
 	git tag v$(VER)
 	git push origin v$(VER)
 	@echo "✅  Pushed tag v$(VER) — publish workflow triggered."
