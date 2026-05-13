@@ -175,6 +175,7 @@ class BronzeLoader:
 
     def _sql_source(self):
         from dlt.sources.sql_database import sql_table
+        from sqlalchemy import text as _sa_text
 
         conn = expand_env_str(self.src["connection_string"])
         schema = self.src.get("schema") or None
@@ -182,8 +183,10 @@ class BronzeLoader:
 
         resources = []
         for tbl in tables_cfg:
-            inc  = tbl.get("incremental", {})
+            inc = tbl.get("incremental", {})
             mode = inc.get("mode", "replace")
+            select_cols = tbl.get("select")
+            filter_clause = tbl.get("filter")
 
             kwargs = dict(
                 credentials=conn,
@@ -198,14 +201,19 @@ class BronzeLoader:
                 )
             elif mode == "merge":
                 kwargs["write_disposition"] = "merge"
-                kwargs["primary_key"]       = inc["primary_key"]
+                kwargs["primary_key"] = inc["primary_key"]
 
-            filter_clause = tbl.get("filter")
-            if filter_clause:
-                from sqlalchemy import text as _sa_text
-                kwargs["query_adapter_callback"] = (
-                    lambda sel, _t, _sql=filter_clause: sel.where(_sa_text(_sql))
-                )
+            if select_cols or filter_clause:
+                def adapter(sel, table_obj, _cols=select_cols, _sql=filter_clause):
+                    if _cols:
+                        sel = sel.with_only_columns(
+                            *[table_obj.c[c] for c in _cols]
+                        )
+                    if _sql:
+                        sel = sel.where(_sa_text(_sql))
+                    return sel
+
+                kwargs["query_adapter_callback"] = adapter
 
             resources.append(sql_table(**kwargs))
 
