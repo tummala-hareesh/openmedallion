@@ -2,6 +2,7 @@
 
 _VALID_SOURCE_TYPES    = {"sql_database", "rest_api", "filesystem", "local_files"}
 _VALID_TRANSFORM_TYPES = {"rename", "cast", "drop", "udf"}
+_VALID_DIALECTS        = {"oracle", "postgres", "mysql", "mssql", "sqlite"}
 
 
 def _validate_config(cfg: dict) -> None:
@@ -47,6 +48,35 @@ def _validate_config(cfg: dict) -> None:
             src_type in _VALID_SOURCE_TYPES,
             f"source.type must be one of {sorted(_VALID_SOURCE_TYPES)}, got '{src_type}'"
         )
+
+        def _require_str_list(val, path: str) -> None:
+            require(isinstance(val, list) and len(val) > 0
+                    and all(isinstance(c, str) and c.strip() for c in val),
+                    f"'{path}' must be a non-empty list of column name strings")
+
+        if src_type == "sql_database":
+            if "credentials_file" in source:
+                require_str(source["credentials_file"], "source.credentials_file")
+                dialect = source.get("dialect")
+                require(
+                    dialect in _VALID_DIALECTS,
+                    f"source.dialect is required when using credentials_file. "
+                    f"Must be one of {sorted(_VALID_DIALECTS)}, got '{dialect}'"
+                )
+            if "dialect" in source and "credentials_file" not in source:
+                require(
+                    source["dialect"] in _VALID_DIALECTS,
+                    f"source.dialect must be one of {sorted(_VALID_DIALECTS)}, "
+                    f"got '{source['dialect']}'"
+                )
+
+        if src_type in ("sql_database", "local_files"):
+            for i, tbl in enumerate(source.get("tables", [])):
+                if "select" in tbl:
+                    _require_str_list(tbl["select"], f"source.tables[{i}].select")
+        else:
+            if "select" in source:
+                _require_str_list(source["select"], "source.select")
 
     # bronze_to_silver (optional block)
     b2s = cfg.get("bronze_to_silver")

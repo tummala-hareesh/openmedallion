@@ -1,7 +1,12 @@
-"""setup_db.py — creates a local SQLite database with seed data.
+"""setup_db.py — creates the SQLite retail database for the demo.
 
 SQLite ships with Python — no driver installation required.
 Run this once before your first `medallion run retail --layer bronze`.
+
+For real Postgres/Oracle:
+  1. Copy ../secrets.yaml.example → ../secrets.yaml and fill in your credentials.
+  2. In retail/backend/bronze.yaml, comment out the connection_string lines
+     and uncomment the dialect + credentials_file lines.
 """
 import sys
 sys.stdout.reconfigure(encoding="utf-8")
@@ -59,5 +64,9 @@ print()
 print("Then simulate a delta load:")
 print("  python add_delta.py")
 print("  medallion run retail --layer bronze   # only new rows loaded")
+print()
+print("To use a real Postgres/Oracle database:")
+print("  1. cp ../secrets.yaml.example ../secrets.yaml  and fill in your credentials")
+print("  2. Edit retail/backend/bronze.yaml — swap connection_string for credentials_file")
 print()
 print("Or open retail/ipynb/walkthrough.ipynb for a guided run.")

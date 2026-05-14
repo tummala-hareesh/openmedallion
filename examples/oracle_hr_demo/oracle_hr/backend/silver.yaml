@@ -17,7 +17,6 @@ bronze_to_silver:
         - type: cast
           columns:
             department_id: Int64
-            manager_id:    Int64
 
     - source_file: jobs.parquet
       output_file: jobs.parquet

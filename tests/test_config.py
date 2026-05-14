@@ -251,3 +251,39 @@ class TestValidateConfig:
         cfg = _valid_cfg()
         cfg["silver_to_gold"]["projects"] = [{"name": "proj", "aggregations": [{}]}]
         _validate_config(cfg)
+
+    def test_select_accepted_in_sql_table(self):
+        cfg = _valid_cfg(**{"source.type": "sql_database"})
+        cfg["source"]["tables"] = [{"name": "orders", "select": ["order_id", "amount"]}]
+        _validate_config(cfg)
+
+    def test_select_accepted_in_local_files_table(self):
+        cfg = _valid_cfg(**{"source.type": "local_files"})
+        cfg["source"]["tables"] = [{"name": "t", "path": "t.csv", "select": ["id", "value"]}]
+        _validate_config(cfg)
+
+    def test_select_accepted_at_source_level_for_filesystem(self):
+        cfg = _valid_cfg(**{"source.type": "filesystem"})
+        cfg["source"]["select"] = ["col_a", "col_b"]
+        _validate_config(cfg)
+
+    def test_select_not_a_list_raises(self):
+        cfg = _valid_cfg(**{"source.type": "sql_database"})
+        cfg["source"]["tables"] = [{"name": "orders", "select": "order_id"}]
+        with pytest.raises(ValueError, match="select"):
+            _validate_config(cfg)
+
+    def test_select_empty_list_raises(self):
+        cfg = _valid_cfg(**{"source.type": "sql_database"})
+        cfg["source"]["tables"] = [{"name": "orders", "select": []}]
+        with pytest.raises(ValueError, match="select"):
+            _validate_config(cfg)
+
+    def test_select_and_filter_coexist(self):
+        cfg = _valid_cfg(**{"source.type": "sql_database"})
+        cfg["source"]["tables"] = [{
+            "name": "employees",
+            "select": ["employee_id", "salary"],
+            "filter": "status = 'ACTIVE'",
+        }]
+        _validate_config(cfg)

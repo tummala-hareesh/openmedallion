@@ -28,6 +28,13 @@ Incremental modes (``source.tables[].incremental.mode``)
 ``replace``  Full overwrite each run.
 ``append``   Adds only new rows using a cursor column.
 ``merge``    Upserts on a primary key.
+
+Credential resolution (``source.type == sql_database``)
+--------------------------------------------------------
+Either ``connection_string`` (raw SQLAlchemy URL, env-var expanded) or the
+``credentials_file`` + ``dialect`` pair.  When ``credentials_file`` is given,
+openmedallion reads the named YAML file, looks up the ``dialect`` block, and
+assembles the connection string internally.
 """
 import dlt
 import dlt.sources
@@ -37,9 +44,114 @@ import gzip
 import io
 import polars as pl
 from pathlib import Path
+from urllib.parse import urlparse
 
 from openmedallion import storage
 from openmedallion.config.loader import expand_env_str
+
+
+# ---------------------------------------------------------------------------
+# Credential helpers
+# ---------------------------------------------------------------------------
+
+_DIALECT_DRIVERS = {
+    "oracle":   "oracle+oracledb",
+    "postgres": "postgresql+psycopg2",
+    "mysql":    "mysql+pymysql",
+    "mssql":    "mssql+pyodbc",
+    "sqlite":   "sqlite",
+}
+
+
+def _load_credentials_file(file_path: str, dialect: str) -> dict:
+    """Read *dialect* credentials from a YAML file.
+
+    Args:
+        file_path: Path to the credentials YAML (absolute or relative to CWD).
+        dialect:   Top-level key to read from the file (e.g. ``"oracle"``).
+
+    Returns:
+        dict: Credentials block for the requested dialect.
+
+    Raises:
+        FileNotFoundError: If the file does not exist.
+        KeyError: If *dialect* has no entry in the file.
+    """
+    import yaml
+    p = Path(file_path)
+    if not p.exists():
+        raise FileNotFoundError(
+            f"[bronze] credentials file not found: {p.resolve()}\n"
+            f"  Create one from the example:  cp secrets.yaml.example {p}"
+        )
+    with open(p) as fh:
+        all_creds = yaml.safe_load(fh) or {}
+    if dialect not in all_creds:
+        available = sorted(all_creds.keys())
+        raise KeyError(
+            f"[bronze] no '{dialect}' entry in {p}. "
+            f"Available keys: {available}"
+        )
+    return all_creds[dialect]
+
+
+def _build_conn_str(dialect: str, creds: dict) -> str:
+    """Assemble a SQLAlchemy connection string from a credentials dict.
+
+    Args:
+        dialect: One of ``oracle``, ``postgres``, ``mysql``, ``mssql``, ``sqlite``.
+        creds:   Credentials block (keys vary by dialect — see secrets.yaml.example).
+
+    Returns:
+        str: A valid SQLAlchemy connection string.
+
+    Raises:
+        ValueError: If *dialect* is not recognised.
+    """
+    if dialect not in _DIALECT_DRIVERS:
+        raise ValueError(
+            f"[bronze] unsupported dialect '{dialect}'. "
+            f"Choose from: {sorted(_DIALECT_DRIVERS)}"
+        )
+    driver = _DIALECT_DRIVERS[dialect]
+
+    if dialect == "sqlite":
+        return f"sqlite:///{creds['path']}"
+
+    host     = creds["host"]
+    username = creds["username"]
+    password = creds["password"]
+
+    if dialect == "oracle":
+        port    = creds.get("port", 1521)
+        service = creds["service"]
+        return f"{driver}://{username}:{password}@{host}:{port}/{service}"
+
+    database = creds["database"]
+
+    if dialect == "mssql":
+        port        = creds.get("port", 1433)
+        drv_name    = creds.get("driver", "ODBC+Driver+17+for+SQL+Server")
+        return f"{driver}://{username}:{password}@{host}:{port}/{database}?driver={drv_name}"
+
+    port = creds.get("port", 5432 if dialect == "postgres" else 3306)
+    return f"{driver}://{username}:{password}@{host}:{port}/{database}"
+
+
+def _conn_display(conn_str: str, dialect: str) -> str:
+    """Return a safe display string for the connection (no password)."""
+    if dialect == "sqlite":
+        return conn_str.split("///")[-1]
+    try:
+        p = urlparse(conn_str)
+        host_part = p.hostname or ""
+        if p.port:
+            host_part += f":{p.port}"
+        if p.path:
+            host_part += p.path
+        return host_part
+    except Exception:
+        return "(unknown host)"
 
 
 # ---------------------------------------------------------------------------
@@ -120,6 +232,8 @@ class BronzeLoader:
                 df = storage.read_parquet(path)
             else:
                 raise ValueError(f"[bronze] unsupported local file format: {path}")
+            if cols := tbl.get("select"):
+                df = df.select(cols)
             out = storage.join(self.bronze_path, f"{name}.parquet")
             storage.write_parquet(df, out)
             print(f"📥  [bronze] {path} → {out}  ({len(df)} rows)")
@@ -173,10 +287,64 @@ class BronzeLoader:
 
         raise NotImplementedError(f"Source type '{src_type}' not wired.")
 
+    # ------------------------------------------------------------------
+    # SQL credential resolution + connection probe
+    # ------------------------------------------------------------------
+
+    def _resolve_conn_str(self) -> str:
+        """Return a ready-to-use SQLAlchemy connection string.
+
+        Prefers ``credentials_file`` + ``dialect`` when present; falls back
+        to the raw ``connection_string`` field (env-var expanded).
+        """
+        if "credentials_file" in self.src:
+            dialect = self.src["dialect"]
+            creds   = _load_credentials_file(self.src["credentials_file"], dialect)
+            return _build_conn_str(dialect, creds)
+        return expand_env_str(self.src["connection_string"])
+
+    def _probe_connection(self, conn_str: str) -> None:
+        """Verify DB connectivity and print available tables in the schema.
+
+        Args:
+            conn_str: SQLAlchemy connection string (already resolved).
+
+        Raises:
+            ConnectionError: If the database cannot be reached.
+        """
+        from sqlalchemy import create_engine, text, inspect as sa_inspect
+
+        dialect = self.src.get("dialect") or conn_str.split(":")[0]
+        schema  = self.src.get("schema") or None
+        display = _conn_display(conn_str, dialect)
+
+        label = f"schema {schema}" if schema else "default schema"
+        print(f"🔌  Connecting to {dialect} at {display} ({label}) ...")
+
+        try:
+            engine = create_engine(conn_str)
+            with engine.connect() as con:
+                con.execute(text("SELECT 1"))
+            tables = sa_inspect(engine).get_table_names(schema=schema)
+        except Exception as exc:
+            raise ConnectionError(
+                f"[bronze] DB connection failed: {exc}"
+            ) from exc
+
+        print(f"✅  Connected — {len(tables)} table(s) in {label}:")
+        col_w = max((len(t) for t in tables), default=0) + 2
+        row   = ""
+        for i, t in enumerate(tables):
+            row += f"{t:<{col_w}}"
+            if (i + 1) % 4 == 0 or i == len(tables) - 1:
+                print(f"    {row.rstrip()}")
+                row = ""
+
     def _sql_source(self):
         from dlt.sources.sql_database import sql_table
 
-        conn = expand_env_str(self.src["connection_string"])
+        conn   = self._resolve_conn_str()
+        self._probe_connection(conn)
         schema = self.src.get("schema") or None
         tables_cfg = self.src.get("tables", [])
 
@@ -200,6 +368,10 @@ class BronzeLoader:
                 kwargs["write_disposition"] = "merge"
                 kwargs["primary_key"]       = inc["primary_key"]
 
+            # filter: push WHERE clause to the DB via query_adapter_callback.
+            # select: NOT applied here — sel.with_only_columns() inside the
+            # adapter corrupts dlt's incremental cursor tracking. Column pruning
+            # for SQL sources is applied in _collect_parquets() instead.
             filter_clause = tbl.get("filter")
             if filter_clause:
                 from sqlalchemy import text as _sa_text
@@ -233,10 +405,15 @@ class BronzeLoader:
 
     def _collect_parquets(self) -> dict[str, str]:
         results = {}
-        table_names = [t["name"] for t in self.src.get("tables", [])]
+        tables_cfg  = self.src.get("tables", [])
+        table_names = [t["name"] for t in tables_cfg]
 
         if not table_names and self.src.get("resource"):
             table_names = [self.src["resource"]]
+
+        # Per-table select lookup (SQL / local_files sources).
+        # Filesystem / REST sources use a single top-level select key instead.
+        per_table_select = {t["name"]: t["select"] for t in tables_cfg if t.get("select")}
 
         # dlt always writes shards to {bucket_url}/{dataset_name}/{table}/
         # dataset_name is hardcoded as "bronze" in _build_pipeline above
@@ -251,6 +428,9 @@ class BronzeLoader:
 
             dfs = [_read_shard(s) for s in shards]
             df  = pl.concat(dfs) if len(dfs) > 1 else dfs[0]
+            cols = per_table_select.get(name) or self.src.get("select")
+            if cols:
+                df = df.select(cols)
 
             out = storage.join(self.bronze_path, f"{name}.parquet")
             storage.mkdir(self.bronze_path)

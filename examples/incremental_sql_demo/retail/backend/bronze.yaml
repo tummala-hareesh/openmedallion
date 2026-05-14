@@ -1,12 +1,21 @@
 source:
   type: sql_database
-  dialect: sqlite
+
+  # ── Connection ─────────────────────────────────────────────────────────────
+  # DEMO (SQLite — no credentials needed, path is set here directly):
+  dialect:           sqlite
   connection_string: "sqlite:///data/retail.db"
+
+  # REAL DATABASE — comment out the two lines above and uncomment below,
+  # then fill in examples/secrets.yaml with your credentials:
+  # dialect:          postgres      # or oracle, mysql, mssql
+  # credentials_file: ../secrets.yaml
 
   tables:
     # Append mode: only rows newer than the last cursor value are loaded.
     # Re-running picks up only new orders.
     - name: orders
+      select: [order_id, customer_id, amount, created_at]
       incremental:
         mode: append
         cursor_column: created_at
@@ -14,7 +23,9 @@ source:
 
     # Merge mode: upserts on primary key.
     # Re-running overwrites changed customer rows in-place.
+    # select: drop the email column — PII not needed downstream.
     - name: customers
+      select: [customer_id, name, tier]
       incremental:
         mode: merge
         primary_key: customer_id

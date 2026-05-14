@@ -6,6 +6,23 @@ This is the simplest possible OpenMedallion pipeline. One table, one UDF, two go
 
 ---
 
+## 🚀 Quickstart
+
+```bash
+# From this directory (examples/local_parquet_demo/)
+
+# Step 1 — generate source CSV + seed bronze
+python seed.py
+
+# Step 2 — silver: rename, cast, flag large orders
+medallion run demo --layer silver
+
+# Step 3 — gold: aggregate by customer and by status
+medallion run demo --layer gold
+```
+
+---
+
 ## 🔄 Pipeline Flow
 
 ```mermaid
@@ -70,16 +87,16 @@ Two YAML-declared aggregations run against the silver output:
 
 | customer_id | customer_name | total_orders | total_spent |
 | --- | --- | --- | --- |
-| 101 | Alice | 4 | 600.0 |
-| 102 | Bob | 3 | 300.5 |
-| 103 | Charlie | 3 | 415.0 |
+| 101 | Alice | 5 | 695.0 |
+| 102 | Bob | 5 | 445.5 |
+| 103 | Charlie | 5 | 585.0 |
 
 **`orders_by_status.parquet`** — group by `status`:
 
 | status | num_orders | total_amount |
 | --- | --- | --- |
-| completed | 11 | 2070.5 |
-| pending | 3 | 230.0 |
+| completed | 11 | 1485.5 |
+| pending | 3 | 215.0 |
 | cancelled | 1 | 25.0 |
 
 ---

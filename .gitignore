@@ -14,10 +14,13 @@ build/
 
 # Data (generated outputs)
 data/
-examples/*/data/
 *.parquet
 *.csv
-!examples/*/data/source/*.csv
+#!examples/*/data/source/*.csv
+examples/*/data/bronze/*
+examples/*/data/silver/*
+examples/*/data/gold/*
+
 
 # dlt state
 .dlt/

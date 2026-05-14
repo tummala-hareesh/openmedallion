@@ -1,4 +1,4 @@
-.PHONY: help build test lint clean publish release kestra-up kestra-down kestra-logs
+.PHONY: help build test lint clean examples publish release kestra-up kestra-down kestra-logs
 
 # Accept v=2026.5.1 or v=v2026.5.1 — VER is always the bare number
 VER := $(patsubst v%,%,$(v))
@@ -10,6 +10,7 @@ help:
 	@echo "  make build               Build wheel and sdist"
 	@echo "  make test                Run test suite"
 	@echo "  make lint                Run ruff linter"
+	@echo "  make examples            Run all example pipelines and report pass/fail"
 	@echo "  make clean               Remove build artefacts"
 	@echo "  make publish v=2026.5.1  Bump version, commit, tag, push → triggers PyPI"
 	@echo "  make release v=2026.5.1  Tag + push only (version already bumped)"
@@ -28,6 +29,9 @@ test:
 
 lint:
 	uv run ruff check openmedallion/ tests/
+
+examples:
+	@.venv/bin/python examples/run_examples.py
 
 clean:
 	rm -rf dist/ .pytest_cache/ site/

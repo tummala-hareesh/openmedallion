@@ -118,9 +118,10 @@ destination:
 | Key | Type | Required | Description |
 | --- | --- | --- | --- |
 | `type` | enum | ✅ | `sql_database`, `rest_api`, or `filesystem`. |
-| `dialect` | string | sql only | SQLAlchemy dialect: `oracle`, `postgres`, `mysql`, `mssql`, `sqlite`. |
-| `connection_string` | string | sql only | Full SQLAlchemy connection string. Supports `${VAR}` expansion. |
-| `schema` | string | — | Database schema to scope table discovery. |
+| `dialect` | enum | creds file | Required when `credentials_file` is used. One of `oracle`, `postgres`, `mysql`, `mssql`, `sqlite`. |
+| `credentials_file` | string | — | Path to a credentials YAML (see `secrets.yaml.example`). Preferred over `connection_string`. Supports `${VAR}` expansion. |
+| `connection_string` | string | — | Raw SQLAlchemy URL. Supports `${VAR}` expansion. Used only when `credentials_file` is absent. |
+| `schema` | string | — | Database schema to scope table discovery and `SELECT` statements. |
 | `tables` | list | sql/filesystem | Tables to ingest. |
 | `base_url` | string | rest only | REST API base URL. |
 | `resource` | string | rest only | Resource/endpoint name. |
@@ -128,11 +129,50 @@ destination:
 | `file_glob` | string | filesystem | Glob pattern, e.g. `**/*.parquet`. |
 | `format` | string | filesystem | `parquet` (default) or `csv`. |
 
+#### Credential file format (`credentials_file`)
+
+openmedallion reads the YAML file, looks up the `dialect` key, and builds the
+SQLAlchemy connection string internally.  Connection is tested and available
+tables are printed before ingestion starts.
+
+```yaml
+# /workspace/secrets.yaml  (keep outside repo — never commit real credentials)
+
+oracle:
+  host:     db.corp.com
+  port:     1521          # default
+  service:  XE
+  username: hr
+  password: secret
+
+postgres:
+  host:     pg.corp.com
+  port:     5432          # default
+  database: analytics
+  username: etl
+  password: secret
+
+sqlite:
+  path: data/mydb.db      # relative to CWD where medallion runs
+```
+
+Set the path and dialect via env vars (supports `${VAR:-default}` expansion):
+
+```yaml
+# bronze.yaml
+source:
+  type:             sql_database
+  dialect:          "${SECRETS_DIALECT:-sqlite}"
+  credentials_file: "${SECRETS_PATH:-dev_credentials.yaml}"
+  schema:           HR
+```
+
 ### `source.tables[]`
 
 | Key | Type | Required | Description |
 | --- | --- | --- | --- |
 | `name` | string | ✅ | Table name in the source database. |
+| `select` | list[string] | — | Column names to ingest. Omit to ingest all columns. For SQL sources the projection is pushed to the database; for local_files it is applied after reading. Always include the `cursor_column` when using `append` mode. |
 | `incremental` | object | — | Omit for full-replace each run. |
 | `incremental.mode` | enum | — | `replace` (default), `append`, or `merge`. |
 | `incremental.cursor_column` | string | append | Column used to track the high-watermark. |
