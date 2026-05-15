@@ -47,9 +47,7 @@ publish:
 	sed -i 's/^__version__ = ".*"/__version__ = "$(VER)"/' openmedallion/__init__.py
 	git add pyproject.toml openmedallion/__init__.py
 	git commit -m "chore: bump version to $(VER)"
-	git tag v$(VER)
 	git push origin HEAD
-	git push origin v$(VER)
 	@echo "✅  Tagged v$(VER) and pushed — publish workflow triggered."
 
 release:

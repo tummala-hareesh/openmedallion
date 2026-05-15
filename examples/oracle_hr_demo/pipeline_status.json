@@ -1,0 +1,27 @@
+{
+  "state": "success",
+  "run_id": "9980af39-2c67-46f5-8c0b-6ef76f688bb4",
+  "start_time": 1778818587.2538404,
+  "end_time": 1778818587.4429622,
+  "error": null,
+  "nodes": {
+    "silver": {
+      "state": "pending",
+      "start": null,
+      "end": null,
+      "error": null
+    },
+    "gold": {
+      "state": "success",
+      "start": 1778818587.2555563,
+      "end": 1778818587.4425578,
+      "error": null
+    },
+    "config": {
+      "state": "success",
+      "start": 1778818587.254643,
+      "end": 1778818587.2552028,
+      "error": null
+    }
+  }
+}
