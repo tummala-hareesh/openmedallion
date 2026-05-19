@@ -8,8 +8,8 @@ from openmedallion.pipeline.bronze import BronzeLoader
 
 class TestLayerConstants:
 
-    def test_all_four_layers_defined(self):
-        assert set(LAYERS.keys()) == {"bronze", "silver", "gold", "export"}
+    def test_all_layers_defined(self):
+        assert set(LAYERS.keys()) == {"bronze", "silver", "gold", "export", "explore"}
 
     def test_default_layer_is_gold(self):
         assert DEFAULT_LAYER == "gold"
@@ -25,6 +25,9 @@ class TestLayerConstants:
 
     def test_export_final_var(self):
         assert LAYERS["export"][0] == ["bi_export"]
+
+    def test_explore_final_var(self):
+        assert LAYERS["explore"][0] == ["explore"]
 
     def test_all_layers_have_label(self):
         for layer, (_, label) in LAYERS.items():

@@ -8,6 +8,23 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+---
+
+## [2026.5.4] — 2026-05-14
+
+### Added
+
+- `select:` — column projection at bronze ingestion (SQL: pushed to DB via `query_adapter_callback`; local_files: Polars post-read; filesystem/REST: Polars post-shard)
+- `credentials_file:` + `dialect:` — structured credential YAML; builds SQLAlchemy URL internally
+- Connection probe — `_probe_connection()` tests connectivity and lists schema tables before ingestion
+- Shared `examples/secrets.yaml` pattern — one file at `examples/` level; SQLite demos use `connection_string` directly
+- `make examples` runner (`examples/run_examples.py`) — cleans, seeds, and runs all 4 examples; reports PASS/FAIL with timing
+- GitLab CI fixes (`uv sync --group dev`, `uv.lock` cleanup)
+
+---
+
+## [2026.5.1] — 2026-05-14
+
 ### Added
 
 - GitHub Actions CI workflow (multi-Python matrix, lint)
@@ -42,10 +59,11 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - `openmedallion.helpers.dates` — `date_trunc`, `days_between`, `classify_recency`,
   `add_calendar_columns`
 - `openmedallion.scaffold.templates` — `init_project`
-- `openmedallion.viz` — DAG visualiser, live-reload server, run tracker
-- `medallion` CLI — `run`, `init`, `dag`, `serve`, `ui` subcommands
+- `medallion` CLI — `run`, `init` subcommands
 - S3 support via `openmedallion[s3]` optional extra (s3fs + boto3)
 - LocalStack compatibility via `AWS_ENDPOINT_URL` environment variable
 
-[Unreleased]: https://github.com/tummala-hareesh/openmedallion/compare/v2026.4.1...HEAD
+[Unreleased]: https://github.com/tummala-hareesh/openmedallion/compare/v2026.5.4...HEAD
+[2026.5.4]: https://github.com/tummala-hareesh/openmedallion/compare/v2026.5.1...v2026.5.4
+[2026.5.1]: https://github.com/tummala-hareesh/openmedallion/compare/v2026.4.1...v2026.5.1
 [2026.4.1]: https://github.com/tummala-hareesh/openmedallion/releases/tag/v2026.4.1

@@ -1,0 +1,18 @@
+gold_to_explore:
+  projects:
+    - name: ecommerce
+      tables:
+        - source_file: revenue_by_category.parquet
+          report_type:  profile
+          output_file:  revenue_by_category_profile.html
+          title:        "Revenue & Margin by Product Category"
+
+        - source_file: top_customers.parquet
+          report_type:  profile
+          output_file:  top_customers_profile.html
+          title:        "Customer Lifetime Value"
+
+        - source_file: monthly_summary.parquet
+          report_type:  walker
+          output_file:  monthly_summary_explorer.html
+          title:        "Monthly Revenue Trend Explorer"

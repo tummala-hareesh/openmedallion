@@ -145,6 +145,15 @@ def load_project(project: str, projects_root: str | Path = "projects") -> dict:
 
         print(f"📋  [config] {layer:6s}: {layer_path}")
 
+    # explore is optional — load only when declared in includes
+    if explore_file := includes.get("explore"):
+        explore_path = root / explore_file
+        if not explore_path.exists():
+            raise FileNotFoundError(f"Included explore config not found: {explore_path}")
+        with open(explore_path) as f:
+            _deep_merge(cfg, yaml.safe_load(f) or {})
+        print(f"📋  [config] explore: {explore_path}")
+
     _expand_env_vars(cfg)
     _validate_config(cfg)
     return cfg

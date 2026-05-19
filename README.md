@@ -37,8 +37,6 @@ pip install openmedallion
 medallion init my_project       # scaffold: YAML configs + UDF stubs + kestra_flow.yml
 medallion run my_project        # Bronze → Silver → Gold in one command
 medallion run my_project --layer silver   # re-run a single layer
-medallion dag                   # print the Hamilton DAG
-medallion serve                 # launch the live pipeline tracker UI
 ```
 
 ---
@@ -48,7 +46,6 @@ medallion serve                 # launch the live pipeline tracker UI
 - **Declarative YAML config** — define pipeline layers without writing boilerplate
 - **Incremental loads** — append and merge modes via dlt cursor columns and primary keys
 - **Composable UDFs** — drop Python functions into `udf/silver/` or `udf/gold/`; no new framework to learn
-- **Live DAG tracker** — Hamilton-powered web UI to visualise and monitor execution
 - **Local first** — run the full pipeline against Parquet files with zero cloud credentials
 - **Cloud portable** — swap `filesystem` for S3 in one line; logic stays unchanged
 - **Source agnostic** — any dlt source: SQL databases, REST APIs, filesystems, and more
@@ -77,7 +74,7 @@ Hamilton DAG           ← orchestrates which layer runs and in what order
 | ⚪ Silver | Polars | Typed, composable Python UDFs |
 | 🟡 Gold | Polars | YAML-declared group-by metrics |
 | 📤 Export | Polars | Parquet + CSV for BI tools |
-| 🔗 Orchestration | Hamilton | DAG wiring with live web tracker |
+| 🔗 Orchestration | Hamilton | DAG wiring and execution order |
 
 ---
 
@@ -90,8 +87,8 @@ pip install openmedallion
 Optional extras:
 
 ```bash
-pip install "openmedallion[s3]"    # S3 support via s3fs + boto3
-pip install "openmedallion[viz]"   # DAG visualisation via graphviz
+pip install "openmedallion[s3]"      # S3 support via s3fs + boto3
+pip install "openmedallion[oracle]"  # Oracle DB support via oracledb
 ```
 
 > Requires Python 3.11+
@@ -328,7 +325,7 @@ A great fit if you:
 | Item | Status |
 | --- | --- |
 | Bronze / Silver / Gold pipeline | ✅ 2026.4.1 |
-| Hamilton DAG + live tracker | ✅ 2026.4.1 |
+| Hamilton DAG orchestration | ✅ 2026.4.1 |
 | Local Parquet + S3 storage | ✅ 2026.4.1 |
 | Incremental append + merge | ✅ 2026.4.1 |
 | CLI scaffolding (`medallion init`) | ✅ 2026.4.1 |

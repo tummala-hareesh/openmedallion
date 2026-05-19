@@ -5,40 +5,25 @@ Commands
 medallion init <project>
     Scaffold a new project under <project>/.
 
-medallion run <project> [--layer LAYER] [--projects PATH] [--track]
+medallion run <project> [--layer LAYER] [--projects PATH]
     Run the pipeline for a project.
 
     --layer     Which layer to run up to and including.
-                bronze  — ingest only
-                silver  — bronze + silver
-                gold    — bronze + silver + gold  (default)
-                export  — full pipeline including BI export
+                bronze   — ingest only
+                silver   — bronze + silver
+                gold     — bronze + silver + gold  (default)
+                export   — full pipeline including BI export
+                explore  — bronze → silver → gold → HTML reports
+                           (requires [profile] and/or [explore] extras)
 
     --projects  Override the project root directory (default: . — current directory).
-
-    --track     Start the live status dashboard at http://localhost:8765 and
-                attach the status tracker to the Hamilton DAG.
-
-medallion dag
-    Print the Hamilton pipeline DAG as a text tree (no graphviz required).
-
-medallion visualize <project> [--layer LAYER] [--output PATH] [--open]
-    Export the Hamilton DAG as a PNG image (requires graphviz).
-
-medallion status [--port PORT]
-    Start the live status dashboard server standalone.
 
 Examples
 --------
     medallion init      sales_project
     medallion run       sales_project
     medallion run       sales_project --layer bronze
-    medallion run       sales_project --track
-    medallion dag
-    medallion visualize sales_project
-    medallion visualize sales_project --layer gold --open
-    medallion status
-    medallion status    --port 9000
+    medallion run       sales_project --layer explore
 """
 import argparse
 import sys
@@ -54,10 +39,11 @@ from openmedallion.pipeline           import nodes as pipeline_nodes
 
 # Maps --layer value → Hamilton final_vars + human label
 LAYERS: dict[str, tuple[list[str], str]] = {
-    "bronze": (["bronze"],    "bronze ingestion"),
-    "silver": (["silver"],    "bronze → silver"),
-    "gold":   (["gold"],      "bronze → silver → gold"),
-    "export": (["bi_export"], "full pipeline + BI export"),
+    "bronze":  (["bronze"],    "bronze ingestion"),
+    "silver":  (["silver"],    "bronze → silver"),
+    "gold":    (["gold"],      "bronze → silver → gold"),
+    "export":  (["bi_export"], "full pipeline + BI export"),
+    "explore": (["explore"],   "bronze → silver → gold → HTML reports"),
 }
 DEFAULT_LAYER = "gold"
 
@@ -89,13 +75,6 @@ def cmd_run(args: argparse.Namespace) -> None:
     cfg = load_project(args.project, args.projects)
 
     builder = driver.Builder().with_modules(pipeline_nodes)
-    if args.track:
-        from openmedallion.viz.tracker import PipelineStatusTracker
-        from openmedallion.viz.server  import start_server
-        tracker = PipelineStatusTracker()
-        start_server(block=False)
-        builder = builder.with_adapters(tracker)
-
     dr = builder.build()
 
     inputs:    dict = {"cfg": cfg}
@@ -118,41 +97,6 @@ def cmd_run(args: argparse.Namespace) -> None:
     print(f"\n{'━' * _W}")
     print(f"  ✅  {label} complete.")
     print(f"{'━' * _W}\n")
-
-
-def cmd_dag(_: argparse.Namespace) -> None:
-    from openmedallion.viz.dag import print_dag
-    print_dag()
-
-
-def cmd_visualize(args: argparse.Namespace) -> None:
-    from openmedallion.viz.dag import export_dag, export_execution_dag, open_image
-
-    if args.layer is None:
-        out = Path(args.output or "dag.png")
-        print(f"📊  Exporting full DAG → {out}")
-        path = export_dag(out)
-    else:
-        out = Path(args.output or f"dag_{args.layer}.png")
-        final_vars, _ = LAYERS[args.layer]
-        cfg = load_project(args.project)
-        inputs: dict = {"cfg": cfg}
-        if args.layer in ("silver", "gold"):
-            inputs["bronze"] = _discover_bronze_paths(cfg)
-        if args.layer == "gold":
-            inputs["silver"] = _discover_silver_paths(cfg)
-        print(f"📊  Exporting execution DAG (layer={args.layer}) → {out}")
-        path = export_execution_dag(final_vars, inputs, output_path=out)
-
-    print(f"✅  Saved: {path}")
-    if args.open:
-        open_image(path)
-
-
-def cmd_status(args: argparse.Namespace) -> None:
-    from openmedallion.viz.server import start_server
-    print(f"🖥️   Starting status dashboard on port {args.port} ...")
-    start_server(port=args.port, block=True)
 
 
 # ---------------------------------------------------------------------------
@@ -210,42 +154,13 @@ def _build_parser() -> argparse.ArgumentParser:
         "--projects", default=".", metavar="PATH",
         help="Parent directory containing the project folder (default: . — current directory)",
     )
-    p_run.add_argument(
-        "--track", action="store_true",
-        help="Start live status dashboard and attach the Hamilton tracker",
-    )
-
-    # dag
-    sub.add_parser("dag", help="Print the Hamilton pipeline DAG as a text tree")
-
-    # visualize
-    p_viz = sub.add_parser("visualize", help="Export the Hamilton DAG as a PNG image")
-    p_viz.add_argument("project", help="Project name (used when --layer is set)")
-    p_viz.add_argument(
-        "--layer", choices=list(LAYERS), default=None, metavar="LAYER",
-        help="Export only the execution path for this layer (default: full DAG)",
-    )
-    p_viz.add_argument("--output", default=None, metavar="PATH",
-                       help="Output file path (default: dag.png or dag_<layer>.png)")
-    p_viz.add_argument("--open", action="store_true",
-                       help="Open the image in the default viewer after export")
-
-    # status
-    p_status = sub.add_parser("status", help="Start the live status dashboard server")
-    p_status.add_argument(
-        "--port", type=int, default=8765, metavar="PORT",
-        help="TCP port to listen on (default: 8765)",
-    )
 
     return parser
 
 
 _HANDLERS = {
-    "init":      cmd_init,
-    "run":       cmd_run,
-    "dag":       cmd_dag,
-    "visualize": cmd_visualize,
-    "status":    cmd_status,
+    "init": cmd_init,
+    "run":  cmd_run,
 }
 
 
