@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>openmedallion — How It Works</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      min-height: 100vh;
+      padding: 40px 24px 60px;
+    }
+
+    /* ── Header ── */
+    .header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+    .header h1 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: #f0f6fc;
+    }
+    .header h1 span { color: #d29922; }
+    .header p {
+      margin-top: 10px;
+      color: #8b949e;
+      font-size: 1.05rem;
+      max-width: 560px;
+      margin-inline: auto;
+      line-height: 1.6;
+    }
+
+    /* ── Pipeline row ── */
+    .pipeline {
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      gap: 0;
+      max-width: 1050px;
+      margin: 0 auto 52px;
+      flex-wrap: nowrap;
+    }
+
+    /* Arrow between cards */
+    .arrow {
+      display: flex;
+      align-items: center;
+      padding: 0 6px;
+      flex-shrink: 0;
+    }
+    .arrow svg { display: block; }
+
+    /* ── Cards ── */
+    .card {
+      flex: 1;
+      min-width: 0;
+      border-radius: 12px;
+      padding: 22px 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      border: 1px solid;
+    }
+
+    .card-sources  { background: #161b22; border-color: #30363d; }
+    .card-bronze   { background: #1c1409; border-color: #7a4b0a; }
+    .card-silver   { background: #0e1824; border-color: #1c4275; }
+    .card-gold     { background: #181408; border-color: #7a6a0a; }
+    .card-output   { background: #0f1a14; border-color: #1a5c2a; }
+
+    .card-icon { font-size: 2rem; line-height: 1; }
+
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+    }
+    .card-sources .card-title  { color: #8b949e; }
+    .card-bronze  .card-title  { color: #cd7f32; }
+    .card-silver  .card-title  { color: #79c0ff; }
+    .card-gold    .card-title  { color: #e3b341; }
+    .card-output  .card-title  { color: #56d364; }
+
+    .card-subtitle {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #6e7681;
+      margin-top: -6px;
+    }
+
+    .card-desc {
+      font-size: 0.82rem;
+      color: #8b949e;
+      line-height: 1.55;
+      flex: 1;
+    }
+
+    /* Library pills */
+    .libs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 4px;
+    }
+    .lib {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-family: 'Cascadia Code', 'Fira Mono', monospace;
+      white-space: nowrap;
+    }
+    .lib-dlt      { background: #2a1c08; color: #d08030; border: 1px solid #7a4b0a; }
+    .lib-polars   { background: #0c1d30; color: #6ec9f5; border: 1px solid #1c4275; }
+    .lib-hamilton { background: #1a1020; color: #c084fc; border: 1px solid #5b21b6; }
+    .lib-yaml     { background: #1c1409; color: #fbbf24; border: 1px solid #7a4b0a; }
+    .lib-source   { background: #161b22; color: #8b949e; border: 1px solid #30363d; }
+    .lib-parquet  { background: #0f1a14; color: #4ade80; border: 1px solid #1a5c2a; }
+
+    /* ── Analogy strip ── */
+    .analogy-strip {
+      max-width: 1050px;
+      margin: 0 auto 52px;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      padding: 20px 28px;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      text-align: center;
+    }
+    .analogy-strip h3 {
+      grid-column: 1 / -1;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #6e7681;
+      margin-bottom: 4px;
+    }
+    .analogy-item { display: flex; flex-direction: column; gap: 4px; }
+    .analogy-emoji { font-size: 1.5rem; }
+    .analogy-label { font-size: 0.75rem; color: #6e7681; }
+    .analogy-value { font-size: 0.82rem; color: #c9d1d9; font-weight: 500; }
+
+    /* ── How it runs ── */
+    .how-section {
+      max-width: 1050px;
+      margin: 0 auto 52px;
+    }
+    .how-section h2 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #6e7681;
+      margin-bottom: 18px;
+      text-align: center;
+    }
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    .step {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      padding: 18px 16px;
+    }
+    .step-num {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: #6e7681;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+    }
+    .step-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #f0f6fc;
+      margin-bottom: 6px;
+    }
+    .step-desc {
+      font-size: 0.78rem;
+      color: #8b949e;
+      line-height: 1.55;
+    }
+    .step code {
+      font-family: 'Cascadia Code', 'Fira Mono', monospace;
+      background: #0d1117;
+      padding: 1px 5px;
+      border-radius: 4px;
+      color: #79c0ff;
+      font-size: 0.75rem;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      text-align: center;
+      color: #484f58;
+      font-size: 0.75rem;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <h1>open<span>medallion</span></h1>
+    <p>A simple framework that takes raw data from any source, cleans and transforms it, and turns it into insights — automatically.</p>
+  </div>
+
+  <!-- Pipeline cards -->
+  <div class="pipeline">
+
+    <!-- Sources -->
+    <div class="card card-sources">
+      <div class="card-icon">🗄️</div>
+      <div class="card-title">Data Sources</div>
+      <div class="card-subtitle">Where data lives</div>
+      <div class="card-desc">Any database, spreadsheet, file, or API your organisation already uses.</div>
+      <div class="libs">
+        <span class="lib lib-source">Oracle</span>
+        <span class="lib lib-source">PostgreSQL</span>
+        <span class="lib lib-source">SQLite</span>
+        <span class="lib lib-source">CSV / Parquet</span>
+        <span class="lib lib-source">REST API</span>
+      </div>
+    </div>
+
+    <div class="arrow">
+      <svg width="28" height="28" viewBox="0 0 28 28"><path d="M6 14h16M16 8l6 6-6 6" stroke="#30363d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+    </div>
+
+    <!-- Bronze -->
+    <div class="card card-bronze">
+      <div class="card-icon">🥉</div>
+      <div class="card-title">Bronze</div>
+      <div class="card-subtitle">Raw — as collected</div>
+      <div class="card-desc">Data is pulled from the source and saved to disk exactly as-is. Only filtered for the rows and columns you need.</div>
+      <div class="libs">
+        <span class="lib lib-dlt">dlt</span>
+        <span class="lib lib-yaml">YAML config</span>
+      </div>
+    </div>
+
+    <div class="arrow">
+      <svg width="28" height="28" viewBox="0 0 28 28"><path d="M6 14h16M16 8l6 6-6 6" stroke="#7a4b0a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+    </div>
+
+    <!-- Silver -->
+    <div class="card card-silver">
+      <div class="card-icon">🥈</div>
+      <div class="card-title">Silver</div>
+      <div class="card-subtitle">Cleaned &amp; joined</div>
+      <div class="card-desc">Tables are merged, columns renamed, bad values removed, and business rules applied. Data becomes trustworthy here.</div>
+      <div class="libs">
+        <span class="lib lib-polars">Polars</span>
+        <span class="lib lib-hamilton">Hamilton</span>
+      </div>
+    </div>
+
+    <div class="arrow">
+      <svg width="28" height="28" viewBox="0 0 28 28"><path d="M6 14h16M16 8l6 6-6 6" stroke="#1c4275" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+    </div>
+
+    <!-- Gold -->
+    <div class="card card-gold">
+      <div class="card-icon">🥇</div>
+      <div class="card-title">Gold</div>
+      <div class="card-subtitle">Insights &amp; metrics</div>
+      <div class="card-desc">Summaries, KPIs, and aggregates your team actually reads — headcount, revenue bands, trends. Ready to export.</div>
+      <div class="libs">
+        <span class="lib lib-polars">Polars</span>
+        <span class="lib lib-hamilton">Hamilton</span>
+      </div>
+    </div>
+
+    <div class="arrow">
+      <svg width="28" height="28" viewBox="0 0 28 28"><path d="M6 14h16M16 8l6 6-6 6" stroke="#7a6a0a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+    </div>
+
+    <!-- Output -->
+    <div class="card card-output">
+      <div class="card-icon">📊</div>
+      <div class="card-title">Output</div>
+      <div class="card-subtitle">Files &amp; reports</div>
+      <div class="card-desc">Parquet files ready for any BI tool, Python notebook, or downstream system. Also exports CSV for Excel users.</div>
+      <div class="libs">
+        <span class="lib lib-parquet">Parquet</span>
+        <span class="lib lib-parquet">CSV</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Analogy strip -->
+  <div class="analogy-strip">
+    <h3>Think of it like a kitchen</h3>
+    <div class="analogy-item">
+      <div class="analogy-emoji">🛒</div>
+      <div class="analogy-label">Sources</div>
+      <div class="analogy-value">Grocery store</div>
+    </div>
+    <div class="analogy-item">
+      <div class="analogy-emoji">📦</div>
+      <div class="analogy-label">Bronze</div>
+      <div class="analogy-value">Raw ingredients delivered</div>
+    </div>
+    <div class="analogy-item">
+      <div class="analogy-emoji">🔪</div>
+      <div class="analogy-label">Silver</div>
+      <div class="analogy-value">Prepped &amp; measured</div>
+    </div>
+    <div class="analogy-item">
+      <div class="analogy-emoji">🍽️</div>
+      <div class="analogy-label">Gold</div>
+      <div class="analogy-value">Finished dish, plated</div>
+    </div>
+    <div class="analogy-item">
+      <div class="analogy-emoji">🍴</div>
+      <div class="analogy-label">Output</div>
+      <div class="analogy-value">Served to the table</div>
+    </div>
+  </div>
+
+  <!-- How it runs -->
+  <div class="how-section">
+    <h2>How you run it</h2>
+    <div class="steps">
+
+      <div class="step">
+        <div class="step-num">Step 1</div>
+        <div class="step-title">Describe your data in plain files</div>
+        <div class="step-desc">You write simple <code>bronze.yaml</code>, <code>silver.yaml</code>, <code>gold.yaml</code> config files that say where your data is and what you want done to it. No code required for most tasks.</div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">Step 2</div>
+        <div class="step-title">Run one command</div>
+        <div class="step-desc"><code>medallion run &lt;project&gt;</code> — that's it. The framework handles the order of operations and logs every step so you know exactly what happened.</div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">Step 3</div>
+        <div class="step-title">Open the results</div>
+        <div class="step-desc">Every run produces ready-to-use Parquet files your BI team can open directly — Power BI, Tableau, Python notebooks, or anything that reads columnar data.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Library legend -->
+  <div class="how-section">
+    <h2>Python libraries — what each one does</h2>
+    <div class="steps">
+
+      <div class="step">
+        <div class="step-num">Bronze layer</div>
+        <div class="step-title"><code style="color:#d08030">dlt</code> — Data Load Tool</div>
+        <div class="step-desc">Connects to databases, files, and APIs. Handles authentication, pagination, and incremental loads — only fetching new rows since the last run. Think of it as a very smart copy-paste that never misses an update.</div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">Silver &amp; Gold layers</div>
+        <div class="step-title"><code style="color:#6ec9f5">Polars</code> — Lightning-fast tables</div>
+        <div class="step-desc">Like pandas or Excel formulas but 10–100× faster, written in Rust. Handles joining tables, filtering rows, and computing new columns — all the number-crunching work at each layer.</div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">All layers</div>
+        <div class="step-title"><code style="color:#c084fc">Hamilton</code> — Step orchestrator</div>
+        <div class="step-desc">Figures out the correct order to run your transformation steps and only re-runs what actually changed. Ensures bronze always runs before silver, silver before gold — automatically.</div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">Config</div>
+        <div class="step-title"><code style="color:#fbbf24">YAML</code> — Human-readable config</div>
+        <div class="step-desc">All pipeline definitions live in plain YAML files — readable without a programming background. Change a filter, add a column, point to a new database — all without touching Python.</div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">Output</div>
+        <div class="step-title"><code style="color:#4ade80">Parquet</code> — Columnar data files</div>
+        <div class="step-desc">The industry standard for analytical data. Compressed, fast to query, and readable by every modern BI tool — Power BI, Tableau, DuckDB, Python, Spark. No database server needed.</div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">Scheduling</div>
+        <div class="step-title"><code style="color:#8b949e">Kestra</code> — Pipeline scheduler</div>
+        <div class="step-desc">For recurring scheduled runs (daily, weekly, etc.), openmedallion generates a Kestra flow file automatically. Kestra handles retries, per-task logs, and run history — no cron job hacking.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="footer">openmedallion · open-source · github.com/tummala-hareesh/openmedallion</div>
+
+</body>
+</html>

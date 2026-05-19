@@ -781,39 +781,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#dag" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        dag
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#visualize" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        visualize
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#status" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        status
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#global-behaviour" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1101,39 +1068,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#dag" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        dag
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#visualize" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        visualize
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#status" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        status
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#global-behaviour" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1186,18 +1120,6 @@
 <td><a href="#run"><code>run</code></a></td>
 <td>Execute the pipeline for a project</td>
 </tr>
-<tr>
-<td><a href="#dag"><code>dag</code></a></td>
-<td>Print the Hamilton DAG as a text tree</td>
-</tr>
-<tr>
-<td><a href="#visualize"><code>visualize</code></a></td>
-<td>Export the Hamilton DAG as a PNG image</td>
-</tr>
-<tr>
-<td><a href="#status"><code>status</code></a></td>
-<td>Start the live status dashboard server</td>
-</tr>
 </tbody>
 </table>
 <hr />
@@ -1216,35 +1138,39 @@
 <tbody>
 <tr>
 <td><code>project</code></td>
-<td>Project name. Creates <code>projects/&lt;project&gt;/</code> in the current directory.</td>
+<td>Project name. Creates <code>&lt;project&gt;/</code> in the current directory.</td>
 </tr>
 </tbody>
 </table>
 <p><strong>What it creates:</strong></p>
-<div class="highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>projects/&lt;project&gt;/
+<div class="highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>&lt;project&gt;/
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>├── main.yaml              # pipeline name, paths, bi_export
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>├── bronze.yaml            # Oracle SQL source template
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>├── silver.yaml            # rename + cast + UDF template
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>├── gold.yaml              # group_by aggregation template
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>└── udf/
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    ├── silver/
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    │   ├── base.py        # Silver base-table UDF stub
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    │   └── derived.py     # Silver derived-table UDF stub
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>    └── gold/
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>        └── transforms.py  # Gold pre-agg UDF stub
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>├── backend/
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>│   ├── bronze.yaml        # source connection + incremental config
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>│   ├── silver.yaml        # rename + cast + UDF template
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>│   ├── gold.yaml          # group_by aggregation template
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>│   └── udf/
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>│       ├── silver/
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>│       │   ├── base.py    # Silver base-table UDF stub
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>│       │   └── derived.py # Silver derived-table UDF stub
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>│       └── gold/
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>│           └── transforms.py  # Gold pre-agg UDF stub
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>├── frontend/              # dashboard files (Tableau, Power BI, etc.)
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>├── data/                  # gitignored pipeline outputs
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>├── summary/               # analysis write-ups
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>├── kestra_flow.yml        # Kestra orchestration flow
+</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>└── README.md              # pre-filled project documentation template
 </span></code></pre></div>
 <p>If the project folder already exists, the command aborts with an error and prints the path to delete to reinitialise.</p>
 <p><strong>Example:</strong>
 <div class="highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>medallion<span class="w"> </span>init<span class="w"> </span>sales_project
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="c1"># 🏗️  Scaffolding project &#39;sales_project&#39; ...</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1"># 🏗️   [init] created projects/sales_project/main.yaml</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># ...</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="c1"># ✅  Project &#39;sales_project&#39; initialised.</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1"># ✅  Project &#39;sales_project&#39; initialised.</span>
 </span></code></pre></div></p>
 <hr />
 <h2 id="run">run<a class="headerlink" href="#run" title="Permanent link">&para;</a></h2>
 <p>Execute the pipeline for a named project.</p>
-<div class="highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>medallion<span class="w"> </span>run<span class="w"> </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>--layer<span class="w"> </span>LAYER<span class="o">]</span><span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span><span class="w"> </span><span class="o">[</span>--track<span class="o">]</span>
+<div class="highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>medallion<span class="w"> </span>run<span class="w"> </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>--layer<span class="w"> </span>LAYER<span class="o">]</span><span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span>
 </span></code></pre></div>
 <p><strong>Arguments:</strong></p>
 <table>
@@ -1278,13 +1204,8 @@
 </tr>
 <tr>
 <td><code>--projects</code></td>
-<td><code>projects</code></td>
+<td><code>.</code></td>
 <td>Projects root directory. Override when running from a different working directory.</td>
-</tr>
-<tr>
-<td><code>--track</code></td>
-<td>off</td>
-<td>Start the live status dashboard at <code>http://localhost:8765</code> and attach the Hamilton tracker.</td>
 </tr>
 </tbody>
 </table>
@@ -1334,118 +1255,8 @@
 </span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="c1"># Re-run transforms after editing a UDF</span>
 </span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>medallion<span class="w"> </span>run<span class="w"> </span>sales_project<span class="w"> </span>--layer<span class="w"> </span>silver
 </span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>
-</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="c1"># Production run with BI export and live tracker</span>
-</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>medallion<span class="w"> </span>run<span class="w"> </span>sales_project<span class="w"> </span>--layer<span class="w"> </span><span class="nb">export</span><span class="w"> </span>--track
-</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>
-</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="c1"># Projects in a non-default directory</span>
-</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>medallion<span class="w"> </span>run<span class="w"> </span>sales_project<span class="w"> </span>--projects<span class="w"> </span>/var/pipelines/projects
-</span></code></pre></div></p>
-<hr />
-<h2 id="dag">dag<a class="headerlink" href="#dag" title="Permanent link">&para;</a></h2>
-<p>Print the full Hamilton pipeline DAG as an ASCII text tree. Does not require a project to be configured — it reflects the static structure of <code>pipeline/nodes.py</code>.</p>
-<div class="highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>medallion<span class="w"> </span>dag
-</span></code></pre></div>
-<p>No arguments or options.</p>
-<p><strong>Example output:</strong>
-<div class="highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>config
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>└── bronze
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>    └── silver
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>        └── gold
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>            └── bi_export
-</span></code></pre></div></p>
-<hr />
-<h2 id="visualize">visualize<a class="headerlink" href="#visualize" title="Permanent link">&para;</a></h2>
-<p>Export the Hamilton DAG as a PNG image using graphviz.</p>
-<div class="highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>medallion<span class="w"> </span>visualize<span class="w"> </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>--layer<span class="w"> </span>LAYER<span class="o">]</span><span class="w"> </span><span class="o">[</span>--output<span class="w"> </span>PATH<span class="o">]</span><span class="w"> </span><span class="o">[</span>--open<span class="o">]</span>
-</span></code></pre></div>
-<div class="admonition warning">
-<p class="admonition-title">Requires graphviz</p>
-<p>Install with <code>pip install "openmedallion[viz]"</code> and ensure the <code>graphviz</code> system package is also installed (<code>apt install graphviz</code> / <code>brew install graphviz</code>).</p>
-</div>
-<p><strong>Arguments:</strong></p>
-<table>
-<thead>
-<tr>
-<th>Argument</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>project</code></td>
-<td>Project name (required when <code>--layer</code> is set).</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Options:</strong></p>
-<table>
-<thead>
-<tr>
-<th>Flag</th>
-<th>Default</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>--layer</code></td>
-<td>none</td>
-<td>Export the execution DAG for a specific layer. Omit to export the full static DAG.</td>
-</tr>
-<tr>
-<td><code>--output</code></td>
-<td><code>dag.png</code></td>
-<td>Output file path. Defaults to <code>dag_&lt;layer&gt;.png</code> when <code>--layer</code> is set.</td>
-</tr>
-<tr>
-<td><code>--open</code></td>
-<td>off</td>
-<td>Open the exported image in the default system viewer.</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Examples:</strong>
-<div class="highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Full static DAG</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>medallion<span class="w"> </span>visualize<span class="w"> </span>sales_project
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># Execution DAG for the gold layer</span>
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>medallion<span class="w"> </span>visualize<span class="w"> </span>sales_project<span class="w"> </span>--layer<span class="w"> </span>gold
-</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>
-</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="c1"># Save to a specific path and open immediately</span>
-</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>medallion<span class="w"> </span>visualize<span class="w"> </span>sales_project<span class="w"> </span>--output<span class="w"> </span>reports/dag.png<span class="w"> </span>--open
-</span></code></pre></div></p>
-<hr />
-<h2 id="status">status<a class="headerlink" href="#status" title="Permanent link">&para;</a></h2>
-<p>Start the live pipeline status dashboard as a standalone server.</p>
-<div class="highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>medallion<span class="w"> </span>status<span class="w"> </span><span class="o">[</span>--port<span class="w"> </span>PORT<span class="o">]</span>
-</span></code></pre></div>
-<p><strong>Options:</strong></p>
-<table>
-<thead>
-<tr>
-<th>Flag</th>
-<th>Default</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>--port</code></td>
-<td><code>8765</code></td>
-<td>TCP port to listen on.</td>
-</tr>
-</tbody>
-</table>
-<p>The dashboard serves a FastAPI + Server-Sent Events (SSE) web page that shows node execution states and timings in real time. Open <code>http://localhost:8765</code> in a browser.</p>
-<div class="admonition tip">
-<p class="admonition-title">Starting the tracker from run</p>
-<p><code>medallion status</code> starts the server standalone (for debugging or demo use). In production, use <code>medallion run &lt;project&gt; --track</code> instead — that starts the server in the background <em>and</em> attaches the Hamilton tracker to the running pipeline so the dashboard updates live.</p>
-</div>
-<p><strong>Example:</strong>
-<div class="highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>medallion<span class="w"> </span>status
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="c1"># 🖥️   Starting status dashboard on port 8765 ...</span>
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
-</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>medallion<span class="w"> </span>status<span class="w"> </span>--port<span class="w"> </span><span class="m">9000</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="c1"># Projects in a non-default directory</span>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>medallion<span class="w"> </span>run<span class="w"> </span>sales_project<span class="w"> </span>--projects<span class="w"> </span>/var/pipelines/projects
 </span></code></pre></div></p>
 <hr />
 <h2 id="global-behaviour">Global Behaviour<a class="headerlink" href="#global-behaviour" title="Permanent link">&para;</a></h2>

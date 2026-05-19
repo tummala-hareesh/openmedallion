@@ -1529,8 +1529,6 @@
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>medallion<span class="w"> </span>init<span class="w"> </span>my_project<span class="w">       </span><span class="c1"># scaffold: YAML configs + UDF stubs + kestra_flow.yml</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>medallion<span class="w"> </span>run<span class="w"> </span>my_project<span class="w">        </span><span class="c1"># Bronze → Silver → Gold in one command</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>medallion<span class="w"> </span>run<span class="w"> </span>my_project<span class="w"> </span>--layer<span class="w"> </span>silver<span class="w">   </span><span class="c1"># re-run a single layer</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>medallion<span class="w"> </span>dag<span class="w">                   </span><span class="c1"># print the Hamilton DAG</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>medallion<span class="w"> </span>serve<span class="w">                 </span><span class="c1"># launch the live pipeline tracker UI</span>
 </span></code></pre></div>
 <hr />
 <h2 id="key-features">Key Features<a class="headerlink" href="#key-features" title="Permanent link">&para;</a></h2>
@@ -1538,7 +1536,6 @@
 <li><strong>Declarative YAML config</strong> — define pipeline layers without writing boilerplate</li>
 <li><strong>Incremental loads</strong> — append and merge modes via dlt cursor columns and primary keys</li>
 <li><strong>Composable UDFs</strong> — drop Python functions into <code>udf/silver/</code> or <code>udf/gold/</code>; no new framework to learn</li>
-<li><strong>Live DAG tracker</strong> — Hamilton-powered web UI to visualise and monitor execution</li>
 <li><strong>Local first</strong> — run the full pipeline against Parquet files with zero cloud credentials</li>
 <li><strong>Cloud portable</strong> — swap <code>filesystem</code> for S3 in one line; logic stays unchanged</li>
 <li><strong>Source agnostic</strong> — any dlt source: SQL databases, REST APIs, filesystems, and more</li>
@@ -1588,7 +1585,7 @@
 <tr>
 <td>🔗 Orchestration</td>
 <td>Hamilton</td>
-<td>DAG wiring with live web tracker</td>
+<td>DAG wiring and execution order</td>
 </tr>
 </tbody>
 </table>
@@ -1597,8 +1594,8 @@
 <div class="highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>pip<span class="w"> </span>install<span class="w"> </span>openmedallion
 </span></code></pre></div>
 <p>Optional extras:</p>
-<div class="highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;openmedallion[s3]&quot;</span><span class="w">    </span><span class="c1"># S3 support via s3fs + boto3</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;openmedallion[viz]&quot;</span><span class="w">   </span><span class="c1"># DAG visualisation via graphviz</span>
+<div class="highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;openmedallion[s3]&quot;</span><span class="w">      </span><span class="c1"># S3 support via s3fs + boto3</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;openmedallion[oracle]&quot;</span><span class="w">  </span><span class="c1"># Oracle DB support via oracledb</span>
 </span></code></pre></div>
 <blockquote>
 <p>Requires Python 3.11+</p>
@@ -1849,7 +1846,7 @@
 <td>✅ 2026.4.1</td>
 </tr>
 <tr>
-<td>Hamilton DAG + live tracker</td>
+<td>Hamilton DAG orchestration</td>
 <td>✅ 2026.4.1</td>
 </tr>
 <tr>
