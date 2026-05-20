@@ -48,7 +48,7 @@ version: clean lint examples
 	@echo "→ Bumping version to $(VER)"
 	sed -i 's/^version = ".*"/version = "$(VER)"/' pyproject.toml
 	sed -i 's/^__version__ = ".*"/__version__ = "$(VER)"/' openmedallion/__init__.py
-	@echo "✅  Upgraded (local) to openmedallionv$(VER)"
+	@echo "✅  Upgraded (local) to openmedallion v$(VER)"
 
 # ── Release ───────────────────────────────────────────────────────────────────
 
