@@ -38,23 +38,25 @@ clean:
 	find . -type d -name __pycache__ -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
 
-# ── Release ───────────────────────────────────────────────────────────────────
-
-publish:
-	@[ -n "$(v)" ] || (echo "Usage: make publish v=2026.5.1"; exit 1)
+version:
+	@[ -n "$(v)" ] || (echo "Usage: make version v=2026.x.x"; exit 1)
 	@echo "→ Bumping version to $(VER)"
 	sed -i 's/^version = ".*"/version = "$(VER)"/' pyproject.toml
 	sed -i 's/^__version__ = ".*"/__version__ = "$(VER)"/' openmedallion/__init__.py
+	@echo "✅  Upgraded (local) to openmedallionv$(VER)"
+
+# ── Release ───────────────────────────────────────────────────────────────────
+
+publish: version build
 	git add pyproject.toml openmedallion/__init__.py
 	git commit -m "chore: bump version to $(VER)"
 	git push origin HEAD
-	@echo "✅  Tagged v$(VER) and pushed — publish workflow triggered."
+	@echo "✅  Pushed HEAD — Publish workflow triggered."
 
-release:
-	@[ -n "$(v)" ] || (echo "Usage: make release v=2026.5.1"; exit 1)
+release: publish
 	git tag v$(VER)
 	git push origin v$(VER)
-	@echo "✅  Pushed tag v$(VER) — publish workflow triggered."
+	@echo "✅  Pushed tag v$(VER) — Release workflow triggered."
 
 # ── Kestra ────────────────────────────────────────────────────────────────────
 
