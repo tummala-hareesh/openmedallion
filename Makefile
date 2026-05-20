@@ -38,7 +38,7 @@ clean:
 	find . -type d -name __pycache__ -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
 
-version:
+version: clean lint test examples
 	@[ -n "$(v)" ] || (echo "Usage: make version v=2026.x.x"; exit 1)
 	@echo "→ Bumping version to $(VER)"
 	sed -i 's/^version = ".*"/version = "$(VER)"/' pyproject.toml

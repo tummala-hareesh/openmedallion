@@ -78,7 +78,11 @@ include = [
 ]
 
 [dependency-groups]
-dev = ["pytest>=8", "pytest-anyio>=0.0"]
+dev = [
+    "pytest>=8",
+    "pytest-anyio>=0.0",
+    "ruff>=0.15.13",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
