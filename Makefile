@@ -54,7 +54,7 @@ version: clean lint examples
 
 publish: version build
 	@[ -n "$(v)" ] || (echo "Usage: make publish v=2026.x.x"; exit 1)
-	git add pyproject.toml openmedallion/__init__.py
+	git add pyproject.toml openmedallion/__init__.py uv.lock
 	git commit -m "chore: bump version to $(VER)"
 	git push origin HEAD
 	@echo "✅  Pushed HEAD — Publish workflow triggered."
