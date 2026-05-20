@@ -35,10 +35,11 @@ class GoldAggregator:
     """
 
     def __init__(self, cfg: dict):
-        self.silver_path = cfg["paths"]["silver"]
-        self.gold_root   = cfg["paths"]["gold"]
-        self.projects    = cfg["silver_to_gold"]["projects"]
-        self._udf_cache: dict[str, object] = {}
+        self.silver_path     = cfg["paths"]["silver"]
+        self.gold_root       = cfg["paths"]["gold"]
+        self.projects        = cfg["silver_to_gold"]["projects"]
+        self._udf_cache:     dict[str, object] = {}
+        self.explore_enabled = cfg.get("_explore", True)
 
     def aggregate(self) -> dict[str, list[str]]:
         """Run all gold aggregations and return the paths written."""
@@ -62,6 +63,15 @@ class GoldAggregator:
                 storage.write_parquet(df, out)
                 print(f"📊  [gold/{name}] {agg['output_file']}  ({len(df)} rows)")
                 paths.append(out)
+                if self.explore_enabled and (explore_specs := agg.get("explore")):
+                    from pathlib import Path as _Path
+                    from openmedallion.pipeline.explore import _dispatch_reports
+                    _dispatch_reports(
+                        src     = _Path(out),
+                        out_dir = _Path(self.gold_root) / "add-ons" / name,
+                        specs   = explore_specs,
+                        context = f"explore/gold/{name}",
+                    )
 
             results[name] = paths
         return results

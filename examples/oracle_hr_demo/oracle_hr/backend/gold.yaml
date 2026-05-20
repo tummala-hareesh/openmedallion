@@ -10,6 +10,13 @@ silver_to_gold:
             - {column: salary,      agg: sum,   alias: total_payroll}
             - {column: salary,      agg: mean,  alias: avg_salary}
           output_file: headcount_by_department.parquet
+          explore:
+            - report_type: profile
+              output_file:  headcount_by_department_profile.html
+              title:        "Headcount by Department"
+            - report_type: walker
+              output_file:  headcount_by_department_explorer.html
+              title:        "Headcount by Department Explorer"
 
         # ── Salary range utilisation per job title ────────────────────────────
         - source_file: employees_enriched.parquet
@@ -20,6 +27,13 @@ silver_to_gold:
             - {column: salary,      agg: max,   alias: max_actual_salary}
             - {column: salary,      agg: mean,  alias: avg_actual_salary}
           output_file: salary_by_job.parquet
+          explore:
+            - report_type: profile
+              output_file:  salary_by_job_profile.html
+              title:        "Salary by Job Title"
+            - report_type: walker
+              output_file:  salary_by_job_explorer.html
+              title:        "Salary by Job Title Explorer"
 
         # ── Salary as % of job-band maximum — pre-agg UDF adds the column ─────
         - source_file: employees_enriched.parquet
@@ -31,3 +45,10 @@ silver_to_gold:
             - {column: salary_pct_of_max, agg: mean, alias: avg_salary_pct_of_max}
             - {column: employee_id,       agg: count, alias: headcount}
           output_file: salary_utilization.parquet
+          explore:
+            - report_type: profile
+              output_file:  salary_utilization_profile.html
+              title:        "Salary Utilization"
+            - report_type: walker
+              output_file:  salary_utilization_explorer.html
+              title:        "Salary Utilization Explorer"

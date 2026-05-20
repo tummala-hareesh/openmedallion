@@ -5,7 +5,7 @@ Commands
 medallion init <project>
     Scaffold a new project under <project>/.
 
-medallion run <project> [--layer LAYER] [--projects PATH]
+medallion run <project> [--layer LAYER] [--projects PATH] [--no-explore]
     Run the pipeline for a project.
 
     --layer     Which layer to run up to and including.
@@ -16,6 +16,9 @@ medallion run <project> [--layer LAYER] [--projects PATH]
                 explore  — bronze → silver → gold → HTML reports
                            (requires [profile] and/or [explore] extras)
 
+    --no-explore  Skip all inline explore: report generation in every layer.
+                  Useful for fast runs or CI where optional deps are absent.
+
     --projects  Override the project root directory (default: . — current directory).
 
 Examples
@@ -24,6 +27,7 @@ Examples
     medallion run       sales_project
     medallion run       sales_project --layer bronze
     medallion run       sales_project --layer explore
+    medallion run       sales_project --no-explore
 """
 import argparse
 import sys
@@ -73,6 +77,8 @@ def cmd_run(args: argparse.Namespace) -> None:
     print(f"{'━' * _W}\n")
 
     cfg = load_project(args.project, args.projects)
+    if not args.explore:
+        cfg["_explore"] = False
 
     builder = driver.Builder().with_modules(pipeline_nodes)
     dr = builder.build()
@@ -153,6 +159,10 @@ def _build_parser() -> argparse.ArgumentParser:
     p_run.add_argument(
         "--projects", default=".", metavar="PATH",
         help="Parent directory containing the project folder (default: . — current directory)",
+    )
+    p_run.add_argument(
+        "--no-explore", dest="explore", action="store_false", default=True,
+        help="Skip all inline explore: report generation in every layer",
     )
 
     return parser

@@ -13,6 +13,13 @@ silver_to_gold:
             - {column: margin_amount, agg: sum,   alias: total_margin}
             - {column: order_id,      agg: count, alias: num_orders}
           output_file: revenue_by_category.parquet
+          explore:
+            - report_type: profile
+              output_file:  revenue_by_category_profile.html
+              title:        "Revenue by Category"
+            - report_type: walker
+              output_file:  revenue_by_category_explorer.html
+              title:        "Revenue by Category Explorer"
 
         # Lifetime value + order count per customer
         - source_file: order_lines_enriched.parquet
@@ -21,6 +28,13 @@ silver_to_gold:
             - {column: line_revenue, agg: sum,   alias: total_spent}
             - {column: order_id,     agg: count, alias: num_orders}
           output_file: top_customers.parquet
+          explore:
+            - report_type: profile
+              output_file:  top_customers_profile.html
+              title:        "Top Customers"
+            - report_type: walker
+              output_file:  top_customers_explorer.html
+              title:        "Top Customers Explorer"
 
         # Month-over-month revenue trend
         - source_file: order_lines_enriched.parquet
@@ -32,3 +46,10 @@ silver_to_gold:
             - {column: line_revenue, agg: sum,   alias: monthly_revenue}
             - {column: order_id,     agg: count, alias: num_orders}
           output_file: monthly_summary.parquet
+          explore:
+            - report_type: profile
+              output_file:  monthly_summary_profile.html
+              title:        "Monthly Revenue Summary"
+            - report_type: walker
+              output_file:  monthly_summary_explorer.html
+              title:        "Monthly Revenue Explorer"

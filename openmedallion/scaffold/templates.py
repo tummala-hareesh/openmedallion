@@ -54,32 +54,65 @@ def _main_template(project: str, path_data: str = "data") -> dict:
 
 def _bronze_template() -> dict:
     return {
-        "source": {
+        "sources": [{
             "type": "sql_database", "dialect": "oracle",
             "connection_string": "oracle+oracledb://${ORACLE_USER}:${ORACLE_PASSWORD}@${ORACLE_DSN}",
             "schema": "MY_SCHEMA",
-            "tables": [{"name": "MY_TABLE", "incremental": {
-                "mode": "append", "cursor_column": "UPDATED_AT",
-                "initial_value": "2024-01-01T00:00:00"}}],
-        },
-        "destination": {"type": "filesystem", "bucket_url": "data/bronze"},
+            "tables": [{
+                "name": "MY_TABLE",
+                "incremental": {
+                    "mode": "append", "cursor_column": "UPDATED_AT",
+                    "initial_value": "2024-01-01T00:00:00",
+                },
+                "explore": [{
+                    "report_type": "profile",
+                    "output_file":  "my_table_profile.html",
+                    "title":        "MY_TABLE Bronze Quality",
+                }],
+            }],
+            "destination": {"type": "filesystem", "bucket_url": "data/bronze"},
+        }],
     }
 
 
 def _silver_template(project: str) -> dict:
     return {
         "bronze_to_silver": {
-            "tables": [{"source_file": "MY_TABLE.parquet", "output_file": "my_table.parquet",
+            "tables": [{
+                "source_file": "MY_TABLE.parquet",
+                "output_file": "my_table.parquet",
+                "explore": [{
+                    "report_type": "profile",
+                    "output_file":  "my_table_profile.html",
+                    "title":        "My Table Silver Quality",
+                }],
                 "transforms": [
                     {"type": "rename", "columns": {"MY_ID": "id", "UPDATED_AT": "updated_at"}},
                     {"type": "cast",   "columns": {"id": "Int64"}},
                     {"type": "udf",
                      "file": f"{project}/backend/udf/silver/base.py",
                      "function": "enrich_my_table"},
-                ]}],
-            "derived_tables": [{"output_file": "my_derived_table.parquet",
-                "udf": {"file": f"{project}/backend/udf/silver/derived.py",
-                        "function": "build_my_derived_table"}}],
+                ],
+            }],
+            "derived_tables": [{
+                "output_file": "my_derived_table.parquet",
+                "udf": {
+                    "file":     f"{project}/backend/udf/silver/derived.py",
+                    "function": "build_my_derived_table",
+                },
+                "explore": [
+                    {
+                        "report_type": "profile",
+                        "output_file":  "my_derived_table_profile.html",
+                        "title":        "My Derived Table Quality",
+                    },
+                    {
+                        "report_type": "walker",
+                        "output_file":  "my_derived_table_explorer.html",
+                        "title":        "My Derived Table Explorer",
+                    },
+                ],
+            }],
         },
     }
 
@@ -93,6 +126,18 @@ def _gold_template(project: str) -> dict:
             "group_by": ["id"],
             "metrics": [{"column": "id", "agg": "count", "alias": "total_records"}],
             "output_file": "summary.parquet",
+            "explore": [
+                {
+                    "report_type": "profile",
+                    "output_file":  "summary_profile.html",
+                    "title":        "Summary Profile",
+                },
+                {
+                    "report_type": "walker",
+                    "output_file":  "summary_explorer.html",
+                    "title":        "Summary Explorer",
+                },
+            ],
         }]}]},
     }
 
@@ -217,8 +262,13 @@ medallion --help
 
 {path_data}/           ← pipeline outputs (outside project folder, gitignored)
 ├── bronze/
+│   └── add-ons/       ← bronze HTML explore reports
 ├── silver/
+│   └── add-ons/       ← silver HTML explore reports
 ├── gold/
+│   ├── default/       ← gold Parquet per project
+│   └── add-ons/
+│       └── default/   ← gold HTML explore reports
 └── export/
 ```
 
@@ -258,7 +308,18 @@ Run individual layers:
 medallion run {project} --layer bronze   # ingest only
 medallion run {project} --layer silver   # transform only
 medallion run {project} --layer gold     # aggregate only
+medallion run {project} --layer explore  # standalone ExploreGenerator pass (optional)
 ```
+
+HTML explore reports (profile + walker) are generated automatically alongside
+each layer's Parquet output in `add-ons/` subdirectories:
+
+- `{path_data}/bronze/add-ons/`
+- `{path_data}/silver/add-ons/`
+- `{path_data}/gold/add-ons/<project>/`
+
+Requires optional extras: `pip install "openmedallion[profile]"` and/or
+`pip install "openmedallion[explore]"`
 
 Or open `ipynb/walkthrough.ipynb` in Jupyter for a step-by-step guided run.
 
@@ -343,6 +404,18 @@ tasks:
     workingDirectory: {working_dir}
     dependsOn:
       - run_silver
+
+# Uncomment to generate HTML explore reports after gold.
+# Requires: pip install "openmedallion[profile]" and/or "openmedallion[explore]"
+#
+#  - id: run_explore
+#    type: io.kestra.plugin.scripts.python.Commands
+#    warningOnStdErr: false
+#    commands:
+#      - medallion run {project} --layer explore
+#    workingDirectory: {working_dir}
+#    dependsOn:
+#      - run_gold
 
 # Uncomment to enable a scheduled refresh:
 # triggers:
@@ -434,6 +507,24 @@ def _walkthrough_notebook(project: str, path_data: str = "data") -> str:
             "for f in sorted(gold_dir.glob('*.parquet')):\n",
             "    print(f'\\n── {{f.name}} ──')\n",
             "    print(pl.read_parquet(f))",
+        ]),
+        md([
+            "## Step 4 — Explore (optional)\n",
+            "\n",
+            "Generate HTML reports from gold outputs.\n",
+            "Requires: `pip install 'openmedallion[profile]'` and/or `pip install 'openmedallion[explore]'`\n",
+            "\n",
+            "Reports land alongside each layer's Parquet files in `add-ons/` subdirs:\n",
+            f"- `{path_data}/bronze/add-ons/`\n",
+            f"- `{path_data}/silver/add-ons/`\n",
+            f"- `{path_data}/gold/add-ons/{project}/`\n",
+        ]),
+        code([
+            "# Uncomment after installing optional extras:\n",
+            f"# !medallion run {project} --layer explore\n",
+            "#\n",
+            "# Then open the generated HTML files in your browser:\n",
+            f"# import glob; list(glob.glob('{path_data}/**/add-ons/**/*.html', recursive=True))",
         ]),
     ]
 

@@ -228,7 +228,7 @@ def test_explore_generator_dispatches_profile(tmp_path, parquet_file):
     mock_gp.assert_called_once()
     args, kwargs = mock_gp.call_args
     assert args[0] == gold_dir / "data.parquet"
-    assert args[1] == tmp_path / "explore" / "proj" / "data_profile.html"
+    assert args[1] == tmp_path / "gold" / "add-ons" / "proj" / "data_profile.html"
     assert kwargs.get("title") == "My Profile"
     assert kwargs.get("minimal") is False
 
@@ -277,7 +277,7 @@ def test_explore_generator_dispatches_walker(tmp_path, parquet_file):
     mock_gw.assert_called_once()
     args, kwargs = mock_gw.call_args
     assert args[0] == gold_dir / "data.parquet"
-    assert args[1] == tmp_path / "explore" / "proj" / "data_explorer.html"
+    assert args[1] == tmp_path / "gold" / "add-ons" / "proj" / "data_explorer.html"
     assert kwargs.get("title") == "My Explorer"
 
 
@@ -322,11 +322,23 @@ def test_explore_generator_default_title_derived_from_stem(tmp_path, parquet_fil
 
 
 # ---------------------------------------------------------------------------
-# ExploreGenerator — default explore path when paths.explore absent
+# ExploreGenerator — reports land under gold/add-ons/<project>/
 # ---------------------------------------------------------------------------
 
-def test_explore_generator_default_explore_path(tmp_path):
-    """When paths.explore is absent, ExploreGenerator defaults to 'data/explore'."""
-    cfg = {"paths": {"gold": str(tmp_path)}}
-    gen = ExploreGenerator(cfg)
-    assert gen.explore_root == "data/explore"
+def test_explore_generator_output_under_gold_addons(tmp_path, parquet_file):
+    """ExploreGenerator writes reports to gold_path/add-ons/<project>/."""
+    gold_dir = tmp_path / "gold" / "proj"
+    gold_dir.mkdir(parents=True)
+    (gold_dir / "data.parquet").write_bytes(parquet_file.read_bytes())
+
+    cfg = _make_cfg(tmp_path, projects=[{
+        "name": "proj",
+        "tables": [{"source_file": "data.parquet", "report_type": "profile",
+                    "output_file": "data_profile.html"}],
+    }])
+
+    with patch("openmedallion.explore.profile.generate_profile") as mock_gp:
+        ExploreGenerator(cfg).generate()
+
+    args, _ = mock_gp.call_args
+    assert args[1].parent == tmp_path / "gold" / "add-ons" / "proj"

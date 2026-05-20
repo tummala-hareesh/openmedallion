@@ -1,9 +1,23 @@
-source:
-  type: local_files
-  tables:
-    - name: orders
-      path: "data/source/orders.csv"
-    - name: products
-      path: "data/source/products.csv"
-    - name: customers
-      path: "data/source/customers.csv"
+sources:
+  - type: local_files
+    tables:
+      - name: orders
+        path: "data/source/orders.csv"
+        explore:
+          - report_type: profile
+            output_file:  orders_profile.html
+            title:        "Orders Bronze Quality"
+
+      - name: products
+        path: "data/source/products.csv"
+        explore:
+          - report_type: profile
+            output_file:  products_profile.html
+            title:        "Products Bronze Quality"
+
+      - name: customers
+        path: "data/source/customers.csv"
+        explore:
+          - report_type: profile
+            output_file:  customers_profile.html
+            title:        "Customers Bronze Quality"

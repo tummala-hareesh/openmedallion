@@ -187,34 +187,78 @@ class BronzeLoader:
 
     Args:
         cfg: Merged project config dict. Must contain ``pipeline.name`` and
-            ``paths.bronze``. ``source`` and ``destination`` are optional
-            (omitting them causes bronze to no-op and return existing files).
+            ``paths.bronze``.
+
+        Supports two config forms:
+
+        *New (multi-source)*::
+
+            sources:
+              - type: local_files
+                tables: [...]
+              - type: sql_database
+                connection_string: ...
+                tables: [...]
+                destination:
+                  type: filesystem
+                  bucket_url: data
+
+        *Legacy (single source)*::
+
+            source:
+              type: sql_database
+              ...
+            destination:
+              type: filesystem
+              bucket_url: data
+
+        Both forms are normalised to ``sources`` internally.
     """
 
     def __init__(self, cfg: dict):
-        self.src           = cfg.get("source", {})
-        self.dst           = cfg.get("destination", {})
         self.pipeline_name = cfg["pipeline"]["name"]
         self.bronze_path   = cfg["paths"]["bronze"]
 
+        # Normalise legacy source: + destination: to sources: list.
+        if cfg.get("sources"):
+            self.sources: list[dict] = cfg["sources"]
+        elif cfg.get("source"):
+            src = dict(cfg["source"])
+            if cfg.get("destination"):
+                src.setdefault("destination", cfg["destination"])
+            self.sources = [src]
+        else:
+            self.sources = []
+
+        # Set per-source during load(); pre-populated from the first source so
+        # helpers like _resolve_conn_str() work when called outside load().
+        self.src: dict = self.sources[0] if self.sources else {}
+        self.dst: dict = self.sources[0].get("destination", {}) if self.sources else {}
+
+        self.explore_enabled: bool = cfg.get("_explore", True)
+
     def load(self) -> dict[str, str]:
-        """Run ingestion and return a ``{name: path}`` dict for every table."""
-        src_type = self.src.get("type")
-
-        if src_type == "local_files":
-            print(f"\n── Bronze {'─' * 49}")
-            return self._local_files_load()
-
-        if not src_type:
-            # No source configured — discover any pre-existing bronze parquets.
+        """Run ingestion for all sources and return a ``{name: path}`` dict."""
+        if not self.sources:
             return self._discover_existing()
 
         print(f"\n── Bronze {'─' * 49}")
-        pipeline = self._build_pipeline()
-        sources  = self._build_sources()
-        info = pipeline.run(sources, loader_file_format="parquet")
-        print(f"📥  [bronze] dlt pipeline complete: {info}")
-        return self._collect_parquets()
+        results: dict[str, str] = {}
+        for source in self.sources:
+            self.src = source
+            self.dst = source.get("destination", {})
+            src_type = self.src.get("type")
+
+            if src_type == "local_files":
+                results.update(self._local_files_load())
+            elif src_type:
+                pipeline = self._build_pipeline()
+                sources  = self._build_sources()
+                info = pipeline.run(sources, loader_file_format="parquet")
+                print(f"📥  [bronze] dlt pipeline complete: {info}")
+                results.update(self._collect_parquets())
+
+        return results
 
     # ------------------------------------------------------------------
     # local_files source — reads CSV/Parquet directly, no dlt
@@ -238,6 +282,15 @@ class BronzeLoader:
             storage.write_parquet(df, out)
             print(f"📥  [bronze] {path} → {out}  ({len(df)} rows)")
             results[name] = out
+            if self.explore_enabled and (explore_specs := tbl.get("explore")):
+                from pathlib import Path as _Path
+                from openmedallion.pipeline.explore import _dispatch_reports
+                _dispatch_reports(
+                    src     = _Path(out),
+                    out_dir = _Path(self.bronze_path) / "add-ons",
+                    specs   = explore_specs,
+                    context = "explore/bronze",
+                )
         return results
 
     def _discover_existing(self) -> dict[str, str]:
@@ -411,9 +464,10 @@ class BronzeLoader:
         if not table_names and self.src.get("resource"):
             table_names = [self.src["resource"]]
 
-        # Per-table select lookup (SQL / local_files sources).
+        # Per-table select and explore lookups (SQL / local_files sources).
         # Filesystem / REST sources use a single top-level select key instead.
-        per_table_select = {t["name"]: t["select"] for t in tables_cfg if t.get("select")}
+        per_table_select  = {t["name"]: t["select"]  for t in tables_cfg if t.get("select")}
+        per_table_explore = {t["name"]: t["explore"] for t in tables_cfg if t.get("explore")}
 
         # dlt always writes shards to {bucket_url}/{dataset_name}/{table}/
         # dataset_name is hardcoded as "bronze" in _build_pipeline above
@@ -437,5 +491,14 @@ class BronzeLoader:
             storage.write_parquet(df, out)
             print(f"📥  [bronze] merged {len(shards)} shard(s) → {out}")
             results[name] = out
+            if self.explore_enabled and (explore_specs := per_table_explore.get(name)):
+                from pathlib import Path as _Path
+                from openmedallion.pipeline.explore import _dispatch_reports
+                _dispatch_reports(
+                    src     = _Path(out),
+                    out_dir = _Path(self.bronze_path) / "add-ons",
+                    specs   = explore_specs,
+                    context = "explore/bronze",
+                )
 
         return results

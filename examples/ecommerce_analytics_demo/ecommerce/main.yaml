@@ -5,11 +5,9 @@ includes:
   bronze:  backend/bronze.yaml
   silver:  backend/silver.yaml
   gold:    backend/gold.yaml
-  explore: backend/explore.yaml
 
 paths:
   bronze:  "data/bronze"
   silver:  "data/silver"
   gold:    "data/gold"
   export:  "data/export"
-  explore: "data/explore"
