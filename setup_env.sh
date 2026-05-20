@@ -13,7 +13,7 @@
 #   ./setup_env.sh list kernel     — list registered Jupyter kernels
 set -euo pipefail
 
-VENV_DIR=".venv"
+VENV_DIR=".venv_oma"
 PROJECT_NAME="oma"
 VENV_PROMPT=$PROJECT_NAME   # shown in shell prompt on activate
 KERNEL_NAME=$PROJECT_NAME
@@ -28,6 +28,9 @@ create_venv() {
 
     echo "==> Installing dependencies..."
     uv pip install -r requirements.txt --python "$VENV_DIR/bin/python"
+
+    echo "==> Installing openmedallion (editable)..."
+    uv pip install -e . --python "$VENV_DIR/bin/python"
 
     echo "==> Installing ipykernel..."
     uv pip install ipykernel --python "$VENV_DIR/bin/python"

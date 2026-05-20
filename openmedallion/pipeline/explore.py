@@ -3,8 +3,8 @@
 Reads ``gold_to_explore`` from explore.yaml and produces one HTML file per
 table entry using the configured report_type:
 
-    profile  →  ydata-profiling full statistical report  (requires [profile] extra)
-    walker   →  pygwalker interactive drag-and-drop explorer (requires [explore] extra)
+    profile  →  ydata-profiling full statistical report
+    walker   →  pygwalker interactive drag-and-drop explorer
 
 Reports are written to ``paths.explore/<project>/<output_file>``.
 

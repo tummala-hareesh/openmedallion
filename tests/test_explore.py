@@ -40,17 +40,6 @@ def _make_cfg(tmp_path: Path, projects: list | None = None) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# generate_profile — ImportError handling
-# ---------------------------------------------------------------------------
-
-def test_generate_profile_raises_import_error_when_missing(tmp_path, parquet_file):
-    """generate_profile raises ImportError with install hint when ydata-profiling is absent."""
-    with patch.dict("sys.modules", {"ydata_profiling": None}):
-        with pytest.raises(ImportError, match="openmedallion\\[profile\\]"):
-            generate_profile(parquet_file, tmp_path / "out.html")
-
-
-# ---------------------------------------------------------------------------
 # generate_profile — happy path (mocked ProfileReport)
 # ---------------------------------------------------------------------------
 
@@ -100,17 +89,6 @@ def test_generate_profile_uses_stem_as_default_title(tmp_path, parquet_file):
 
     _, kwargs = mock_pr_cls.call_args
     assert kwargs.get("title") == parquet_file.stem
-
-
-# ---------------------------------------------------------------------------
-# generate_walker — ImportError handling
-# ---------------------------------------------------------------------------
-
-def test_generate_walker_raises_import_error_when_missing(tmp_path, parquet_file):
-    """generate_walker raises ImportError with install hint when pygwalker is absent."""
-    with patch.dict("sys.modules", {"pygwalker": None}):
-        with pytest.raises(ImportError, match="openmedallion\\[explore\\]"):
-            generate_walker(parquet_file, tmp_path / "out.html")
 
 
 # ---------------------------------------------------------------------------

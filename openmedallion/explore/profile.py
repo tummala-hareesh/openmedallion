@@ -1,10 +1,4 @@
-"""explore/profile.py — ydata-profiling HTML report generator.
-
-Requires the [profile] optional extra:
-    pip install "openmedallion[profile]"
-
-Called by ExploreGenerator when report_type: profile is declared in explore.yaml.
-"""
+"""explore/profile.py — ydata-profiling HTML report generator."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -26,14 +20,7 @@ def generate_profile(
         minimal: When True, skips expensive correlation / interaction charts.
                  Useful for wide tables (50+ columns).
     """
-    try:
-        from ydata_profiling import ProfileReport
-    except ImportError as exc:
-        raise ImportError(
-            "ydata-profiling is not installed. "
-            'Install it with:  pip install "openmedallion[profile]"'
-        ) from exc
-
+    from ydata_profiling import ProfileReport
     import polars as pl
 
     df = pl.read_parquet(source).to_pandas()

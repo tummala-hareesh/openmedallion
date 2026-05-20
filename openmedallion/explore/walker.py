@@ -1,9 +1,5 @@
 """explore/walker.py — pygwalker interactive HTML explorer generator.
 
-Requires the [explore] optional extra:
-    pip install "openmedallion[explore]"
-
-Called by ExploreGenerator when report_type: walker is declared in explore.yaml.
 pygwalker has native Polars support — no pandas bridge needed.
 """
 from __future__ import annotations
@@ -26,14 +22,7 @@ def generate_walker(
         output: Destination HTML file path.
         title:  Reserved — pygwalker does not currently expose a title arg.
     """
-    try:
-        import pygwalker as pyg
-    except ImportError as exc:
-        raise ImportError(
-            "pygwalker is not installed. "
-            'Install it with:  pip install "openmedallion[explore]"'
-        ) from exc
-
+    import pygwalker as pyg
     import polars as pl
 
     df = pl.read_parquet(source)
