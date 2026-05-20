@@ -12,9 +12,9 @@ silver_to_gold:
             - report_type: profile
               output_file:  customer_summary_profile.html
               title:        "Customer Summary"
-            - report_type: walker
-              output_file:  customer_summary_explorer.html
-              title:        "Customer Summary Explorer"
+            # - report_type: walker
+            #   output_file:  customer_summary_explorer.html
+            #   title:        "Customer Summary Explorer"
 
         - source_file: orders.parquet
           group_by: []

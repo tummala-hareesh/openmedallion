@@ -47,7 +47,7 @@ bronze_to_silver:
         file: oracle_hr/backend/udf/silver/enrich.py
         function: build_employees_enriched
       output_file: employees_enriched.parquet
-      explore:
-        - report_type: walker
-          output_file:  enriched_explorer.html
-          title:        "Employees Enriched Explorer"
+      # explore:
+      #   - report_type: walker
+      #     output_file:  enriched_explorer.html
+      #     title:        "Employees Enriched Explorer"

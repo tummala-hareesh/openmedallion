@@ -47,6 +47,6 @@ bronze_to_silver:
         - report_type: profile
           output_file:  order_lines_enriched_profile.html
           title:        "Order Lines Enriched Quality"
-        - report_type: walker
-          output_file:  order_lines_enriched_explorer.html
-          title:        "Order Lines Enriched Explorer"
+        # - report_type: walker
+        #   output_file:  order_lines_enriched_explorer.html
+        #   title:        "Order Lines Enriched Explorer"
