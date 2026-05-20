@@ -1198,12 +1198,6 @@ wheels = [
 ]
 
 [[package]]
-name = "hamilton"
-version = "0.1.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/89/dd/a3e5f68e5740df69a8d1239d72c03f6fffd0d8a988f9d031969fc984abac/Hamilton-0.1.0.tar.gz", hash = "sha256:3ecee49aa392b29d3dcfcc1d8217df21c09371268f87a44c65d63a1c6e7824c8", size = 43905, upload-time = "2013-08-09T13:53:29.884Z" }
-
-[[package]]
 name = "humanize"
 version = "4.15.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2054,7 +2048,6 @@ version = "2026.5.8"
 source = { editable = "." }
 dependencies = [
     { name = "dlt", extra = ["filesystem", "parquet", "sql-database"] },
-    { name = "hamilton" },
     { name = "polars" },
     { name = "pygwalker" },
     { name = "pyyaml" },
@@ -2089,7 +2082,6 @@ dev = [
 requires-dist = [
     { name = "boto3", marker = "extra == 's3'", specifier = ">=1.34" },
     { name = "dlt", extras = ["filesystem", "sql-database", "parquet"], specifier = ">=1.4" },
-    { name = "hamilton", specifier = ">=0.1.0" },
     { name = "mkdocs", marker = "extra == 'docs'", specifier = ">=1.6" },
     { name = "mkdocs-material", marker = "extra == 'docs'", specifier = ">=9.5" },
     { name = "oracledb", marker = "extra == 'oracle'", specifier = ">=1.0" },
