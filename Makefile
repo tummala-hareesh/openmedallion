@@ -1,4 +1,4 @@
-.PHONY: help build test lint clean examples publish release kestra-up kestra-down kestra-logs
+.PHONY: help build test publish release kestra-up kestra-down kestra-logs
 
 # Accept v=2026.5.1 or v=v2026.5.1 — VER is always the bare number
 VER := $(patsubst v%,%,$(v))
