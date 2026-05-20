@@ -65,6 +65,10 @@ release: publish
 	git push origin v$(VER)
 	@echo "✅  Pushed tag v$(VER) — Release workflow triggered."
 
+restore:
+	@[ -n "$(v)" ] || (echo "Usage: make restore v=2026.x.x"; exit 1)
+	git push --delete origin v$(VER)
+
 # ── Kestra ────────────────────────────────────────────────────────────────────
 
 kestra-up:
