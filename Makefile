@@ -67,6 +67,7 @@ release: publish
 
 restore:
 	@[ -n "$(v)" ] || (echo "Usage: make restore v=2026.x.x"; exit 1)
+	git tag -d v$(VER)
 	git push --delete origin v$(VER)
 
 # ── Kestra ────────────────────────────────────────────────────────────────────
