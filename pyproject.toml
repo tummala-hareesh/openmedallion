@@ -40,7 +40,6 @@ dependencies = [
     "sf-hamilton>=1.82",
     "polars>=1.0",
     "pyyaml>=6.0",
-    "hamilton>=0.1.0",
     "ydata-profiling>=4.0",
     "pygwalker>=0.4",
     "setuptools>=70.0,<=81.0",

@@ -18,7 +18,7 @@ PROJECT_NAME="oma"
 VENV_PROMPT=$PROJECT_NAME   # shown in shell prompt on activate
 KERNEL_NAME=$PROJECT_NAME
 KERNEL_DISPLAY=$PROJECT_NAME
-PYTHON_VERSION=3.13
+PYTHON_VERSION=3.12
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -27,7 +27,7 @@ create_venv() {
     uv venv "$VENV_DIR" --python "$PYTHON_VERSION" --prompt "$VENV_PROMPT" --clear
 
     echo "==> Installing dependencies..."
-    uv pip install -r requirements.txt --python "$VENV_DIR/bin/python"
+    uv pip install -r pyproject.toml --python "$VENV_DIR/bin/python"
 
     echo "==> Installing openmedallion (editable)..."
     uv pip install -e . --python "$VENV_DIR/bin/python"
