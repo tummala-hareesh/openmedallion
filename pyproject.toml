@@ -81,6 +81,7 @@ include = [
 dev = [
     "pytest>=8",
     "pytest-anyio>=0.0",
+    "pytest-cov>=7.1.0",
     "ruff>=0.15.13",
 ]
 

@@ -3,9 +3,8 @@
 All tests target public interfaces and mock the deferred library imports so CI
 passes without installing the [profile] or [explore] optional extras.
 """
-import json
 from pathlib import Path
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 
 import polars as pl
 import pytest

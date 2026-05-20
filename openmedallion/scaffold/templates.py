@@ -26,7 +26,7 @@ Creates the full project structure under <path_project>/<project>/:
 Data outputs go to <path_data>/ (outside the project folder, gitignored separately).
 """
 import json
-import os
+#import os
 import yaml
 from pathlib import Path
 

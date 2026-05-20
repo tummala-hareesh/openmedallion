@@ -7,9 +7,6 @@ and is exercised via the per_table_explore map; tested via direct unit call.
 from pathlib import Path
 from unittest.mock import patch
 
-import polars as pl
-import pytest
-
 from openmedallion.pipeline.bronze import BronzeLoader
 
 

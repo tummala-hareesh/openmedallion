@@ -32,14 +32,12 @@ Examples
 import argparse
 import sys
 from pathlib import Path
-
-sys.stdout.reconfigure(encoding="utf-8")
-
 from openmedallion.scaffold.templates import init_project
 from openmedallion.config.loader      import load_project
 from hamilton                         import driver
 from openmedallion.pipeline           import nodes as pipeline_nodes
 
+sys.stdout.reconfigure(encoding="utf-8")
 
 # Maps --layer value → Hamilton final_vars + human label
 LAYERS: dict[str, tuple[list[str], str]] = {

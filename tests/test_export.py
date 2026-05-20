@@ -1,6 +1,5 @@
 """tests/test_export.py — tests for BIExporter."""
 import polars as pl
-from pathlib import Path
 
 from openmedallion.pipeline.export import BIExporter
 

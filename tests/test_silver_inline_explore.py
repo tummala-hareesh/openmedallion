@@ -4,10 +4,9 @@ All tests mock at the source module (openmedallion.explore.profile / .walker)
 so optional deps (ydata-profiling, pygwalker) are not required in CI.
 """
 from pathlib import Path
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import patch
 
 import polars as pl
-import pytest
 
 from openmedallion.pipeline.silver import SilverTransformer
 

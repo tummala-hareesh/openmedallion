@@ -10,10 +10,12 @@ help:
 	@echo "  make build               Build wheel and sdist"
 	@echo "  make test                Run test suite"
 	@echo "  make lint                Run ruff linter"
+	@echo "  make coverage            Run test coverage"
 	@echo "  make examples            Run all example pipelines and report pass/fail"
 	@echo "  make clean               Remove build artefacts"
-	@echo "  make publish v=2026.5.1  Bump version, commit, tag, push → triggers PyPI"
-	@echo "  make release v=2026.5.1  Tag + push only (version already bumped)"
+	@echo "  make version v=yyyy.mm.v Prepare version, changes version number inside the code"
+	@echo "  make publish v=yyyy.mm.v Bump version, commit, tag, push → triggers CI & Docs"
+	@echo "  make release v=yyyy.mm.v Tag + push only (version already bumped) → Goes LIVE on PyPI"
 	@echo "  make kestra-up           Start Kestra + Postgres via Docker Compose"
 	@echo "  make kestra-down         Stop and remove Kestra containers"
 	@echo "  make kestra-logs         Tail Kestra container logs"
@@ -25,10 +27,13 @@ build:
 	uv build
 
 test:
-	uv run pytest --tb=short -q
+	uv run --active pytest --tb=short -q
 
 lint:
-	uv run ruff check openmedallion/ tests/
+	uv run --active ruff check openmedallion/ tests/
+
+coverage: 
+	uv run --active pytest --cov=openmedallion
 
 examples:
 	@.venv/bin/python examples/run_examples.py
@@ -38,7 +43,7 @@ clean:
 	find . -type d -name __pycache__ -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
 
-version: clean lint test examples
+version: clean lint examples
 	@[ -n "$(v)" ] || (echo "Usage: make version v=2026.x.x"; exit 1)
 	@echo "→ Bumping version to $(VER)"
 	sed -i 's/^version = ".*"/version = "$(VER)"/' pyproject.toml
@@ -48,12 +53,14 @@ version: clean lint test examples
 # ── Release ───────────────────────────────────────────────────────────────────
 
 publish: version build
+	@[ -n "$(v)" ] || (echo "Usage: make publish v=2026.x.x"; exit 1)
 	git add pyproject.toml openmedallion/__init__.py
 	git commit -m "chore: bump version to $(VER)"
 	git push origin HEAD
 	@echo "✅  Pushed HEAD — Publish workflow triggered."
 
 release: publish
+	@[ -n "$(v)" ] || (echo "Usage: make release v=2026.x.x"; exit 1)
 	git tag v$(VER)
 	git push origin v$(VER)
 	@echo "✅  Pushed tag v$(VER) — Release workflow triggered."

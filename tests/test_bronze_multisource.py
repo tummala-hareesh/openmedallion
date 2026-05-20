@@ -1,8 +1,7 @@
 """tests/test_bronze_multisource.py — multi-source bronze ingestion."""
 import polars as pl
-import pytest
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from openmedallion.pipeline.bronze import BronzeLoader
 
@@ -13,7 +12,8 @@ from openmedallion.pipeline.bronze import BronzeLoader
 
 def _write_csv(path: Path, rows: list[dict]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    import csv, io
+    import csv
+    import io
     buf = io.StringIO()
     if rows:
         w = csv.DictWriter(buf, fieldnames=list(rows[0].keys()))

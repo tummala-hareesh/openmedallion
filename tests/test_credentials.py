@@ -1,7 +1,6 @@
 """tests/test_credentials.py — credential file loading and connection string building."""
 import pytest
 import yaml
-from pathlib import Path
 
 from openmedallion.pipeline.bronze import _load_credentials_file, _build_conn_str, BronzeLoader
 
