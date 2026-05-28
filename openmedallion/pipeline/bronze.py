@@ -420,6 +420,8 @@ class BronzeLoader:
             elif mode == "merge":
                 kwargs["write_disposition"] = "merge"
                 kwargs["primary_key"]       = inc["primary_key"]
+                if mk := inc.get("merge_key"):
+                    kwargs["merge_key"]     = mk
 
             # filter: push WHERE clause to the DB via query_adapter_callback.
             # select: NOT applied here — sel.with_only_columns() inside the
@@ -451,6 +453,8 @@ class BronzeLoader:
             elif inc["mode"] == "merge":
                 resource_cfg["write_disposition"] = "merge"
                 resource_cfg["primary_key"]       = inc["primary_key"]
+                if mk := inc.get("merge_key"):
+                    resource_cfg["merge_key"]     = mk
 
         return rest_api_source(
             {"client": {"base_url": self.src["base_url"]}, "resources": [resource_cfg]}
