@@ -236,6 +236,10 @@ class BronzeLoader:
         self.dst: dict = self.sources[0].get("destination", {}) if self.sources else {}
 
         self.explore_enabled: bool = cfg.get("_explore", True)
+        self.debug_enabled: bool   = cfg.get("_debug", True)
+
+        if self.debug_enabled:
+            print(f"[DEBUG] BronzeLoader: pipeline={self.pipeline_name}, bronze_path={self.bronze_path}, sources={len(self.sources)}")
 
     def load(self) -> dict[str, str]:
         """Run ingestion for all sources and return a ``{name: path}`` dict."""
@@ -248,6 +252,9 @@ class BronzeLoader:
             self.src = source
             self.dst = source.get("destination", {})
             src_type = self.src.get("type")
+
+            if self.debug_enabled:
+                print(f"[DEBUG] load: src_type={src_type!r}, destination={self.dst.get('type')!r}")
 
             if src_type == "local_files":
                 results.update(self._local_files_load())
@@ -270,6 +277,8 @@ class BronzeLoader:
         for tbl in self.src.get("tables", []):
             name = tbl["name"]
             path = tbl["path"]
+            if self.debug_enabled:
+                print(f"[DEBUG] local_files: table={name!r}, path={path!r}, select={tbl.get('select')!r}")
             if path.endswith(".csv"):
                 df = pl.read_csv(path)
             elif path.endswith(".parquet"):
@@ -352,18 +361,23 @@ class BronzeLoader:
         """
         if "credentials_file" in self.src:
             dialect = self.src["dialect"]
-            creds   = _load_credentials_file(self.src["credentials_file"], dialect)
+            if self.debug_enabled:
+                print(f"[DEBUG] _resolve_conn_str: using credentials_file={self.src['credentials_file']!r}, dialect={dialect!r}")
+            creds = _load_credentials_file(self.src["credentials_file"], dialect)
             return _build_conn_str(dialect, creds)
+        if self.debug_enabled:
+            print("[DEBUG] _resolve_conn_str: using connection_string (env-expanded)")
         return expand_env_str(self.src["connection_string"])
 
     def _probe_connection(self, conn_str: str) -> None:
-        """Verify DB connectivity and print available tables in the schema.
+        """Verify DB connectivity and check that configured tables exist in the schema.
 
         Args:
             conn_str: SQLAlchemy connection string (already resolved).
 
         Raises:
             ConnectionError: If the database cannot be reached.
+            ValueError: If any configured table is not found in the schema.
         """
         from sqlalchemy import create_engine, text, inspect as sa_inspect
 
@@ -378,20 +392,26 @@ class BronzeLoader:
             engine = create_engine(conn_str)
             with engine.connect() as con:
                 con.execute(text("SELECT 1"))
-            tables = sa_inspect(engine).get_table_names(schema=schema)
+            db_tables = set(sa_inspect(engine).get_table_names(schema=schema))
         except Exception as exc:
             raise ConnectionError(
                 f"[bronze] DB connection failed: {exc}"
             ) from exc
 
-        print(f"✅  Connected — {len(tables)} table(s) in {label}:")
-        col_w = max((len(t) for t in tables), default=0) + 2
-        row   = ""
-        for i, t in enumerate(tables):
-            row += f"{t:<{col_w}}"
-            if (i + 1) % 4 == 0 or i == len(tables) - 1:
-                print(f"    {row.rstrip()}")
-                row = ""
+        configured = [t["name"] for t in self.src.get("tables", [])]
+        missing    = [t for t in configured if t not in db_tables]
+        if self.debug_enabled:
+            print(f"[DEBUG] _probe_connection: db_tables_count={len(db_tables)}, configured={configured}, missing={missing}")
+
+        for name in configured:
+            mark = "✅" if name not in missing else "❌"
+            print(f"  {mark}  {name}")
+
+        if missing:
+            raise ValueError(
+                f"[bronze] table(s) not found in {label}: {missing}. "
+                f"Check spelling in your bronze.yaml."
+            )
 
     def _sql_source(self):
         from dlt.sources.sql_database import sql_table
@@ -405,6 +425,8 @@ class BronzeLoader:
         for tbl in tables_cfg:
             inc  = tbl.get("incremental", {})
             mode = inc.get("mode", "replace")
+            if self.debug_enabled:
+                print(f"[DEBUG] _sql_source: table={tbl['name']!r}, mode={mode!r}, filter={tbl.get('filter')!r}, select={tbl.get('select')!r}")
 
             kwargs = dict(
                 credentials=conn,
@@ -436,6 +458,8 @@ class BronzeLoader:
                 )
 
             if filter_propagate:
+                if self.debug_enabled:
+                    print(f"[DEBUG] _sql_source: filter_propagate={filter_propagate!r} for table={tbl['name']!r}")
                 ref = next((t for t in tables_cfg if t["name"] == filter_propagate), None)
                 if ref is None:
                     raise ValueError(
@@ -459,12 +483,14 @@ class BronzeLoader:
                 )
 
             if filter_clause:
+                if self.debug_enabled:
+                    print(f"[DEBUG] _sql_source: applying filter to {tbl['name']!r}: {filter_clause!r}")
                 from sqlalchemy import text as _sa_text
                 kwargs["query_adapter_callback"] = (
                     lambda sel, _t, _sql=filter_clause: sel.where(_sa_text(_sql))
                 )
 
-            resources.append(sql_table(**kwargs))
+            resources.append(sql_table(**kwargs)) # pyright: ignore[reportArgumentType]
 
         return resources
 
@@ -474,6 +500,8 @@ class BronzeLoader:
             "name": resource,
             "endpoint": self.src.get("endpoint", resource),
         }
+        if self.debug_enabled:
+            print(f"[DEBUG] _rest_api_source: resource={resource!r}, base_url={self.src.get('base_url')!r}, endpoint={resource_cfg['endpoint']!r}")
         inc = self.src.get("incremental")
         if inc:
             if inc["mode"] == "append":
@@ -487,7 +515,7 @@ class BronzeLoader:
                     resource_cfg["merge_key"]     = mk
 
         return rest_api_source(
-            {"client": {"base_url": self.src["base_url"]}, "resources": [resource_cfg]}
+            {"client": {"base_url": self.src["base_url"]}, "resources": [resource_cfg]} # pyright: ignore[reportArgumentType]
         )
 
     def _collect_parquets(self) -> dict[str, str]:
@@ -510,6 +538,8 @@ class BronzeLoader:
         for name in table_names:
             shard_dir = storage.join(bucket_url, "bronze", name)
             shards    = _ls_shards(shard_dir)
+            if self.debug_enabled:
+                print(f"[DEBUG] _collect_parquets: table={name!r}, shard_dir={shard_dir!r}, shards_found={len(shards)}, select={per_table_select.get(name) or self.src.get('select')!r}")
             if not shards:
                 print(f"⚠️   [bronze] no shards found for '{name}' at {shard_dir}")
                 continue
