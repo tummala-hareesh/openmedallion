@@ -1,4 +1,4 @@
-.PHONY: help build test publish release kestra-up kestra-down kestra-logs
+.PHONY: help build test lint coverage examples clean version publish release restore kestra-up kestra-down kestra-logs
 
 # Accept v=2026.5.1 or v=v2026.5.1 — VER is always the bare number
 VER := $(patsubst v%,%,$(v))
@@ -36,7 +36,7 @@ coverage:
 	uv run --active pytest --cov=openmedallion
 
 examples:
-	@.venv_oma/bin/python examples/run_examples.py
+	@.venv/bin/python3 examples/run_examples.py
 
 clean:
 	rm -rf dist/ .pytest_cache/ site/
