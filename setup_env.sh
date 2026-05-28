@@ -18,7 +18,7 @@ PROJECT_NAME="oma"
 VENV_PROMPT=$PROJECT_NAME   # shown in shell prompt on activate
 KERNEL_NAME=$PROJECT_NAME
 KERNEL_DISPLAY=$PROJECT_NAME
-PYTHON_VERSION=3.12
+PYTHON_VERSION=3.13
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 

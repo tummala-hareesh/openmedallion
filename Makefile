@@ -36,7 +36,7 @@ coverage:
 	uv run --active pytest --cov=openmedallion
 
 examples:
-	@.venv/bin/python examples/run_examples.py
+	@.venv_oma/bin/python examples/run_examples.py
 
 clean:
 	rm -rf dist/ .pytest_cache/ site/

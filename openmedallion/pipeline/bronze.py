@@ -125,7 +125,7 @@ def _build_conn_str(dialect: str, creds: dict) -> str:
     if dialect == "oracle":
         port    = creds.get("port", 1521)
         service = creds["service"]
-        return f"{driver}://{username}:{password}@{host}:{port}/{service}"
+        return f"{driver}://{username}:{password}@{host}:{port}/?service_name={service}"
 
     database = creds["database"]
 
