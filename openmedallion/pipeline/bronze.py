@@ -420,7 +420,7 @@ class BronzeLoader:
             elif mode == "merge":
                 kwargs["write_disposition"] = "merge"
                 kwargs["primary_key"]       = inc["primary_key"]
-                if mk := inc.get("merge_key"):
+                if (mk := inc.get("merge_key")):
                     kwargs["merge_key"]     = mk
 
             # filter: push WHERE clause to the DB via query_adapter_callback.
