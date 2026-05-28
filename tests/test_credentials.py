@@ -20,7 +20,7 @@ class TestBuildConnStr:
             "host": "dbhost", "port": 1521, "service": "XE",
             "username": "hr", "password": "secret",
         })
-        assert s == "oracle+oracledb://hr:secret@dbhost:1521/XE"
+        assert s == "oracle+oracledb://hr:secret@dbhost:1521/?service_name=XE"
 
     def test_oracle_default_port(self):
         s = _build_conn_str("oracle", {
@@ -102,7 +102,7 @@ class TestLoadCredentialsFile:
         creds = _load_credentials_file(str(f), "oracle")
         conn  = _build_conn_str("oracle", creds)
         assert "oracle+oracledb://" in conn
-        assert "localhost:1521/XE" in conn
+        assert "localhost:1521/?service_name=XE" in conn
 
 
 # ---------------------------------------------------------------------------
