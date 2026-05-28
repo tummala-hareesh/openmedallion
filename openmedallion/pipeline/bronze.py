@@ -427,7 +427,37 @@ class BronzeLoader:
             # select: NOT applied here — sel.with_only_columns() inside the
             # adapter corrupts dlt's incremental cursor tracking. Column pruning
             # for SQL sources is applied in _collect_parquets() instead.
-            filter_clause = tbl.get("filter")
+            filter_clause     = tbl.get("filter")
+            filter_propagate  = tbl.get("filter_propagate")
+
+            if filter_clause and filter_propagate:
+                raise ValueError(
+                    f"[bronze] table '{tbl['name']}': use either 'filter' or 'filter_propagate', not both."
+                )
+
+            if filter_propagate:
+                ref = next((t for t in tables_cfg if t["name"] == filter_propagate), None)
+                if ref is None:
+                    raise ValueError(
+                        f"[bronze] filter_propagate: table '{filter_propagate}' not found in source config."
+                    )
+                ref_filter = ref.get("filter")
+                if not ref_filter:
+                    raise ValueError(
+                        f"[bronze] filter_propagate: table '{filter_propagate}' has no 'filter' to propagate."
+                    )
+                join_key = inc.get("primary_key") or inc.get("merge_key")
+                if not join_key:
+                    raise ValueError(
+                        f"[bronze] filter_propagate on '{tbl['name']}': set 'primary_key' or 'merge_key' "
+                        f"under 'incremental' so the join column can be determined."
+                    )
+                filter_clause = (
+                                f"EXISTS (SELECT 1 FROM {filter_propagate} "
+                                f"WHERE {filter_propagate}.{join_key} = {tbl['name']}.{join_key} "
+                                f"AND {ref_filter})"
+                )
+
             if filter_clause:
                 from sqlalchemy import text as _sa_text
                 kwargs["query_adapter_callback"] = (
