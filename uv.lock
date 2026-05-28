@@ -2044,7 +2044,7 @@ wheels = [
 
 [[package]]
 name = "openmedallion"
-version = "2026.5.9"
+version = "2026.5.10"
 source = { editable = "." }
 dependencies = [
     { name = "dlt", extra = ["filesystem", "parquet", "sql-database"] },
