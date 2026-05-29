@@ -391,7 +391,10 @@ class BronzeLoader:
         try:
             engine = create_engine(conn_str)
             with engine.connect() as con:
-                con.execute(text("SELECT 1"))
+                if (dialect == 'oracle'): 
+                    con.execute(text("SELECT 1 FROM DUAL"))
+                else:
+                    con.execute(text("SELECT 1"))
             db_tables = set(sa_inspect(engine).get_table_names(schema=schema))
         except Exception as exc:
             raise ConnectionError(
@@ -450,7 +453,7 @@ class BronzeLoader:
             # adapter corrupts dlt's incremental cursor tracking. Column pruning
             # for SQL sources is applied in _collect_parquets() instead.
             filter_clause     = tbl.get("filter")
-            filter_propagate  = tbl.get("filter_propagate")
+            filter_propagate  = tbl.get("filter_propogate", None)
 
             if filter_clause and filter_propagate:
                 raise ValueError(
@@ -470,16 +473,18 @@ class BronzeLoader:
                     raise ValueError(
                         f"[bronze] filter_propagate: table '{filter_propagate}' has no 'filter' to propagate."
                     )
-                join_key = inc.get("primary_key") or inc.get("merge_key")
+                join_key = inc.get("merge_key") or inc.get("primary_key")
                 if not join_key:
                     raise ValueError(
                         f"[bronze] filter_propagate on '{tbl['name']}': set 'primary_key' or 'merge_key' "
                         f"under 'incremental' so the join column can be determined."
                     )
+                if isinstance(join_key, list):
+                    join_key = join_key[0]
+
                 filter_clause = (
-                                f"EXISTS (SELECT 1 FROM {filter_propagate} "
-                                f"WHERE {filter_propagate}.{join_key} = {tbl['name']}.{join_key} "
-                                f"AND {ref_filter})"
+                    f"{join_key} IN ("
+                    f"SELECT {join_key} FROM {filter_propagate} WHERE {ref_filter})"
                 )
 
             if filter_clause:
