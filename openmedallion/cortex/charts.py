@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 import polars as pl
 
 from openmedallion.cortex.theme import (
-    CHART_PALETTE, FONT_UI, MAIN_BG, TEXT_DIM, TEXT_MUTED, WHITE,
+    CHART_PALETTE, FONT_UI, TEXT_DIM, TEXT_MUTED, WHITE,
 )
 
 _LAYOUT_BASE = dict(

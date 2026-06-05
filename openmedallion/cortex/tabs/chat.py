@@ -5,8 +5,8 @@ from dash import Input, Output, State, callback, dcc, html
 import dash_bootstrap_components as dbc
 
 from openmedallion.cortex.theme import (
-    BORDER, FONT_MONO, FONT_UI, GREEN_DARK, RED_DARK, SQL_BG, SQL_BORDER,
-    SQL_TEXT, TEAL, TEAL_ACCENT, TEAL_BG, TEAL_BORDER, TEAL_DARK,
+    BORDER, FONT_MONO, FONT_UI, RED_DARK, SQL_BG, SQL_BORDER,
+    SQL_TEXT, TEAL, TEAL_BG, TEAL_BORDER, TEAL_DARK,
     TEXT_DIM, TEXT_MUTED, TEXT_PRIMARY, TEXT_SECONDARY, WHITE,
 )
 
