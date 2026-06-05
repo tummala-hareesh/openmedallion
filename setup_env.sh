@@ -13,7 +13,7 @@
 #   ./setup_env.sh list kernel     — list registered Jupyter kernels
 set -euo pipefail
 
-VENV_DIR=".venv_oma"
+VENV_DIR=".venv"
 PROJECT_NAME="oma"
 VENV_PROMPT=$PROJECT_NAME   # shown in shell prompt on activate
 KERNEL_NAME=$PROJECT_NAME

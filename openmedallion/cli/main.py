@@ -21,13 +21,20 @@ medallion run <project> [--layer LAYER] [--projects PATH] [--no-explore]
 
     --projects  Override the project root directory (default: . — current directory).
 
+medallion query <project> "<question>" [--projects PATH] [--model MODEL]
+    Ask a natural-language question directly in the terminal — no server needed.
+    Requires: openmedallion[cerebrum]
+
+    --projects  Project root directory (default: . — current directory).
+    --model     Ollama model tag (default: from settings / llama3.2).
+
 medallion ask <project> [--projects PATH] [--port PORT] [--model MODEL]
     Start the cerebrum LLM engine + neuron FastAPI server on :8000.
     Requires: openmedallion[cerebrum]
 
     --projects  Project root directory (default: . — current directory).
     --port      Port for the neuron HTTP server (default: 8000).
-    --model     Ollama model tag (default: llama3.2).
+    --model     Ollama model tag (default: from settings / llama3.2).
 
 medallion cortex <project> [--neuron-url URL] [--port PORT] [--debug]
     Start the Dash cortex UI on :8050 (connects to neuron at --neuron-url).
@@ -44,6 +51,8 @@ Examples
     medallion run       sales_project --layer bronze
     medallion run       sales_project --layer explore
     medallion run       sales_project --no-explore
+    medallion query     sales_project "What are the top 5 products by revenue?"
+    medallion query     sales_project "Show monthly trends" --model mistral
     medallion ask       sales_project
     medallion ask       sales_project --model mistral --port 8001
     medallion cortex    sales_project
@@ -123,6 +132,81 @@ def cmd_run(args: argparse.Namespace) -> None:
     print(f"{'━' * _W}\n")
 
 
+def cmd_query(args: argparse.Namespace) -> None:
+    _W = 58
+    print(f"\n{'━' * _W}")
+    print(f"  medallion  ·  query  ·  {args.project}")
+    print(f"{'━' * _W}\n")
+
+    try:
+        from openmedallion.cerebrum.pipeline import CerebrumPipeline
+    except ImportError:
+        print("  ❌  cerebrum not installed — run: pip install 'openmedallion[cerebrum]'")
+        sys.exit(1)
+
+    from openmedallion.config import settings
+
+    model      = args.model or settings.LLM_MODEL
+    ollama_url = settings.OLLAMA_URL
+    cfg        = load_project(args.project, args.projects)
+    silver_dir = Path(cfg["paths"]["silver"])
+
+    if not silver_dir.exists():
+        print(f"  ❌  Silver layer not found: {silver_dir}")
+        print(f"       Run: medallion run {args.project}")
+        sys.exit(1)
+
+    print(f"  🤖  model   →  {model}")
+    print(f"  🗂️   silver  →  {silver_dir}")
+    print(f"  ❓  question →  {args.question}\n")
+
+    try:
+        import httpx
+        pipeline = CerebrumPipeline(silver_dir, model=model, ollama_base_url=ollama_url)
+        qr = pipeline.ask(args.question)
+    except (httpx.ConnectError, httpx.ConnectTimeout):
+        print(f"  ❌  Ollama is not reachable at {ollama_url}")
+        print("       Start it with: ollama serve")
+        sys.exit(1)
+    except Exception as exc:
+        print(f"  ❌  {exc}")
+        sys.exit(1)
+
+    rows = qr.result.to_dicts()
+
+    print(f"  SQL\n  {'─' * (_W - 2)}")
+    for line in qr.sql.strip().splitlines():
+        print(f"    {line}")
+
+    print(f"\n  Results  ({len(rows)} row{'s' if len(rows) != 1 else ''})")
+    print(f"  {'─' * (_W - 2)}")
+    if rows:
+        _print_table(rows)
+    else:
+        print("  (no rows returned)")
+
+    if qr.recommended_prompt:
+        print("\n  Recommended prompt")
+        print(f"  {'─' * (_W - 2)}")
+        print(f"  {qr.recommended_prompt}")
+
+    print(f"\n{'━' * _W}\n")
+
+
+def _print_table(rows: list[dict]) -> None:
+    """Print a list of dicts as a plain aligned table."""
+    if not rows:
+        return
+    cols    = list(rows[0].keys())
+    widths  = {c: max(len(str(c)), *(len(str(r.get(c, ""))) for r in rows)) for c in cols}
+    sep     = "  " + "  ".join("─" * widths[c] for c in cols)
+    header  = "  " + "  ".join(str(c).ljust(widths[c]) for c in cols)
+    print(header)
+    print(sep)
+    for row in rows:
+        print("  " + "  ".join(str(row.get(c, "")).ljust(widths[c]) for c in cols))
+
+
 def cmd_ask(args: argparse.Namespace) -> None:
     _W = 58
     print(f"\n{'━' * _W}")
@@ -136,11 +220,14 @@ def cmd_ask(args: argparse.Namespace) -> None:
         sys.exit(1)
 
     import os
+    from openmedallion.config import settings
+
+    model = args.model or settings.LLM_MODEL
     os.environ["MEDALLION_PROJECTS_ROOT"] = args.projects
-    os.environ["MEDALLION_LLM_MODEL"]     = args.model
+    os.environ["MEDALLION_LLM_MODEL"]     = model
 
     print(f"  🧠  neuron  →  http://localhost:{args.port}")
-    print(f"  🤖  model   →  {args.model}\n")
+    print(f"  🤖  model   →  {model}\n")
 
     from openmedallion.neuron.server import app as neuron_app
     uvicorn.run(neuron_app, host="0.0.0.0", port=args.port)
@@ -230,6 +317,22 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Skip all inline explore: report generation in every layer",
     )
 
+    # query
+    p_query = sub.add_parser(
+        "query",
+        help="Ask a question directly in the terminal — no server needed (requires [cerebrum] extra)",
+    )
+    p_query.add_argument("project",  help="Project name")
+    p_query.add_argument("question", help="Natural-language question to ask")
+    p_query.add_argument(
+        "--projects", default=".", metavar="PATH",
+        help="Parent directory containing the project folder (default: .)",
+    )
+    p_query.add_argument(
+        "--model", default=None, metavar="MODEL",
+        help="Ollama model tag (default: from settings.yaml / MEDALLION_LLM_MODEL / llama3.2)",
+    )
+
     # ask
     p_ask = sub.add_parser(
         "ask",
@@ -245,8 +348,8 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Port for the neuron HTTP server (default: 8000)",
     )
     p_ask.add_argument(
-        "--model", default="llama3.2", metavar="MODEL",
-        help="Ollama model tag (default: llama3.2)",
+        "--model", default=None, metavar="MODEL",
+        help="Ollama model tag (default: from settings.yaml / MEDALLION_LLM_MODEL / llama3.2)",
     )
 
     # cortex
@@ -274,6 +377,7 @@ def _build_parser() -> argparse.ArgumentParser:
 _HANDLERS = {
     "init":   cmd_init,
     "run":    cmd_run,
+    "query":  cmd_query,
     "ask":    cmd_ask,
     "cortex": cmd_cortex,
 }
