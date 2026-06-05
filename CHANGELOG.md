@@ -8,6 +8,23 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Inline `explore:` key on tables in `bronze.yaml`, `silver.yaml`, and `gold.yaml` — attach report specs directly to any table; reports are generated immediately after that layer writes
+- `openmedallion/explore/` module — `profile.py` (ydata-profiling HTML reports) + `walker.py` (pygwalker interactive explorer)
+- `pipeline/explore.py` — `ExploreGenerator` + shared `_dispatch_reports()` helper; called by Bronze, Silver, and Gold after each write; optional deps imported lazily
+- `openmedallion[profile]` optional extra (`ydata-profiling>=4.0`)
+- `openmedallion[explore]` optional extra (`pygwalker>=0.4`)
+- `--layer explore` CLI flag — re-generates HTML reports from existing Parquet files without re-running upstream layers
+- Report output convention — co-located with layer data under `add-ons/` subdirectory
+
+### Removed
+
+- `openmedallion/viz/` module (`server.py`, `tracker.py`, `notebook.py`, `dag.py`)
+- `fastapi`, `uvicorn`, `websockets`, `panel`, `jupyter_bokeh` core dependencies
+- `viz` optional extra from `pyproject.toml`
+- `dag`, `visualize`, `status`, `--track` CLI commands
+
 ---
 
 ## [2026.5.4] — 2026-05-14

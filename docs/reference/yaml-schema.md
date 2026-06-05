@@ -178,6 +178,7 @@ source:
 | `incremental.cursor_column` | string | append | Column used to track the high-watermark. |
 | `incremental.initial_value` | string | append | Value to use on the very first run. |
 | `incremental.primary_key` | string | merge | Primary key column for upsert. |
+| `explore` | list | — | List of report specs to generate after this table is written. See [Inline explore](#inline-explore). |
 
 ### `destination`
 
@@ -228,6 +229,7 @@ bronze_to_silver:
 | `source_file` | string | ✅ | Parquet filename to read from `paths.bronze`. |
 | `output_file` | string | ✅ | Parquet filename to write to `paths.silver`. |
 | `transforms` | list | — | Ordered list of transform steps. |
+| `explore` | list | — | List of report specs to generate after this table is written. See [Inline explore](#inline-explore). |
 
 ### `transforms[]`
 
@@ -327,6 +329,7 @@ silver_to_gold:
 | `metrics` | list | — | Metric specs. Required unless `select` is used. |
 | `select` | list[string] | — | Pass-through mode: select columns without aggregating. |
 | `output_file` | string | ✅ | Parquet filename to write under `paths.gold/<project>/`. |
+| `explore` | list | — | List of report specs to generate after this aggregation is written. See [Inline explore](#inline-explore). |
 
 ### `metrics[]`
 
@@ -343,6 +346,61 @@ silver_to_gold:
 | `file` | string | ✅ | Path to the Python file, relative to project root. |
 | `function` | string | ✅ | Function name. |
 | `args` | dict | — | Keyword arguments forwarded to the function. |
+
+---
+
+## Inline Explore
+
+Add an `explore:` list directly to any table entry in `bronze.yaml`, `silver.yaml`, or `gold.yaml`. Reports are generated immediately after the Parquet file for that table is written — no separate `explore.yaml` or `paths.explore` key needed.
+
+```yaml
+# bronze.yaml — on a source table
+- name: employees
+  explore:
+    - report_type: profile
+      output_file:  employees_profile.html
+      title:        "Employees Bronze Quality"
+
+# silver.yaml — on a transformed table
+- source_file: employees.parquet
+  explore:
+    - report_type: walker
+      output_file:  employees_explorer.html
+      title:        "Employees Explorer"
+
+# gold.yaml — on an aggregation
+aggregations:
+  - output_file: headcount.parquet
+    explore:
+      - report_type: profile
+        output_file:  headcount_profile.html
+        title:        "Headcount by Department"
+```
+
+### `explore[]`
+
+| Key | Type | Required | Description |
+| --- | --- | --- | --- |
+| `report_type` | enum | ✅ | `profile` (ydata-profiling HTML report) or `walker` (pygwalker interactive explorer). |
+| `output_file` | string | ✅ | HTML filename to write. |
+| `title` | string | — | Optional title shown in the report. |
+
+**Report output paths** — reports are co-located with their layer's data under an `add-ons/` subdirectory:
+
+| Layer | Output path |
+| --- | --- |
+| Bronze | `paths.bronze/add-ons/<output_file>` |
+| Silver | `paths.silver/add-ons/<output_file>` |
+| Gold | `paths.gold/add-ons/<project>/<output_file>` |
+
+**Optional dependencies** — install the extras for the report type you want:
+
+```bash
+pip install "openmedallion[profile]"   # ydata-profiling >= 4.0
+pip install "openmedallion[explore]"   # pygwalker >= 0.4
+```
+
+If the optional dependency is not installed, the report is silently skipped with a notice. An unknown `report_type` also prints a warning and skips without aborting the run.
 
 ---
 

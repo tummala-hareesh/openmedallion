@@ -82,7 +82,7 @@ medallion run <project> [--layer LAYER] [--projects PATH]
 
 | Flag | Default | Description |
 | --- | --- | --- |
-| `--layer` | `gold` | Which layer to run up to and including. One of: `bronze`, `silver`, `gold`, `export`. |
+| `--layer` | `gold` | Which layer to run up to and including. One of: `bronze`, `silver`, `gold`, `export`, `explore`. |
 | `--projects` | `.` | Projects root directory. Override when running from a different working directory. |
 
 **Layer behaviour:**
@@ -93,6 +93,7 @@ medallion run <project> [--layer LAYER] [--projects PATH]
 | `silver` | config → silver (bronze skipped) | Re-running transforms without re-ingesting |
 | `gold` | config → gold (bronze + silver skipped) | Re-running aggregations only |
 | `export` | Full pipeline | Production run including BI export |
+| `explore` | Reads existing Parquet, generates reports | Generate data-quality / exploration HTML reports |
 
 !!! note "Layer skipping uses overrides"
     When `--layer silver` or `--layer gold` is specified, existing bronze/silver Parquet files are discovered and injected as Hamilton `overrides`. The upstream nodes are not re-executed. See [Architecture — Skipping layers](../concepts/architecture.md#skipping-layers-with-overrides).

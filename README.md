@@ -74,6 +74,7 @@ Hamilton DAG           ← orchestrates which layer runs and in what order
 | ⚪ Silver | Polars | Typed, composable Python UDFs |
 | 🟡 Gold | Polars | YAML-declared group-by metrics |
 | 📤 Export | Polars | Parquet + CSV for BI tools |
+| 🔍 Explore | ydata-profiling / pygwalker | HTML data-quality and exploration reports |
 | 🔗 Orchestration | Hamilton | DAG wiring and execution order |
 
 ---
@@ -87,8 +88,10 @@ pip install openmedallion
 Optional extras:
 
 ```bash
-pip install "openmedallion[s3]"      # S3 support via s3fs + boto3
-pip install "openmedallion[oracle]"  # Oracle DB support via oracledb
+pip install "openmedallion[s3]"       # S3 support via s3fs + boto3
+pip install "openmedallion[oracle]"   # Oracle DB support via oracledb
+pip install "openmedallion[profile]"  # Data profiling reports via ydata-profiling
+pip install "openmedallion[explore]"  # Interactive exploration reports via pygwalker
 ```
 
 > Requires Python 3.11+
@@ -330,7 +333,8 @@ A great fit if you:
 | Incremental append + merge | ✅ 2026.4.1 |
 | CLI scaffolding (`medallion init`) | ✅ 2026.4.1 |
 | PyPI publish (OIDC trusted publishing) | ✅ 2026.4.1 |
-| LazyFrame UDF contract | 🔜 2026.5 |
+| `select:` column projection + `credentials_file:` | ✅ 2026.5.4 |
+| Inline `explore:` — profiling + interactive reports | ✅ unreleased |
 | Schema contract enforcement | 🔜 2026.6 |
 | Lineage + metadata helpers | 🔜 2026.6 |
 | Additional cloud destinations | 🔜 2026.6 |
