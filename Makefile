@@ -1,4 +1,4 @@
-.PHONY: help build test lint clean publish release kestra-up kestra-down kestra-logs
+.PHONY: help build test lint coverage examples clean version publish release restore kestra-up kestra-down kestra-logs
 
 # Accept v=2026.5.2 or v=v2026.5.2 — VER is always the bare number
 VER := $(patsubst v%,%,$(v))
@@ -10,9 +10,12 @@ help:
 	@echo "  make build               Build wheel and sdist"
 	@echo "  make test                Run test suite"
 	@echo "  make lint                Run ruff linter"
+	@echo "  make coverage            Run test coverage"
+	@echo "  make examples            Run all example pipelines and report pass/fail"
 	@echo "  make clean               Remove build artefacts"
-	@echo "  make publish v=2026.5.2  Bump version, commit, tag, push → triggers PyPI"
-	@echo "  make release v=2026.5.2  Tag + push only (version already bumped)"
+	@echo "  make version v=yyyy.mm.v Prepare version, changes version number inside the code"
+	@echo "  make publish v=yyyy.mm.v Bump version, commit, tag, push → triggers CI & Docs"
+	@echo "  make release v=yyyy.mm.v Tag + push only (version already bumped) → Goes LIVE on PyPI"
 	@echo "  make kestra-up           Start Kestra + Postgres via Docker Compose"
 	@echo "  make kestra-down         Stop and remove Kestra containers"
 	@echo "  make kestra-logs         Tail Kestra container logs"
@@ -24,35 +27,48 @@ build:
 	uv build
 
 test:
-	uv run pytest --tb=short -q
+	uv run --active pytest --tb=short -q
 
 lint:
-	uv run ruff check openmedallion/ tests/
+	uv run --active ruff check openmedallion/ tests/
+
+coverage: 
+	uv run --active pytest --cov=openmedallion
+
+examples:
+	@.venv/bin/python3 examples/run_examples.py
 
 clean:
 	rm -rf dist/ .pytest_cache/ site/
 	find . -type d -name __pycache__ -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
 
-# ── Release ───────────────────────────────────────────────────────────────────
-
-publish:
-	@[ -n "$(v)" ] || (echo "Usage: make publish v=2026.5.2"; exit 1)
+version: clean lint examples
+	@[ -n "$(v)" ] || (echo "Usage: make version v=2026.x.x"; exit 1)
 	@echo "→ Bumping version to $(VER)"
 	sed -i 's/^version = ".*"/version = "$(VER)"/' pyproject.toml
 	sed -i 's/^__version__ = ".*"/__version__ = "$(VER)"/' openmedallion/__init__.py
-	git add pyproject.toml openmedallion/__init__.py
-	git commit -m "chore: bump version to $(VER)"
-	git tag v$(VER)
-	git push origin HEAD
-	git push origin v$(VER)
-	@echo "✅  Tagged v$(VER) and pushed — publish workflow triggered."
+	@echo "✅  Upgraded (local) to openmedallion v$(VER)"
 
-release:
-	@[ -n "$(v)" ] || (echo "Usage: make release v=2026.5.2"; exit 1)
+# ── Release ───────────────────────────────────────────────────────────────────
+
+publish: version build
+	@[ -n "$(v)" ] || (echo "Usage: make publish v=2026.x.x"; exit 1)
+	git add pyproject.toml openmedallion/__init__.py uv.lock
+	git commit -m "chore: bump version to $(VER)"
+	git push origin HEAD
+	@echo "✅  Pushed HEAD — Publish workflow triggered."
+
+release: publish
+	@[ -n "$(v)" ] || (echo "Usage: make release v=2026.x.x"; exit 1)
 	git tag v$(VER)
 	git push origin v$(VER)
-	@echo "✅  Pushed tag v$(VER) — publish workflow triggered."
+	@echo "✅  Pushed tag v$(VER) — Release workflow triggered."
+
+restore:
+	@[ -n "$(v)" ] || (echo "Usage: make restore v=2026.x.x"; exit 1)
+	git tag -d v$(VER)
+	git push --delete origin v$(VER)
 
 # ── Kestra ────────────────────────────────────────────────────────────────────
 

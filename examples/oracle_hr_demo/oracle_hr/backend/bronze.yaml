@@ -1,39 +1,61 @@
-source:
-  type: sql_database
+sources:
+  - type: sql_database
 
-  # ── Connection ─────────────────────────────────────────────────────────────
-  # Demo default: SQLite (no Oracle install required).
-  # Real Oracle: export ORACLE_CONN_STR=oracle+oracledb://USER:PASS@HOST:PORT/SERVICE
-  # If your Oracle tables live in a non-default schema, add: schema: HR
-  connection_string: "${ORACLE_CONN_STR:-sqlite:///data/oracle_hr.db}"
+    # ── Connection ───────────────────────────────────────────────────────────
+    # DEMO (SQLite — no credentials needed, path is set here directly):
+    dialect:           sqlite
+    connection_string: "sqlite:///oracle_hr/data/source/oracle_hr.db"
 
-  tables:
-    # ── employees ─────────────────────────────────────────────────────────────
-    # filter: push a SQL WHERE clause to the dlt ingestion step so that only
-    #   ACTIVE employees in the five target departments are loaded into bronze.
-    #   Rows in dept 30 (Purchasing), 50 (Shipping), or with status='INACTIVE'
-    #   are excluded at source — they never enter the data lake.
-    - name: employees
-      filter: "department_id IN (10, 20, 60, 80, 90) AND status = 'ACTIVE'"
-      incremental:
-        mode: append
-        cursor_column: hire_date
-        initial_value: "2000-01-01"
+    # REAL DATABASE — comment out the two lines above and uncomment below,
+    # then fill in examples/secrets.yaml with your credentials:
+    # dialect:          oracle       # or postgres, mysql, mssql
+    # credentials_file: ../secrets.yaml
 
-    # ── departments ───────────────────────────────────────────────────────────
-    - name: departments
-      incremental:
-        mode: merge
-        primary_key: department_id
+    tables:
+      # ── employees ───────────────────────────────────────────────────────────
+      # filter: push a SQL WHERE clause so that only employees in the five target
+      #   departments are loaded into bronze.  Rows in dept 30 (Purchasing) and
+      #   50 (Shipping) are excluded at source — they never enter the data lake.
+      # select: drop email (PII).
+      #   hire_date must be included — it is the incremental cursor column.
+      - name: employees
+        select: [employee_id, first_name, last_name, hire_date, job_id, salary, manager_id, department_id]
+        filter: "department_id IN (10, 20, 60, 80, 90)"
+        incremental:
+          mode: append
+          cursor_column: hire_date
+          initial_value: "2000-01-01"
+        explore:
+          - report_type: profile
+            output_file:  employees_profile.html
+            title:        "Employees Bronze Quality"
 
-    # ── jobs ──────────────────────────────────────────────────────────────────
-    - name: jobs
-      incremental:
-        mode: merge
-        primary_key: job_id
+      # ── departments ─────────────────────────────────────────────────────────
+      # select: only the columns used in the silver join and gold aggregations.
+      - name: departments
+        select: [department_id, department_name]
+        filter_propogate: employees
+        incremental:
+          mode: merge
+          primary_key: department_id
+        explore:
+          - report_type: profile
+            output_file:  departments_profile.html
+            title:        "Departments Bronze Quality"
 
-destination:
-  type: filesystem
-  # dlt appends /bronze/<table>/ automatically; bronze.py merges shards into
-  # oracle_hr/data/bronze/<table>.parquet  (paths.bronze = oracle_hr/data/bronze)
-  bucket_url: "data"
+      # ── jobs ────────────────────────────────────────────────────────────────
+      - name: jobs
+        select: [job_id, job_title, min_salary, max_salary]
+        incremental:
+          mode: merge
+          primary_key: job_id
+        explore:
+          - report_type: profile
+            output_file:  jobs_profile.html
+            title:        "Jobs Bronze Quality"
+
+    destination:
+      type: filesystem
+      # dlt appends /bronze/<table>/ automatically; bronze.py merges shards into
+      # oracle_hr/data/bronze/<table>.parquet  (paths.bronze = oracle_hr/data/bronze)
+      bucket_url: "data"

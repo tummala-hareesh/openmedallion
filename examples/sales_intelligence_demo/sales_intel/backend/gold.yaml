@@ -1,0 +1,46 @@
+silver_to_gold:
+  projects:
+    - name: sales_intel
+      aggregations:
+
+        # Total revenue + deal count by region
+        - source_file: rep_performance.parquet
+          group_by: [region]
+          metrics:
+            - {column: amount,  agg: sum,   alias: total_revenue}
+            - {column: txn_id,  agg: count, alias: num_deals}
+          output_file: regional_summary.parquet
+          explore:
+            - report_type: profile
+              output_file:  regional_summary_profile.html
+              title:        "Regional Revenue Summary"
+            - report_type: walker
+              output_file:  regional_summary_explorer.html
+              title:        "Regional Revenue Explorer"
+
+        # Rep leaderboard: total revenue + deals per rep
+        - source_file: rep_performance.parquet
+          group_by: [rep_id, name, region, team]
+          metrics:
+            - {column: amount, agg: sum,   alias: total_revenue}
+            - {column: txn_id, agg: count, alias: num_deals}
+          output_file: rep_leaderboard.parquet
+          explore:
+            - report_type: profile
+              output_file:  rep_leaderboard_profile.html
+              title:        "Rep Leaderboard"
+
+        # Quarter-over-quarter revenue trend
+        - source_file: rep_performance.parquet
+          pre_agg_udf:
+            file: sales_intel/backend/udf/gold/metrics.py
+            function: add_quarter
+          group_by: [quarter]
+          metrics:
+            - {column: amount, agg: sum,   alias: quarterly_revenue}
+            - {column: txn_id, agg: count, alias: num_deals}
+          output_file: quarterly_trend.parquet
+          explore:
+            - report_type: profile
+              output_file:  quarterly_trend_profile.html
+              title:        "Quarterly Revenue Trend"

@@ -53,9 +53,9 @@ flowchart LR
     end
 
     subgraph bronze["🟤 Bronze"]
-        BO["ORDERS.parquet"]
-        BP["PRODUCTS.parquet"]
-        BC["CUSTOMERS.parquet"]
+        BO["orders.parquet"]
+        BP["products.parquet"]
+        BC["customers.parquet"]
     end
 
     subgraph silver["⚪ Silver  (phase 1 → phase 2)"]
@@ -182,7 +182,7 @@ medallion run ecommerce --layer silver
 medallion run ecommerce --layer gold
 
 # Step 4 — inspect results
-python inspect.py
+python show_results.py
 ```
 
 ---
@@ -193,9 +193,9 @@ python inspect.py
 
 | category | total_revenue | total_margin | num_orders | margin_pct |
 | --- | --- | --- | --- | --- |
-| Electronics | 4440.0 | 1300.0 | 8 | 29.3% |
-| Clothing | 1080.0 | 576.0 | 8 | 53.3% |
-| Books | 345.0 | 190.0 | 4 | 55.1% |
+| Electronics | 3470.0 | 1110.0 | 7 | 32.0% |
+| Clothing | 1110.0 | 594.0 | 8 | 53.5% |
+| Books | 435.0 | 240.0 | 5 | 55.2% |
 
 Electronics leads on revenue. Books and Clothing lead on margin percentage.
 
@@ -203,24 +203,24 @@ Electronics leads on revenue. Books and Clothing lead on margin percentage.
 
 | name | region | tier | total_spent | num_orders |
 | --- | --- | --- | --- | --- |
-| Alice Chen | US-West | gold | 2970.0 | 5 |
-| Carol Lee | Europe | gold | 1790.0 | 5 |
-| Eve Brown | Asia | silver | 430.0 | 3 |
-| Bob Smith | US-East | silver | 380.0 | 4 |
-| David Kim | US-West | bronze | 295.0 | 3 |
+| Alice Chen | US-West | gold | 1980.0 | 5 |
+| Carol Lee | Europe | gold | 1830.0 | 4 |
+| Eve Brown | Asia | silver | 440.0 | 4 |
+| David Kim | US-West | bronze | 420.0 | 3 |
+| Bob Smith | US-East | silver | 345.0 | 4 |
 
-Gold-tier customers account for ~81% of total revenue.
+Gold-tier customers account for ~76% of total revenue.
 
 ### `monthly_summary.parquet`
 
 | order_month | monthly_revenue | num_orders |
 | --- | --- | --- |
-| 2024-01 | 1755.0 | 4 |
-| 2024-02 | 1710.0 | 5 |
-| 2024-03 | 1905.0 | 6 |
-| 2024-04 | 495.0 | 5 |
+| 2024-01 | 1875.0 | 4 |
+| 2024-02 | 1825.0 | 5 |
+| 2024-03 | 880.0 | 7 |
+| 2024-04 | 435.0 | 4 |
 
-March is the peak month. April dips — no laptop orders.
+February is the peak month. March has the most orders but lower average order value.
 
 ---
 

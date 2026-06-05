@@ -1,18 +1,23 @@
-"""setup_db.py — creates a local SQLite database simulating Oracle's classic HR schema.
+"""setup_db.py — creates the SQLite HR database for the demo.
 
-SQLite ships with Python — no Oracle install required for the demo.
+SQLite ships with Python — no Oracle install required.
 Run this once before your first `medallion run oracle_hr --layer bronze`.
 
-For real Oracle, set ORACLE_CONN_STR and ORACLE_SCHEMA env vars instead of
-running this script, then run the pipeline as normal.
+The bronze filter keeps all 12 employees in target departments (10, 20, 60, 80, 90),
+both ACTIVE and INACTIVE.  The 3 in dept 30 / 50 are excluded at source.
+
+For real Oracle/Postgres:
+  1. Copy ../secrets.yaml.example → ../secrets.yaml and fill in your credentials.
+  2. In oracle_hr/backend/bronze.yaml, comment out the connection_string lines
+     and uncomment the dialect + credentials_file lines.
 """
 import sys
-sys.stdout.reconfigure(encoding="utf-8")
+#sys.stdout.reconfigure(encoding="utf-8")
 
 import sqlite3
 from pathlib import Path
 
-DB = Path("oracle_hr/data/oracle_hr.db")
+DB = Path("oracle_hr/data/source/oracle_hr.db")
 DB.parent.mkdir(parents=True, exist_ok=True)
 
 con = sqlite3.connect(DB)
@@ -117,15 +122,16 @@ con.close()
 print(f"✅  Database seeded at {DB}")
 print()
 print("   15 employees inserted:")
-print("    • 12 ACTIVE in target departments  (10, 20, 60, 80, 90)")
-print("    •  2 INACTIVE in target departments → removed by status filter")
-print("    •  3 ACTIVE in dept 30 / 50        → removed by department filter")
+print("    • 12 in target departments  (10, 20, 60, 80, 90)  → ingested by bronze")
+print("    •  3 in dept 30 / 50        → excluded by department filter")
 print()
-print("   After bronze filter, pipeline ingests 12 employees.")
+print("   Bronze filter: department only.  All 12 employees (ACTIVE and INACTIVE) are ingested.")
 print()
 print("Next steps:")
 print("  medallion run oracle_hr --projects . --layer bronze")
 print("  medallion run oracle_hr --projects . --layer silver")
 print("  medallion run oracle_hr --projects .")
 print()
-print("Or open oracle_hr/ipynb/walkthrough.ipynb for a guided run.")
+print("To use a real Oracle/Postgres database:")
+print("  1. cp ../secrets.yaml.example ../secrets.yaml  and fill in your credentials")
+print("  2. Edit oracle_hr/backend/bronze.yaml — swap connection_string for credentials_file")

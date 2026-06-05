@@ -8,6 +8,13 @@ silver_to_gold:
             - {column: order_id, agg: count, alias: total_orders}
             - {column: amount,   agg: sum,   alias: total_spent}
           output_file: customer_summary.parquet
+          explore:
+            - report_type: profile
+              output_file:  customer_summary_profile.html
+              title:        "Customer Summary"
+            # - report_type: walker
+            #   output_file:  customer_summary_explorer.html
+            #   title:        "Customer Summary Explorer"
 
         - source_file: orders.parquet
           group_by: []
@@ -15,3 +22,7 @@ silver_to_gold:
             - {column: order_id, agg: count, alias: total_orders}
             - {column: amount,   agg: sum,   alias: total_revenue}
           output_file: pipeline_totals.parquet
+          explore:
+            - report_type: profile
+              output_file:  pipeline_totals_profile.html
+              title:        "Pipeline Totals"

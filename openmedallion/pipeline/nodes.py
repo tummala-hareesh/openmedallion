@@ -10,7 +10,8 @@ This enables layer-level execution:
     --layer bronze   →  final_vars=["bronze"]
     --layer silver   →  final_vars=["silver"],  inputs includes bronze paths
     --layer gold     →  final_vars=["gold"],    inputs includes silver paths
-    --layer export   →  final_vars=["bi_export"]  (full run, default)
+    --layer export   →  final_vars=["bi_export"]  (full pipeline + BI export)
+    --layer explore  →  final_vars=["explore"]    (gold → HTML reports)
 
 DAG shape
 ---------
@@ -29,14 +30,16 @@ DAG shape
         │         ▼
         ├──▶ gold({config, silver})
         │         │
-        │         ▼
-        └──▶ bi_export({config, gold})
+        │         ├──▶ bi_export({config, gold})
+        │         │
+        │         └──▶ explore({config, gold})
 """
 from pathlib import Path
-from openmedallion.pipeline.bronze import BronzeLoader
-from openmedallion.pipeline.silver import SilverTransformer
-from openmedallion.pipeline.gold   import GoldAggregator
-from openmedallion.pipeline.export import BIExporter
+from openmedallion.pipeline.bronze   import BronzeLoader
+from openmedallion.pipeline.silver   import SilverTransformer
+from openmedallion.pipeline.gold     import GoldAggregator
+from openmedallion.pipeline.export   import BIExporter
+from openmedallion.pipeline.explore  import ExploreGenerator
 
 
 def config(cfg: dict) -> dict:
@@ -62,3 +65,8 @@ def gold(config: dict, silver: dict[str, Path]) -> dict[str, list[Path]]:
 def bi_export(config: dict, gold: dict[str, list[Path]]) -> None:
     """Copy gold Parquet to the export directory; write CSV fallbacks."""
     BIExporter(config).export()
+
+
+def explore(config: dict, gold: dict[str, list[Path]]) -> None:
+    """Generate HTML exploration reports (profile / walker) from gold Parquet."""
+    ExploreGenerator(config).generate()

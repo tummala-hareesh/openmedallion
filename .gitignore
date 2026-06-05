@@ -14,10 +14,13 @@ build/
 
 # Data (generated outputs)
 data/
-examples/*/data/
 *.parquet
 *.csv
-!examples/*/data/source/*.csv
+#!examples/*/data/source/*.csv
+examples/*/data/bronze/*
+examples/*/data/silver/*
+examples/*/data/gold/*
+
 
 # dlt state
 .dlt/
@@ -26,9 +29,10 @@ examples/*/data/
 .vscode/
 .idea/
 
-# Secrets
+# Secrets / local config
 .env
 secrets.yaml
+settings.yaml
 
 # OS
 .DS_Store
@@ -38,3 +42,5 @@ secrets.yaml
 CLAUDE.md
 PLAN.md
 graphify-out/*
+.gstack/
+medallion_audit.jsonl

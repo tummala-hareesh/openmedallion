@@ -118,9 +118,10 @@ destination:
 | Key | Type | Required | Description |
 | --- | --- | --- | --- |
 | `type` | enum | ✅ | `sql_database`, `rest_api`, or `filesystem`. |
-| `dialect` | string | sql only | SQLAlchemy dialect: `oracle`, `postgres`, `mysql`, `mssql`, `sqlite`. |
-| `connection_string` | string | sql only | Full SQLAlchemy connection string. Supports `${VAR}` expansion. |
-| `schema` | string | — | Database schema to scope table discovery. |
+| `dialect` | enum | creds file | Required when `credentials_file` is used. One of `oracle`, `postgres`, `mysql`, `mssql`, `sqlite`. |
+| `credentials_file` | string | — | Path to a credentials YAML (see `secrets.yaml.example`). Preferred over `connection_string`. Supports `${VAR}` expansion. |
+| `connection_string` | string | — | Raw SQLAlchemy URL. Supports `${VAR}` expansion. Used only when `credentials_file` is absent. |
+| `schema` | string | — | Database schema to scope table discovery and `SELECT` statements. |
 | `tables` | list | sql/filesystem | Tables to ingest. |
 | `base_url` | string | rest only | REST API base URL. |
 | `resource` | string | rest only | Resource/endpoint name. |
@@ -128,16 +129,56 @@ destination:
 | `file_glob` | string | filesystem | Glob pattern, e.g. `**/*.parquet`. |
 | `format` | string | filesystem | `parquet` (default) or `csv`. |
 
+#### Credential file format (`credentials_file`)
+
+openmedallion reads the YAML file, looks up the `dialect` key, and builds the
+SQLAlchemy connection string internally.  Connection is tested and available
+tables are printed before ingestion starts.
+
+```yaml
+# /workspace/secrets.yaml  (keep outside repo — never commit real credentials)
+
+oracle:
+  host:     db.corp.com
+  port:     1521          # default
+  service:  XE
+  username: hr
+  password: secret
+
+postgres:
+  host:     pg.corp.com
+  port:     5432          # default
+  database: analytics
+  username: etl
+  password: secret
+
+sqlite:
+  path: data/mydb.db      # relative to CWD where medallion runs
+```
+
+Set the path and dialect via env vars (supports `${VAR:-default}` expansion):
+
+```yaml
+# bronze.yaml
+source:
+  type:             sql_database
+  dialect:          "${SECRETS_DIALECT:-sqlite}"
+  credentials_file: "${SECRETS_PATH:-dev_credentials.yaml}"
+  schema:           HR
+```
+
 ### `source.tables[]`
 
 | Key | Type | Required | Description |
 | --- | --- | --- | --- |
 | `name` | string | ✅ | Table name in the source database. |
+| `select` | list[string] | — | Column names to ingest. Omit to ingest all columns. For SQL sources the projection is pushed to the database; for local_files it is applied after reading. Always include the `cursor_column` when using `append` mode. |
 | `incremental` | object | — | Omit for full-replace each run. |
 | `incremental.mode` | enum | — | `replace` (default), `append`, or `merge`. |
 | `incremental.cursor_column` | string | append | Column used to track the high-watermark. |
 | `incremental.initial_value` | string | append | Value to use on the very first run. |
 | `incremental.primary_key` | string | merge | Primary key column for upsert. |
+| `explore` | list | — | List of report specs to generate after this table is written. See [Inline explore](#inline-explore). |
 
 ### `destination`
 
@@ -188,6 +229,7 @@ bronze_to_silver:
 | `source_file` | string | ✅ | Parquet filename to read from `paths.bronze`. |
 | `output_file` | string | ✅ | Parquet filename to write to `paths.silver`. |
 | `transforms` | list | — | Ordered list of transform steps. |
+| `explore` | list | — | List of report specs to generate after this table is written. See [Inline explore](#inline-explore). |
 
 ### `transforms[]`
 
@@ -287,6 +329,7 @@ silver_to_gold:
 | `metrics` | list | — | Metric specs. Required unless `select` is used. |
 | `select` | list[string] | — | Pass-through mode: select columns without aggregating. |
 | `output_file` | string | ✅ | Parquet filename to write under `paths.gold/<project>/`. |
+| `explore` | list | — | List of report specs to generate after this aggregation is written. See [Inline explore](#inline-explore). |
 
 ### `metrics[]`
 
@@ -303,6 +346,61 @@ silver_to_gold:
 | `file` | string | ✅ | Path to the Python file, relative to project root. |
 | `function` | string | ✅ | Function name. |
 | `args` | dict | — | Keyword arguments forwarded to the function. |
+
+---
+
+## Inline Explore
+
+Add an `explore:` list directly to any table entry in `bronze.yaml`, `silver.yaml`, or `gold.yaml`. Reports are generated immediately after the Parquet file for that table is written — no separate `explore.yaml` or `paths.explore` key needed.
+
+```yaml
+# bronze.yaml — on a source table
+- name: employees
+  explore:
+    - report_type: profile
+      output_file:  employees_profile.html
+      title:        "Employees Bronze Quality"
+
+# silver.yaml — on a transformed table
+- source_file: employees.parquet
+  explore:
+    - report_type: walker
+      output_file:  employees_explorer.html
+      title:        "Employees Explorer"
+
+# gold.yaml — on an aggregation
+aggregations:
+  - output_file: headcount.parquet
+    explore:
+      - report_type: profile
+        output_file:  headcount_profile.html
+        title:        "Headcount by Department"
+```
+
+### `explore[]`
+
+| Key | Type | Required | Description |
+| --- | --- | --- | --- |
+| `report_type` | enum | ✅ | `profile` (ydata-profiling HTML report) or `walker` (pygwalker interactive explorer). |
+| `output_file` | string | ✅ | HTML filename to write. |
+| `title` | string | — | Optional title shown in the report. |
+
+**Report output paths** — reports are co-located with their layer's data under an `add-ons/` subdirectory:
+
+| Layer | Output path |
+| --- | --- |
+| Bronze | `paths.bronze/add-ons/<output_file>` |
+| Silver | `paths.silver/add-ons/<output_file>` |
+| Gold | `paths.gold/add-ons/<project>/<output_file>` |
+
+**Optional dependencies** — install the extras for the report type you want:
+
+```bash
+pip install "openmedallion[profile]"   # ydata-profiling >= 4.0
+pip install "openmedallion[explore]"   # pygwalker >= 0.4
+```
+
+If the optional dependency is not installed, the report is silently skipped with a notice. An unknown `report_type` also prints a warning and skips without aborting the run.
 
 ---
 

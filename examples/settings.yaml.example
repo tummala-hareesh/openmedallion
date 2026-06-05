@@ -1,0 +1,43 @@
+# settings.yaml.example — openmedallion runtime configuration template
+#
+# Copy to your project directory (or ~/.medallion/settings.yaml for user-wide defaults):
+#
+#   cp examples/settings.yaml.example settings.yaml
+#
+# settings.yaml is gitignored — safe to put API keys here.
+#
+# Priority order (highest wins):
+#   1. Environment variable  e.g. MEDALLION_LLM_PROVIDER=openrouter
+#   2. This file
+#   3. Built-in default
+
+# ── LLM provider ──────────────────────────────────────────────────────────────
+#
+# Provider options:
+#   ollama       — local Ollama server (default, no API key needed)
+#   openrouter   — OpenRouter.ai (https://openrouter.ai/api/v1)
+#   openai       — OpenAI API    (https://api.openai.com/v1)
+#   <custom>     — any OpenAI-compatible endpoint; set base_url below
+#
+llm:
+  provider:   ollama                     # ollama | openrouter | openai | <custom>
+  model:      llama3.2                   # Ollama tag OR provider model ID
+                                         #   Ollama examples:    mistral, phi3, llama3.1
+                                         #   OpenRouter examples: openai/gpt-4o, anthropic/claude-3-5-sonnet
+                                         #   OpenAI examples:    gpt-4o, gpt-4o-mini
+  ollama_url: http://localhost:11434     # Ollama base URL (ignored for other providers)
+
+  # Uncomment when using a cloud provider or custom endpoint:
+  # api_key:  sk-or-...                  # MEDALLION_LLM_API_KEY env var also works
+  # base_url: https://openrouter.ai/api/v1  # override provider default endpoint
+                                             # (e.g. LM Studio: http://localhost:1234/v1)
+
+# ── Neuron server ─────────────────────────────────────────────────────────────
+neuron:
+  rate_limit: 60                         # max requests/min per IP
+  audit_log:  medallion_audit.jsonl      # path to append JSONL audit records
+  # api_key:  your-secret-key           # uncomment to require Bearer token auth
+
+# ── Cortex UI ─────────────────────────────────────────────────────────────────
+cortex:
+  mock_client: false                     # true = offline stub (no LLM required)

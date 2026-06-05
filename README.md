@@ -37,8 +37,6 @@ pip install openmedallion
 medallion init my_project       # scaffold: YAML configs + UDF stubs + kestra_flow.yml
 medallion run my_project        # Bronze → Silver → Gold in one command
 medallion run my_project --layer silver   # re-run a single layer
-medallion dag                   # print the Hamilton DAG
-medallion serve                 # launch the live pipeline tracker UI
 ```
 
 ---
@@ -48,11 +46,11 @@ medallion serve                 # launch the live pipeline tracker UI
 - **Declarative YAML config** — define pipeline layers without writing boilerplate
 - **Incremental loads** — append and merge modes via dlt cursor columns and primary keys
 - **Composable UDFs** — drop Python functions into `udf/silver/` or `udf/gold/`; no new framework to learn
-- **Live DAG tracker** — Hamilton-powered web UI to visualise and monitor execution
 - **Local first** — run the full pipeline against Parquet files with zero cloud credentials
 - **Cloud portable** — swap `filesystem` for S3 in one line; logic stays unchanged
 - **Source agnostic** — any dlt source: SQL databases, REST APIs, filesystems, and more
 - **Fast by default** — Polars for all transforms; no pandas bottlenecks
+- **Natural-language queries** — ask questions about your data in plain English; works with Ollama (local), OpenRouter, OpenAI, or any OpenAI-compatible endpoint
 
 ---
 
@@ -77,7 +75,11 @@ Hamilton DAG           ← orchestrates which layer runs and in what order
 | ⚪ Silver | Polars | Typed, composable Python UDFs |
 | 🟡 Gold | Polars | YAML-declared group-by metrics |
 | 📤 Export | Polars | Parquet + CSV for BI tools |
-| 🔗 Orchestration | Hamilton | DAG wiring with live web tracker |
+| 🔍 Explore | ydata-profiling / pygwalker | HTML data-quality and exploration reports |
+| 🔗 Orchestration | Hamilton | DAG wiring and execution order |
+| 🧠 Cerebrum | DuckDB + LLM | Natural-language SQL queries over your pipeline data |
+| 📡 Neuron | FastAPI | HTTP server exposing Cerebrum over REST |
+| 🖥️ Cortex | Dash | Chat UI with table + dashboard tabs and CSV/Excel download |
 
 ---
 
@@ -90,8 +92,12 @@ pip install openmedallion
 Optional extras:
 
 ```bash
-pip install "openmedallion[s3]"    # S3 support via s3fs + boto3
-pip install "openmedallion[viz]"   # DAG visualisation via graphviz
+pip install "openmedallion[s3]"        # S3 support via s3fs + boto3
+pip install "openmedallion[oracle]"    # Oracle DB support via oracledb
+pip install "openmedallion[profile]"   # Data profiling reports via ydata-profiling
+pip install "openmedallion[explore]"   # Interactive exploration reports via pygwalker
+pip install "openmedallion[cerebrum]"  # Natural-language queries: DuckDB engine + neuron FastAPI server
+pip install "openmedallion[cortex]"    # Cortex Dash chat UI (requires [cerebrum])
 ```
 
 > Requires Python 3.11+
@@ -225,6 +231,63 @@ dlt tracks cursor state automatically. Re-running bronze only pulls the delta.
 
 ---
 
+## Natural Language Queries
+
+Ask questions about your pipeline data in plain English — no SQL required.
+
+```bash
+pip install "openmedallion[cerebrum]"
+
+medallion query my_project "What are the top 5 customers by revenue?"
+medallion query my_project "Show monthly trends" --model mistral
+```
+
+This runs the full **cerebrum** pipeline locally: builds a schema context from your silver/gold Parquet files, generates SQL with an LLM, validates it against DuckDB, executes it, and prints the results alongside a canonical reproducible prompt.
+
+### Provider options
+
+By default, cerebrum uses a local **Ollama** server (`ollama serve`). To use a cloud provider, set the provider and API key:
+
+```bash
+# OpenRouter (access to GPT-4o, Claude 3.5, Llama 3, Mistral, …)
+MEDALLION_LLM_PROVIDER=openrouter \
+MEDALLION_LLM_API_KEY=sk-or-... \
+MEDALLION_LLM_MODEL=openai/gpt-4o \
+medallion query my_project "Revenue by region"
+
+# OpenAI
+MEDALLION_LLM_PROVIDER=openai \
+MEDALLION_LLM_API_KEY=sk-... \
+MEDALLION_LLM_MODEL=gpt-4o-mini \
+medallion query my_project "Revenue by region"
+
+# Any OpenAI-compatible endpoint (LM Studio, Groq, vLLM, …)
+MEDALLION_LLM_PROVIDER=lmstudio \
+MEDALLION_LLM_BASE_URL=http://localhost:1234/v1 \
+MEDALLION_LLM_MODEL=local-model \
+medallion query my_project "Revenue by region"
+```
+
+Or configure once in `settings.yaml`:
+
+```yaml
+llm:
+  provider: openrouter
+  model:    openai/gpt-4o
+  api_key:  sk-or-...
+```
+
+### HTTP server + chat UI
+
+```bash
+medallion ask    my_project              # start neuron FastAPI server on :8000
+medallion cortex my_project             # start Dash chat UI on :8050
+```
+
+`neuron` exposes a `/query` endpoint (Swagger UI at `/docs`). `cortex` connects to it and provides a three-tab UI: chat, table, and dashboard with CSV/Excel download.
+
+---
+
 ## Scheduling with Kestra
 
 `medallion init` generates a `kestra_flow.yml` inside every new project — a ready-to-use [Kestra](https://kestra.io) flow that orchestrates bronze → silver → gold with per-task observability and retry support.
@@ -328,15 +391,19 @@ A great fit if you:
 | Item | Status |
 | --- | --- |
 | Bronze / Silver / Gold pipeline | ✅ 2026.4.1 |
-| Hamilton DAG + live tracker | ✅ 2026.4.1 |
+| Hamilton DAG orchestration | ✅ 2026.4.1 |
 | Local Parquet + S3 storage | ✅ 2026.4.1 |
 | Incremental append + merge | ✅ 2026.4.1 |
 | CLI scaffolding (`medallion init`) | ✅ 2026.4.1 |
 | PyPI publish (OIDC trusted publishing) | ✅ 2026.4.1 |
-| LazyFrame UDF contract | 🔜 2026.5 |
-| Schema contract enforcement | 🔜 2026.6 |
-| Lineage + metadata helpers | 🔜 2026.6 |
-| Additional cloud destinations | 🔜 2026.6 |
+| `select:` column projection + `credentials_file:` | ✅ 2026.5.4 |
+| Inline `explore:` — profiling + interactive reports | ✅ 2026.6.2 |
+| Natural-language queries (cerebrum + neuron + cortex) | ✅ 2026.6.2 |
+| `medallion query` — direct CLI Q&A without a server | ✅ 2026.6.2 |
+| Multi-provider LLM (Ollama, OpenRouter, OpenAI, custom) | ✅ 2026.6.3 |
+| Schema contract enforcement | 🔜 roadmap |
+| Lineage + metadata helpers | 🔜 roadmap |
+| Additional cloud destinations | 🔜 roadmap |
 
 ---
 

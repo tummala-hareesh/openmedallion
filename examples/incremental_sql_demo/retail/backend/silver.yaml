@@ -2,6 +2,10 @@ bronze_to_silver:
   tables:
     - source_file: orders.parquet
       output_file: orders.parquet
+      explore:
+        - report_type: profile
+          output_file:  orders_profile.html
+          title:        "Orders Silver Quality"
       transforms:
         - type: cast
           columns:
@@ -11,6 +15,10 @@ bronze_to_silver:
 
     - source_file: customers.parquet
       output_file: customers.parquet
+      explore:
+        - report_type: profile
+          output_file:  customers_profile.html
+          title:        "Customers Silver Quality"
       transforms:
         - type: cast
           columns:

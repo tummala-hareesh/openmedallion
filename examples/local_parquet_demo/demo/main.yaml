@@ -2,12 +2,12 @@ pipeline:
   name: demo
 
 includes:
-  bronze: backend/bronze.yaml
-  silver: backend/silver.yaml
-  gold:   backend/gold.yaml
+  bronze:  backend/bronze.yaml
+  silver:  backend/silver.yaml
+  gold:    backend/gold.yaml
 
 paths:
-  bronze: "data/bronze"
-  silver: "data/silver"
-  gold:   "data/gold"
-  export: "data/export"
+  bronze:  "data/bronze"
+  silver:  "data/silver"
+  gold:    "data/gold"
+  export:  "data/export"

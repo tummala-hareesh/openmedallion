@@ -2,6 +2,10 @@ bronze_to_silver:
   tables:
     - source_file: orders.parquet
       output_file: orders.parquet
+      explore:
+        - report_type: profile
+          output_file:  orders_profile.html
+          title:        "Orders Silver Quality"
       transforms:
         - type: cast
           columns:
@@ -12,6 +16,10 @@ bronze_to_silver:
 
     - source_file: products.parquet
       output_file: products.parquet
+      explore:
+        - report_type: profile
+          output_file:  products_profile.html
+          title:        "Products Silver Quality"
       transforms:
         - type: cast
           columns:
@@ -21,6 +29,10 @@ bronze_to_silver:
 
     - source_file: customers.parquet
       output_file: customers.parquet
+      explore:
+        - report_type: profile
+          output_file:  customers_profile.html
+          title:        "Customers Silver Quality"
       transforms:
         - type: cast
           columns:
@@ -31,3 +43,10 @@ bronze_to_silver:
       udf:
         file: ecommerce/backend/udf/silver/enrich.py
         function: build_order_lines_enriched
+      explore:
+        - report_type: profile
+          output_file:  order_lines_enriched_profile.html
+          title:        "Order Lines Enriched Quality"
+        # - report_type: walker
+        #   output_file:  order_lines_enriched_explorer.html
+        #   title:        "Order Lines Enriched Explorer"

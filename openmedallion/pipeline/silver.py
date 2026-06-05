@@ -28,11 +28,12 @@ class SilverTransformer:
     """
 
     def __init__(self, cfg: dict):
-        self.bronze_path = cfg["paths"]["bronze"]
-        self.silver_path = cfg["paths"]["silver"]
-        self.tables      = cfg["bronze_to_silver"].get("tables", [])
-        self.derived     = cfg["bronze_to_silver"].get("derived_tables", [])
-        self._udf_cache: dict[str, object] = {}
+        self.bronze_path     = cfg["paths"]["bronze"]
+        self.silver_path     = cfg["paths"]["silver"]
+        self.tables          = cfg["bronze_to_silver"].get("tables", [])
+        self.derived         = cfg["bronze_to_silver"].get("derived_tables", [])
+        self._udf_cache:     dict[str, object] = {}
+        self.explore_enabled = cfg.get("_explore", True)
 
     def transform(self) -> dict[str, str]:
         """Run both silver phases and return paths for all written files."""
@@ -53,6 +54,15 @@ class SilverTransformer:
             storage.write_parquet(df, out)
             print(f"🔧  [silver] base    {tbl['source_file']} → {tbl['output_file']}  ({len(df)} rows)")
             results[tbl["output_file"]] = out
+            if self.explore_enabled and (explore_specs := tbl.get("explore")):
+                from pathlib import Path as _Path
+                from openmedallion.pipeline.explore import _dispatch_reports
+                _dispatch_reports(
+                    src     = _Path(out),
+                    out_dir = _Path(self.silver_path) / "add-ons",
+                    specs   = explore_specs,
+                    context = "explore/silver",
+                )
 
         # phase 2: derived tables via UDF
         for dtbl in self.derived:
@@ -64,6 +74,15 @@ class SilverTransformer:
             storage.write_parquet(df, out)
             print(f"🔧  [silver] derived {dtbl['output_file']}  ({len(df)} rows)")
             results[dtbl["output_file"]] = out
+            if self.explore_enabled and (explore_specs := dtbl.get("explore")):
+                from pathlib import Path as _Path
+                from openmedallion.pipeline.explore import _dispatch_reports
+                _dispatch_reports(
+                    src     = _Path(out),
+                    out_dir = _Path(self.silver_path) / "add-ons",
+                    specs   = explore_specs,
+                    context = "explore/silver",
+                )
 
         return results
 

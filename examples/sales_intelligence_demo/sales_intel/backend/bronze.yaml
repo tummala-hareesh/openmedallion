@@ -1,0 +1,23 @@
+sources:
+  - type: local_files
+    tables:
+      - name: transactions
+        path: "data/source/transactions.csv"
+        explore:
+          - report_type: profile
+            output_file:  transactions_profile.html
+            title:        "Transactions Bronze Quality"
+
+      - name: reps
+        path: "data/source/reps.csv"
+        explore:
+          - report_type: profile
+            output_file:  reps_profile.html
+            title:        "Sales Reps Bronze Quality"
+
+      - name: targets
+        path: "data/source/targets.csv"
+        explore:
+          - report_type: profile
+            output_file:  targets_profile.html
+            title:        "Targets Bronze Quality"

@@ -37,6 +37,7 @@ The CLI selects which Hamilton node to execute as the **final variable**. Hamilt
 | `silver` | `["silver"]` | config → bronze → silver |
 | `gold` | `["gold"]` | config → bronze → silver → gold |
 | `export` | `["bi_export"]` | config → bronze → silver → gold → bi_export |
+| `explore` | `["explore"]` | Generates HTML reports from already-written Parquet files; does not re-run upstream layers |
 
 ### Skipping layers with `overrides`
 

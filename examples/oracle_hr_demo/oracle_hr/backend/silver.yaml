@@ -3,6 +3,11 @@ bronze_to_silver:
   tables:
     - source_file: employees.parquet
       output_file: employees.parquet
+      explore:
+        - report_type: profile
+          output_file:  employees_profile.html
+          title:        "Employee Data Quality"
+          minimal:      false
       transforms:
         - type: cast
           columns:
@@ -13,14 +18,21 @@ bronze_to_silver:
 
     - source_file: departments.parquet
       output_file: departments.parquet
+      explore:
+        - report_type: profile
+          output_file:  departments_profile.html
+          title:        "Departments Silver Quality"
       transforms:
         - type: cast
           columns:
             department_id: Int64
-            manager_id:    Int64
 
     - source_file: jobs.parquet
       output_file: jobs.parquet
+      explore:
+        - report_type: profile
+          output_file:  jobs_profile.html
+          title:        "Jobs Silver Quality"
       transforms:
         - type: cast
           columns:
@@ -35,3 +47,7 @@ bronze_to_silver:
         file: oracle_hr/backend/udf/silver/enrich.py
         function: build_employees_enriched
       output_file: employees_enriched.parquet
+      # explore:
+      #   - report_type: walker
+      #     output_file:  enriched_explorer.html
+      #     title:        "Employees Enriched Explorer"

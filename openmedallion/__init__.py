@@ -6,7 +6,7 @@ from openmedallion.pipeline.gold      import GoldAggregator
 from openmedallion.pipeline.export    import BIExporter
 from openmedallion.contracts.udf      import load_udf, check_return
 
-__version__ = "2026.5.1"
+__version__ = "2026.6.5"
 
 __all__ = [
     "load_project", "expand_env_str",

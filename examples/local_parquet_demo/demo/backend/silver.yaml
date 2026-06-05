@@ -2,6 +2,10 @@ bronze_to_silver:
   tables:
     - source_file: ORDERS.parquet
       output_file: orders.parquet
+      explore:
+        - report_type: profile
+          output_file:  orders_profile.html
+          title:        "Orders Data Quality"
       transforms:
         - type: rename
           columns:
