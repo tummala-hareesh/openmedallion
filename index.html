@@ -527,6 +527,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#natural-language-queries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Natural Language Queries
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Natural Language Queries">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#provider-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Provider options
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#http-server-chat-ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HTTP server + chat UI
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#scheduling-with-kestra" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1322,6 +1361,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#natural-language-queries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Natural Language Queries
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Natural Language Queries">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#provider-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Provider options
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#http-server-chat-ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HTTP server + chat UI
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#scheduling-with-kestra" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1540,6 +1618,7 @@
 <li><strong>Cloud portable</strong> — swap <code>filesystem</code> for S3 in one line; logic stays unchanged</li>
 <li><strong>Source agnostic</strong> — any dlt source: SQL databases, REST APIs, filesystems, and more</li>
 <li><strong>Fast by default</strong> — Polars for all transforms; no pandas bottlenecks</li>
+<li><strong>Natural-language queries</strong> — ask questions about your data in plain English; works with Ollama (local), OpenRouter, OpenAI, or any OpenAI-compatible endpoint</li>
 </ul>
 <hr />
 <h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
@@ -1592,6 +1671,21 @@
 <td>Hamilton</td>
 <td>DAG wiring and execution order</td>
 </tr>
+<tr>
+<td>🧠 Cerebrum</td>
+<td>DuckDB + LLM</td>
+<td>Natural-language SQL queries over your pipeline data</td>
+</tr>
+<tr>
+<td>📡 Neuron</td>
+<td>FastAPI</td>
+<td>HTTP server exposing Cerebrum over REST</td>
+</tr>
+<tr>
+<td>🖥️ Cortex</td>
+<td>Dash</td>
+<td>Chat UI with table + dashboard tabs and CSV/Excel download</td>
+</tr>
 </tbody>
 </table>
 <hr />
@@ -1599,10 +1693,12 @@
 <div class="highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>pip<span class="w"> </span>install<span class="w"> </span>openmedallion
 </span></code></pre></div>
 <p>Optional extras:</p>
-<div class="highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;openmedallion[s3]&quot;</span><span class="w">       </span><span class="c1"># S3 support via s3fs + boto3</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;openmedallion[oracle]&quot;</span><span class="w">   </span><span class="c1"># Oracle DB support via oracledb</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;openmedallion[profile]&quot;</span><span class="w">  </span><span class="c1"># Data profiling reports via ydata-profiling</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;openmedallion[explore]&quot;</span><span class="w">  </span><span class="c1"># Interactive exploration reports via pygwalker</span>
+<div class="highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;openmedallion[s3]&quot;</span><span class="w">        </span><span class="c1"># S3 support via s3fs + boto3</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;openmedallion[oracle]&quot;</span><span class="w">    </span><span class="c1"># Oracle DB support via oracledb</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;openmedallion[profile]&quot;</span><span class="w">   </span><span class="c1"># Data profiling reports via ydata-profiling</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;openmedallion[explore]&quot;</span><span class="w">   </span><span class="c1"># Interactive exploration reports via pygwalker</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;openmedallion[cerebrum]&quot;</span><span class="w">  </span><span class="c1"># Natural-language queries: DuckDB engine + neuron FastAPI server</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;openmedallion[cortex]&quot;</span><span class="w">    </span><span class="c1"># Cortex Dash chat UI (requires [cerebrum])</span>
 </span></code></pre></div>
 <blockquote>
 <p>Requires Python 3.11+</p>
@@ -1707,29 +1803,69 @@
 </span></code></pre></div>
 <p>dlt tracks cursor state automatically. Re-running bronze only pulls the delta.</p>
 <hr />
+<h2 id="natural-language-queries">Natural Language Queries<a class="headerlink" href="#natural-language-queries" title="Permanent link">&para;</a></h2>
+<p>Ask questions about your pipeline data in plain English — no SQL required.</p>
+<div class="highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;openmedallion[cerebrum]&quot;</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>medallion<span class="w"> </span>query<span class="w"> </span>my_project<span class="w"> </span><span class="s2">&quot;What are the top 5 customers by revenue?&quot;</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>medallion<span class="w"> </span>query<span class="w"> </span>my_project<span class="w"> </span><span class="s2">&quot;Show monthly trends&quot;</span><span class="w"> </span>--model<span class="w"> </span>mistral
+</span></code></pre></div>
+<p>This runs the full <strong>cerebrum</strong> pipeline locally: builds a schema context from your silver/gold Parquet files, generates SQL with an LLM, validates it against DuckDB, executes it, and prints the results alongside a canonical reproducible prompt.</p>
+<h3 id="provider-options">Provider options<a class="headerlink" href="#provider-options" title="Permanent link">&para;</a></h3>
+<p>By default, cerebrum uses a local <strong>Ollama</strong> server (<code>ollama serve</code>). To use a cloud provider, set the provider and API key:</p>
+<div class="highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># OpenRouter (access to GPT-4o, Claude 3.5, Llama 3, Mistral, …)</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="nv">MEDALLION_LLM_PROVIDER</span><span class="o">=</span>openrouter<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="nv">MEDALLION_LLM_API_KEY</span><span class="o">=</span>sk-or-...<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="nv">MEDALLION_LLM_MODEL</span><span class="o">=</span>openai/gpt-4o<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>medallion<span class="w"> </span>query<span class="w"> </span>my_project<span class="w"> </span><span class="s2">&quot;Revenue by region&quot;</span>
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>
+</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="c1"># OpenAI</span>
+</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="nv">MEDALLION_LLM_PROVIDER</span><span class="o">=</span>openai<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="nv">MEDALLION_LLM_API_KEY</span><span class="o">=</span>sk-...<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="nv">MEDALLION_LLM_MODEL</span><span class="o">=</span>gpt-4o-mini<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-11-11"><a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>medallion<span class="w"> </span>query<span class="w"> </span>my_project<span class="w"> </span><span class="s2">&quot;Revenue by region&quot;</span>
+</span><span id="__span-11-12"><a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a>
+</span><span id="__span-11-13"><a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="c1"># Any OpenAI-compatible endpoint (LM Studio, Groq, vLLM, …)</span>
+</span><span id="__span-11-14"><a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a><span class="nv">MEDALLION_LLM_PROVIDER</span><span class="o">=</span>lmstudio<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-11-15"><a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a><span class="nv">MEDALLION_LLM_BASE_URL</span><span class="o">=</span>http://localhost:1234/v1<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-11-16"><a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a><span class="nv">MEDALLION_LLM_MODEL</span><span class="o">=</span>local-model<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-11-17"><a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a>medallion<span class="w"> </span>query<span class="w"> </span>my_project<span class="w"> </span><span class="s2">&quot;Revenue by region&quot;</span>
+</span></code></pre></div>
+<p>Or configure once in <code>settings.yaml</code>:</p>
+<div class="highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nt">llm</span><span class="p">:</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span><span class="nt">provider</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">openrouter</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span><span class="nt">model</span><span class="p">:</span><span class="w">    </span><span class="l l-Scalar l-Scalar-Plain">openai/gpt-4o</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">  </span><span class="nt">api_key</span><span class="p">:</span><span class="w">  </span><span class="l l-Scalar l-Scalar-Plain">sk-or-...</span>
+</span></code></pre></div>
+<h3 id="http-server-chat-ui">HTTP server + chat UI<a class="headerlink" href="#http-server-chat-ui" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>medallion<span class="w"> </span>ask<span class="w">    </span>my_project<span class="w">              </span><span class="c1"># start neuron FastAPI server on :8000</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>medallion<span class="w"> </span>cortex<span class="w"> </span>my_project<span class="w">             </span><span class="c1"># start Dash chat UI on :8050</span>
+</span></code></pre></div>
+<p><code>neuron</code> exposes a <code>/query</code> endpoint (Swagger UI at <code>/docs</code>). <code>cortex</code> connects to it and provides a three-tab UI: chat, table, and dashboard with CSV/Excel download.</p>
+<hr />
 <h2 id="scheduling-with-kestra">Scheduling with Kestra<a class="headerlink" href="#scheduling-with-kestra" title="Permanent link">&para;</a></h2>
 <p><code>medallion init</code> generates a <code>kestra_flow.yml</code> inside every new project — a ready-to-use <a href="https://kestra.io">Kestra</a> flow that orchestrates bronze → silver → gold with per-task observability and retry support.</p>
 <h3 id="1-start-a-local-kestra-server">1. Start a local Kestra server<a class="headerlink" href="#1-start-a-local-kestra-server" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># from the repo root — requires Docker</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>make<span class="w"> </span>kestra-up
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="c1"># UI available at http://localhost:8080</span>
+<div class="highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># from the repo root — requires Docker</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>make<span class="w"> </span>kestra-up
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="c1"># UI available at http://localhost:8080</span>
 </span></code></pre></div>
 <h3 id="2-register-a-project-flow">2. Register a project flow<a class="headerlink" href="#2-register-a-project-flow" title="Permanent link">&para;</a></h3>
 <p>Add one volume mount to the <code>kestra</code> service in <code>docker-compose.yml</code>:</p>
-<div class="highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./my_project/kestra_flow.yml:/app/flows/my_project.yml</span>
+<div class="highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./my_project/kestra_flow.yml:/app/flows/my_project.yml</span>
 </span></code></pre></div>
 <p>Kestra picks up the file automatically on the next <code>make kestra-up</code> — no copying needed.</p>
 <h3 id="3-trigger-a-run">3. Trigger a run<a class="headerlink" href="#3-trigger-a-run" title="Permanent link">&para;</a></h3>
 <p>From the UI at <code>http://localhost:8080</code>, or via the API:</p>
-<div class="highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span>http://localhost:8080/api/v1/executions/openmedallion.projects/my_project
+<div class="highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span>http://localhost:8080/api/v1/executions/openmedallion.projects/my_project
 </span></code></pre></div>
 <h3 id="4-enable-scheduled-refresh">4. Enable scheduled refresh<a class="headerlink" href="#4-enable-scheduled-refresh" title="Permanent link">&para;</a></h3>
 <p>Uncomment the <code>triggers:</code> block in <code>kestra_flow.yml</code>:</p>
-<div class="highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nt">triggers</span><span class="p">:</span>
-</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">daily_refresh</span>
-</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">io.kestra.plugin.core.trigger.Schedule</span>
-</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">    </span><span class="nt">cron</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;0</span><span class="nv"> </span><span class="s">6</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">*&quot;</span><span class="w">   </span><span class="c1"># every day at 06:00 UTC</span>
+<div class="highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="nt">triggers</span><span class="p">:</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">daily_refresh</span>
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">io.kestra.plugin.core.trigger.Schedule</span>
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">    </span><span class="nt">cron</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;0</span><span class="nv"> </span><span class="s">6</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">*&quot;</span><span class="w">   </span><span class="c1"># every day at 06:00 UTC</span>
 </span></code></pre></div>
 <p>Restart with <code>make kestra-up</code> and Kestra picks up the change immediately.</p>
 <h3 id="kestra-vs-github-actions">Kestra vs GitHub Actions<a class="headerlink" href="#kestra-vs-github-actions" title="Permanent link">&para;</a></h3>
@@ -1878,19 +2014,31 @@
 </tr>
 <tr>
 <td>Inline <code>explore:</code> — profiling + interactive reports</td>
-<td>✅ unreleased</td>
+<td>✅ 2026.6.2</td>
+</tr>
+<tr>
+<td>Natural-language queries (cerebrum + neuron + cortex)</td>
+<td>✅ 2026.6.2</td>
+</tr>
+<tr>
+<td><code>medallion query</code> — direct CLI Q&amp;A without a server</td>
+<td>✅ 2026.6.2</td>
+</tr>
+<tr>
+<td>Multi-provider LLM (Ollama, OpenRouter, OpenAI, custom)</td>
+<td>✅ 2026.6.3</td>
 </tr>
 <tr>
 <td>Schema contract enforcement</td>
-<td>🔜 2026.6</td>
+<td>🔜 roadmap</td>
 </tr>
 <tr>
 <td>Lineage + metadata helpers</td>
-<td>🔜 2026.6</td>
+<td>🔜 roadmap</td>
 </tr>
 <tr>
 <td>Additional cloud destinations</td>
-<td>🔜 2026.6</td>
+<td>🔜 roadmap</td>
 </tr>
 </tbody>
 </table>
