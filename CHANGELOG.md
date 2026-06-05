@@ -8,7 +8,29 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+---
+
+## [2026.6.2] — 2026-06-05
+
 ### Added
+
+- `medallion query <project> "<question>"` — ask a natural-language question directly in the terminal without starting a server; prints SQL, result table, and recommended prompt
+- `config/settings.py` — single source of truth for all `MEDALLION_*` environment variables; supports layered config: env var → `settings.yaml` → built-in default
+- `settings.yaml` file support — copy `examples/settings.yaml.example` to project root or `~/.medallion/settings.yaml`; configure LLM model, Ollama URL, rate limit, audit log, API key, and mock client flag without env vars
+- `examples/settings.yaml.example` — template for runtime configuration
+- `CerebrumPipeline.ask()` `on_step` callback — optional `Callable[[str], None]` parameter; fires before each blocking step (schema build, SQL generation, validation retries, execution, recommended prompt) so callers can surface live progress
+- `medallion ask` startup now prints `/docs` (Swagger UI) and `/health` URLs alongside the server URL
+
+### Fixed
+
+- `cortex` CSV download raised 500 — `download_csv` returned a raw dict missing the `base64` field required by Dash 4; fixed to use `dcc.send_string()`
+- `cortex` chat spinner never appeared — `dbc.Spinner` wrapped a div that was never a callback output; replaced with `dcc.Loading` wrapping `chat-history` which is updated by the ask callback
+- `neuron` returned HTTP 500 with raw `[Errno 111] Connection refused` when Ollama was not running — now returns HTTP 503 with "Ollama is not reachable at … Start it with: ollama serve"
+- `cortex` chat bubble showed raw `httpx.HTTPStatusError` URL string on server errors — `client.ask()` now reads `r.json().get("detail")` and raises `RuntimeError(detail)` so the meaningful message is displayed
+- `make lint` failed on Python 3.14 — `ydata-profiling` and `pygwalker` were duplicated in main `dependencies`, pulling in `numba` which blocks Python 3.14; removed from main deps (remain in `[profile]` and `[explore]` optional extras)
+- Redundant `pl.Utf8` alias removed from `cortex/tabs/dashboard.py` (`pl.Utf8 == pl.String` in Polars 1.x)
+
+### Added (explore layer — carried from previous unreleased work)
 
 - Inline `explore:` key on tables in `bronze.yaml`, `silver.yaml`, and `gold.yaml` — attach report specs directly to any table; reports are generated immediately after that layer writes
 - `openmedallion/explore/` module — `profile.py` (ydata-profiling HTML reports) + `walker.py` (pygwalker interactive explorer)
@@ -18,7 +40,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - `--layer explore` CLI flag — re-generates HTML reports from existing Parquet files without re-running upstream layers
 - Report output convention — co-located with layer data under `add-ons/` subdirectory
 
-### Removed
+### Removed (explore layer — carried from previous unreleased work)
 
 - `openmedallion/viz/` module (`server.py`, `tracker.py`, `notebook.py`, `dag.py`)
 - `fastapi`, `uvicorn`, `websockets`, `panel`, `jupyter_bokeh` core dependencies
@@ -80,7 +102,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - S3 support via `openmedallion[s3]` optional extra (s3fs + boto3)
 - LocalStack compatibility via `AWS_ENDPOINT_URL` environment variable
 
-[Unreleased]: https://github.com/tummala-hareesh/openmedallion/compare/v2026.5.4...HEAD
+[Unreleased]: https://github.com/tummala-hareesh/openmedallion/compare/v2026.6.2...HEAD
+[2026.6.2]: https://github.com/tummala-hareesh/openmedallion/compare/v2026.5.4...v2026.6.2
 [2026.5.4]: https://github.com/tummala-hareesh/openmedallion/compare/v2026.5.1...v2026.5.4
 [2026.5.1]: https://github.com/tummala-hareesh/openmedallion/compare/v2026.4.1...v2026.5.1
 [2026.4.1]: https://github.com/tummala-hareesh/openmedallion/releases/tag/v2026.4.1
