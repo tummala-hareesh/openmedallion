@@ -26,7 +26,7 @@ import dash_bootstrap_components as dbc
 
 from openmedallion.cortex.charts import bar_chart, line_chart, pie_chart
 from openmedallion.cortex.theme import (
-    BORDER, CHART_PALETTE, FONT_UI, GREEN_DARK, RED_DARK, TEAL,
+    BORDER, CHART_PALETTE, FONT_UI, TEAL,
     TEXT_DIM, TEXT_MUTED, TEXT_PRIMARY, WHITE,
 )
 
@@ -347,7 +347,6 @@ def _fmt(v: float) -> str:
     if abs(v) >= 1_000_000:
         return f"{v / 1_000_000:.1f}M"
     if abs(v) >= 1_000:
-        s = f"{v:,.0f}" if v == int(v) else f"{v:,.1f}K".replace(",", "")
         return f"{v / 1_000:.1f}K" if abs(v) < 10_000 else f"{v:,.0f}"
     if v != int(v):
         return f"{v:,.2f}"

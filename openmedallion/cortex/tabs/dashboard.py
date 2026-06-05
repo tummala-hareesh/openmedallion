@@ -18,7 +18,7 @@ from dash import Input, Output, callback, dcc, html
 import dash_bootstrap_components as dbc
 
 from openmedallion.cortex.viz import build_dashboard
-from openmedallion.cortex.theme import BORDER, FONT_UI, TEXT_MUTED, WHITE
+from openmedallion.cortex.theme import FONT_UI, TEXT_MUTED
 
 
 def layout() -> html.Div:

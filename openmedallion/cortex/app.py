@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import dash
 import dash_bootstrap_components as dbc
-from dash import Input, Output, State, callback, dcc, html
+from dash import Input, Output, callback, dcc, html
 
 from openmedallion.config            import settings
 from openmedallion.cortex.client     import MockClient, NeuronClient

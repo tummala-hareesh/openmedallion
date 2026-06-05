@@ -9,7 +9,7 @@ import dash_bootstrap_components as dbc
 
 from openmedallion.cortex.theme import (
     BORDER, FONT_MONO, FONT_UI, SQL_BG, SQL_BORDER, SQL_TEXT,
-    TEAL, TEAL_BG, TEXT_DIM, TEXT_MUTED, TEXT_PRIMARY, TEXT_SECONDARY, WHITE,
+    TEAL, TEAL_BG, TEXT_MUTED, TEXT_SECONDARY,
 )
 
 
@@ -119,7 +119,7 @@ def layout() -> html.Div:
                     "padding": "10px 14px",
                     "textAlign": "left",
                     "color": TEXT_SECONDARY,
-                    "border": f"1px solid #F1F5F9",
+                    "border": "1px solid #F1F5F9",
                     "whiteSpace": "normal",
                     "height": "auto",
                 },

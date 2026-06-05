@@ -10,6 +10,46 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [2026.6.5] — 2026-06-05
+
+### Added
+
+- **cortex UI — Data Studio Pro redesign** — complete visual overhaul targeting business users:
+  - `cortex/theme.py` — centralised design token module: teal accent palette, sidebar colours, WCAG AA text contrast tokens, `CHART_PALETTE`, `FONT_UI` (DM Sans), `FONT_MONO` (JetBrains Mono), `nav_style()` / `panel_style()` helpers
+  - `cortex/assets/cortex.css` — Google Fonts import, body/scrollbar reset, z-index fix for Dash dropdowns
+  - `cortex/viz.py` — dynamic VizEngine: `build_dashboard()` selects chart layout from data shape and question intent (trend → line chart(s); distribution → pie+bar; comparison → bar(s); aggregate/categorical → bar+pie; single-row → big centred KPIs; pure-numeric → histograms); intent detected from question keywords; temporal columns detected by Polars dtype or column name patterns
+
+- **cortex app shell redesign** (`cortex/app.py`):
+  - Dark sidebar (220 px) with brand, Bootstrap Icons navigation, and LLM status footer
+  - `dcc.Store`-driven tab routing — all panels always in DOM, shown/hidden via style callback
+  - Topbar title updates on nav switch; "Table", "Chat", "Dashboard" labels
+
+- **Chat tab redesign** (`cortex/tabs/chat.py`):
+  - Empty state with 3 example chip buttons that pre-fill the textarea
+  - Conversation layout: user bubble (teal-tinted, right-aligned) / assistant bubble (white card, left-aligned)
+  - Collapsible SQL via native HTML5 `<details>`/`<summary>` — no JavaScript required
+  - Suggested follow-up prompt displayed below the input after each answer
+
+- **Table tab redesign** (`cortex/tabs/table.py`):
+  - Collapsible SQL panel (`dbc.Collapse`) with "Show SQL ▸ / Hide SQL ▾" toggle
+  - Row count label and CSV/Excel download buttons repositioned to top-right of table
+  - Numeric columns auto-detected and right-aligned via `style_cell_conditional`
+  - Suggested follow-up prompt shown above the table
+
+- **Dashboard tab redesign** (`cortex/tabs/dashboard.py`):
+  - Fully dynamic layout powered by `viz.build_dashboard()` — chart selection adapts to every query result
+  - Region / Category filter dropdowns with persistent labels; refresh timestamp; Export PDF button
+
+### Changed
+
+- `cortex/charts.py` — updated `bar_chart`, `line_chart`, `pie_chart` to use `CHART_PALETTE` and shared `_LAYOUT_BASE` (DM Sans font, white background, compact margins); added `empty_fig()` helper
+
+### Fixed
+
+- `medallion_audit.jsonl` added to `.gitignore` — runtime audit log was unintentionally tracked
+
+---
+
 ## [2026.6.3] — 2026-06-05
 
 ### Added
