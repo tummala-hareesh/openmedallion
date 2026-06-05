@@ -1,6 +1,6 @@
 .PHONY: help build test lint coverage examples clean version publish release restore kestra-up kestra-down kestra-logs
 
-# Accept v=2026.5.1 or v=v2026.5.1 — VER is always the bare number
+# Accept v=2026.5.2 or v=v2026.5.2 — VER is always the bare number
 VER := $(patsubst v%,%,$(v))
 
 # ── Help ──────────────────────────────────────────────────────────────────────

@@ -419,6 +419,7 @@ class BronzeLoader:
 
     def _sql_source(self):
         from dlt.sources.sql_database import sql_table
+        from sqlalchemy import text as _sa_text
 
         conn   = self._resolve_conn_str()
         self._probe_connection(conn)
@@ -427,11 +428,10 @@ class BronzeLoader:
 
         resources = []
         for tbl in tables_cfg:
-            inc  = tbl.get("incremental", {})
+            inc = tbl.get("incremental", {})
             mode = inc.get("mode", "replace")
             if self.debug_enabled:
                 print(f"[DEBUG] _sql_source: table={tbl['name']!r}, mode={mode!r}, filter={tbl.get('filter')!r}, select={tbl.get('select')!r}")
-
             kwargs = dict(
                 credentials=conn,
                 schema=schema,
@@ -495,7 +495,6 @@ class BronzeLoader:
                 kwargs["query_adapter_callback"] = (
                     lambda sel, _t, _sql=filter_clause: sel.where(_sa_text(_sql))
                 )
-
             resources.append(sql_table(**kwargs)) # pyright: ignore[reportArgumentType]
 
         return resources
