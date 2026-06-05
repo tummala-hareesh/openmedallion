@@ -20,13 +20,12 @@ USE_MOCK_CLIENT=1    Use MockClient instead of NeuronClient (offline / CI mode)
 """
 from __future__ import annotations
 
-import os
-
 import dash
 import dash_bootstrap_components as dbc
 from dash import dcc, html
 
-from openmedallion.cortex.client         import MockClient, NeuronClient
+from openmedallion.config            import settings
+from openmedallion.cortex.client     import MockClient, NeuronClient
 from openmedallion.cortex.tabs           import chat as chat_tab
 from openmedallion.cortex.tabs           import dashboard as dashboard_tab
 from openmedallion.cortex.tabs           import table as table_tab
@@ -46,8 +45,7 @@ def create_app(
         Base URL for the neuron server.  Set ``USE_MOCK_CLIENT=1`` to use the
         deterministic offline stub instead (no network, no Ollama required).
     """
-    use_mock = os.getenv("USE_MOCK_CLIENT", "0") == "1"
-    client   = MockClient() if use_mock else NeuronClient(base_url=neuron_url)
+    client = MockClient() if settings.USE_MOCK_CLIENT else NeuronClient(base_url=neuron_url)
 
     app = dash.Dash(
         __name__,

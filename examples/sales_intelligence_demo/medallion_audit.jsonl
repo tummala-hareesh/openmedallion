@@ -21,3 +21,4 @@
 {"ts": "2026-06-05T06:34:25Z", "method": "GET", "path": "/health", "client": "127.0.0.1", "status": 200, "latency_ms": 0.92}
 {"ts": "2026-06-05T06:34:30Z", "method": "POST", "path": "/query", "client": "127.0.0.1", "status": 503, "latency_ms": 50.25}
 {"ts": "2026-06-05T06:34:30Z", "method": "POST", "path": "/query", "client": "127.0.0.1", "status": 503, "latency_ms": 85.23}
+{"ts": "2026-06-05T12:48:39Z", "method": "GET", "path": "/", "client": "127.0.0.1", "status": 404, "latency_ms": 0.77}

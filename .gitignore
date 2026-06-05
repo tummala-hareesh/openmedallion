@@ -29,9 +29,10 @@ examples/*/data/gold/*
 .vscode/
 .idea/
 
-# Secrets
+# Secrets / local config
 .env
 secrets.yaml
+settings.yaml
 
 # OS
 .DS_Store

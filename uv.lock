@@ -2218,11 +2218,10 @@ source = { editable = "." }
 dependencies = [
     { name = "dlt", extra = ["filesystem", "parquet", "sql-database"] },
     { name = "polars" },
-    { name = "pygwalker" },
     { name = "pyyaml" },
     { name = "setuptools" },
     { name = "sf-hamilton" },
-    { name = "ydata-profiling" },
+    { name = "tqdm" },
 ]
 
 [package.optional-dependencies]
@@ -2287,16 +2286,15 @@ requires-dist = [
     { name = "pandas", marker = "extra == 'cortex'", specifier = ">=2.0" },
     { name = "plotly", marker = "extra == 'cortex'", specifier = ">=5.22" },
     { name = "polars", specifier = ">=1.0" },
-    { name = "pygwalker", specifier = ">=0.4" },
     { name = "pygwalker", marker = "extra == 'explore'", specifier = ">=0.4" },
     { name = "pymdown-extensions", marker = "extra == 'docs'", specifier = ">=10.0" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "s3fs", marker = "extra == 's3'", specifier = ">=2024.1" },
     { name = "setuptools", specifier = ">=70.0,<=81.0" },
     { name = "sf-hamilton", specifier = ">=1.82" },
+    { name = "tqdm", specifier = ">=4.67.3" },
     { name = "uvicorn", marker = "extra == 'cerebrum'", specifier = ">=0.30" },
     { name = "xlsxwriter", marker = "extra == 'cortex'", specifier = ">=3.0" },
-    { name = "ydata-profiling", specifier = ">=4.0" },
     { name = "ydata-profiling", marker = "extra == 'profile'", specifier = ">=4.0" },
 ]
 provides-extras = ["s3", "oracle", "profile", "explore", "cerebrum", "cortex", "docs"]

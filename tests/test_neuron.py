@@ -77,7 +77,7 @@ class TestQueryEndpoint:
     def test_returns_200_with_valid_payload(self, client, silver_dir, monkeypatch):
         monkeypatch.setenv("MEDALLION_PROJECTS_ROOT", str(silver_dir.parent))
 
-        cfg = {
+        {
             "paths": {"silver": str(silver_dir)},
             "pipeline": {"name": "demo"},
         }

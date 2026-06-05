@@ -20,7 +20,6 @@ MEDALLION_AUDIT_LOG       JSONL audit log path (default: "medallion_audit.jsonl"
 """
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import httpx
@@ -28,6 +27,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from openmedallion.cerebrum.pipeline import CerebrumPipeline
+from openmedallion.config            import settings
 from openmedallion.neuron.middleware  import AuditMiddleware, RateLimitMiddleware, verify_api_key
 from openmedallion.neuron.models      import QueryRequest, QueryResponse
 
@@ -49,9 +49,8 @@ app.add_middleware(AuditMiddleware)
 
 
 def _silver_dir(project: str) -> Path:
-    projects_root = os.getenv("MEDALLION_PROJECTS_ROOT", ".")
     from openmedallion.config.loader import load_project
-    cfg = load_project(project, projects_root)
+    cfg = load_project(project, settings.PROJECTS_ROOT)
     return Path(cfg["paths"]["silver"])
 
 
@@ -73,20 +72,21 @@ async def query_endpoint(
             detail=f"Silver layer not found for project '{body.project}': {silver}",
         )
 
-    model      = os.getenv("MEDALLION_LLM_MODEL", "llama3.2")
-    ollama_url = os.getenv("MEDALLION_OLLAMA_URL", "http://localhost:11434")
-    pipeline   = CerebrumPipeline(silver, model=model, ollama_base_url=ollama_url)
+    pipeline = CerebrumPipeline(
+        silver,
+        model=settings.LLM_MODEL,
+        ollama_base_url=settings.OLLAMA_URL,
+    )
 
     try:
         qr = pipeline.ask(body.question)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
     except (httpx.ConnectError, httpx.ConnectTimeout):
-        ollama_url = os.getenv("MEDALLION_OLLAMA_URL", "http://localhost:11434")
         raise HTTPException(
             status_code=503,
             detail=(
-                f"Ollama is not reachable at {ollama_url}. "
+                f"Ollama is not reachable at {settings.OLLAMA_URL}. "
                 "Start it with: ollama serve"
             ),
         )

@@ -24,9 +24,11 @@ from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
-_AUDIT_PATH     = Path(os.getenv("MEDALLION_AUDIT_LOG", "medallion_audit.jsonl"))
+from openmedallion.config import settings
+
+_AUDIT_PATH     = Path(settings.AUDIT_LOG)
 _WINDOW_SECONDS = 60
-_MAX_REQUESTS   = int(os.getenv("MEDALLION_RATE_LIMIT", "60"))
+_MAX_REQUESTS   = settings.RATE_LIMIT
 
 _request_times: dict[str, list[float]] = defaultdict(list)
 
@@ -79,7 +81,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
 def verify_api_key(request: Request) -> None:
     """Raise HTTP 401 if ``MEDALLION_API_KEY`` is set and the header doesn't match."""
-    expected = os.getenv("MEDALLION_API_KEY")
+    expected = os.getenv("MEDALLION_API_KEY")  # read per-request to support monkeypatching
     if not expected:
         return  # auth disabled in local / dev mode
     auth = request.headers.get("Authorization", "")

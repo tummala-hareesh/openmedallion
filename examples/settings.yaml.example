@@ -1,0 +1,30 @@
+# settings.yaml.example — openmedallion runtime configuration template
+#
+# Copy to your project directory (or ~/.medallion/settings.yaml for user-wide defaults):
+#
+#   cp examples/settings.yaml.example settings.yaml
+#
+# settings.yaml is gitignored — safe to put API keys here.
+#
+# Priority order (highest wins):
+#   1. Environment variable  e.g. MEDALLION_LLM_MODEL=mistral
+#   2. This file
+#   3. Built-in default
+#
+# To switch models:  change llm.model below, or run:
+#   MEDALLION_LLM_MODEL=mistral medallion ask my_project
+
+# ── LLM / Ollama ──────────────────────────────────────────────────────────────
+llm:
+  model:      llama3.2                   # any Ollama tag: mistral, phi3, llama3.1, etc.
+  ollama_url: http://localhost:11434     # change if Ollama runs on a remote host
+
+# ── Neuron server ─────────────────────────────────────────────────────────────
+neuron:
+  rate_limit: 60                         # max requests/min per IP
+  audit_log:  medallion_audit.jsonl      # path to append JSONL audit records
+  # api_key:  your-secret-key           # uncomment to require Bearer token auth
+
+# ── Cortex UI ─────────────────────────────────────────────────────────────────
+cortex:
+  mock_client: false                     # true = offline stub (no Ollama required)

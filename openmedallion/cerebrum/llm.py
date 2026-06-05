@@ -7,16 +7,16 @@ from __future__ import annotations
 
 import httpx
 
-_DEFAULT_BASE_URL = "http://localhost:11434"
-_DEFAULT_MODEL    = "llama3.2"
-_TIMEOUT          = 120.0  # seconds — LLMs can be slow on CPU
+from openmedallion.config import settings
+
+_TIMEOUT = 120.0  # seconds — LLMs can be slow on CPU
 
 
 def query(
     prompt: str,
     *,
-    model: str = _DEFAULT_MODEL,
-    base_url: str = _DEFAULT_BASE_URL,
+    model: str = settings.LLM_MODEL,
+    base_url: str = settings.OLLAMA_URL,
     timeout: float = _TIMEOUT,
 ) -> str:
     """Send *prompt* to Ollama and return the stripped response text.
