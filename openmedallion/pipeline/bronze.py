@@ -330,6 +330,7 @@ class BronzeLoader:
             pipeline_name=self.pipeline_name,
             destination=destination,
             dataset_name="bronze",
+            progress='tqdm'
         )
 
     def _build_sources(self):
