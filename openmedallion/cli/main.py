@@ -21,20 +21,24 @@ medallion run <project> [--layer LAYER] [--projects PATH] [--no-explore]
 
     --projects  Override the project root directory (default: . — current directory).
 
-medallion query <project> "<question>" [--projects PATH] [--model MODEL]
+medallion query <project> "<question>" [--projects PATH] [--model MODEL] [--provider PROVIDER]
     Ask a natural-language question directly in the terminal — no server needed.
     Requires: openmedallion[cerebrum]
 
     --projects  Project root directory (default: . — current directory).
-    --model     Ollama model tag (default: from settings / llama3.2).
+    --model     Model identifier (default: from settings / llama3.2).
+    --provider  LLM backend: ollama | openrouter | openai | custom
+                (default: from settings / ollama).
 
-medallion ask <project> [--projects PATH] [--port PORT] [--model MODEL]
+medallion ask <project> [--projects PATH] [--port PORT] [--model MODEL] [--provider PROVIDER]
     Start the cerebrum LLM engine + neuron FastAPI server on :8000.
     Requires: openmedallion[cerebrum]
 
     --projects  Project root directory (default: . — current directory).
     --port      Port for the neuron HTTP server (default: 8000).
-    --model     Ollama model tag (default: from settings / llama3.2).
+    --model     Model identifier (default: from settings / llama3.2).
+    --provider  LLM backend: ollama | openrouter | openai | custom
+                (default: from settings / ollama).
 
 medallion cortex <project> [--neuron-url URL] [--port PORT] [--debug]
     Start the Dash cortex UI on :8050 (connects to neuron at --neuron-url).
@@ -53,8 +57,10 @@ Examples
     medallion run       sales_project --no-explore
     medallion query     sales_project "What are the top 5 products by revenue?"
     medallion query     sales_project "Show monthly trends" --model mistral
+    medallion query     sales_project "Top revenue" --provider openrouter --model openai/gpt-4o
     medallion ask       sales_project
     medallion ask       sales_project --model mistral --port 8001
+    medallion ask       sales_project --provider openrouter --model openai/gpt-4o
     medallion cortex    sales_project
     medallion cortex    sales_project --neuron-url http://localhost:8001 --debug
 """
@@ -146,8 +152,8 @@ def cmd_query(args: argparse.Namespace) -> None:
 
     from openmedallion.config import settings
 
-    model      = args.model or settings.LLM_MODEL
-    ollama_url = settings.OLLAMA_URL
+    provider = args.provider or settings.LLM_PROVIDER
+    model    = args.model    or settings.LLM_MODEL
     cfg        = load_project(args.project, args.projects)
     silver_dir = Path(cfg["paths"]["silver"])
 
@@ -156,20 +162,32 @@ def cmd_query(args: argparse.Namespace) -> None:
         print(f"       Run: medallion run {args.project}")
         sys.exit(1)
 
-    print(f"  🤖  model   →  {model}")
-    print(f"  🗂️   silver  →  {silver_dir}")
-    print(f"  ❓  question →  {args.question}\n")
+    print(f"  🤖  provider →  {provider}")
+    print(f"  🤖  model    →  {model}")
+    print(f"  🗂️   silver   →  {silver_dir}")
+    print(f"  ❓  question  →  {args.question}\n")
 
     def _on_step(msg: str) -> None:
         print(f"  ·  {msg}...", flush=True)
 
     try:
         import httpx
-        pipeline = CerebrumPipeline(silver_dir, model=model, ollama_base_url=ollama_url)
+        pipeline = CerebrumPipeline(
+            silver_dir,
+            model=model,
+            provider=provider,
+            api_key=settings.LLM_API_KEY,
+            base_url=settings.LLM_BASE_URL,
+        )
         qr = pipeline.ask(args.question, on_step=_on_step)
     except (httpx.ConnectError, httpx.ConnectTimeout):
-        print(f"\n  ❌  Ollama is not reachable at {ollama_url}")
-        print("       Start it with: ollama serve")
+        if provider == "ollama":
+            _url = settings.LLM_BASE_URL or settings.OLLAMA_URL
+            print(f"\n  ❌  Ollama is not reachable at {_url}")
+            print("       Start it with: ollama serve")
+        else:
+            print(f"\n  ❌  LLM provider '{provider}' is not reachable.")
+            print("       Check your base_url and network connection.")
         sys.exit(1)
     except Exception as exc:
         print(f"\n  ❌  {exc}")
@@ -225,15 +243,18 @@ def cmd_ask(args: argparse.Namespace) -> None:
     import os
     from openmedallion.config import settings
 
-    model = args.model or settings.LLM_MODEL
+    provider = args.provider or settings.LLM_PROVIDER
+    model    = args.model    or settings.LLM_MODEL
     os.environ["MEDALLION_PROJECTS_ROOT"] = args.projects
+    os.environ["MEDALLION_LLM_PROVIDER"]  = provider
     os.environ["MEDALLION_LLM_MODEL"]     = model
 
     base = f"http://localhost:{args.port}"
-    print(f"  🧠  neuron  →  {base}")
-    print(f"  🤖  model   →  {model}")
-    print(f"  📋  api docs →  {base}/docs")
-    print(f"  ❤️   health  →  {base}/health\n")
+    print(f"  🧠  neuron   →  {base}")
+    print(f"  🤖  provider →  {provider}")
+    print(f"  🤖  model    →  {model}")
+    print(f"  📋  api docs  →  {base}/docs")
+    print(f"  ❤️   health   →  {base}/health\n")
 
     from openmedallion.neuron.server import app as neuron_app
     uvicorn.run(neuron_app, host="0.0.0.0", port=args.port)
@@ -336,7 +357,11 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     p_query.add_argument(
         "--model", default=None, metavar="MODEL",
-        help="Ollama model tag (default: from settings.yaml / MEDALLION_LLM_MODEL / llama3.2)",
+        help="Model identifier (default: from settings.yaml / MEDALLION_LLM_MODEL / llama3.2)",
+    )
+    p_query.add_argument(
+        "--provider", default=None, metavar="PROVIDER",
+        help="LLM backend: ollama | openrouter | openai | custom (default: from settings / ollama)",
     )
 
     # ask
@@ -355,7 +380,11 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     p_ask.add_argument(
         "--model", default=None, metavar="MODEL",
-        help="Ollama model tag (default: from settings.yaml / MEDALLION_LLM_MODEL / llama3.2)",
+        help="Model identifier (default: from settings.yaml / MEDALLION_LLM_MODEL / llama3.2)",
+    )
+    p_ask.add_argument(
+        "--provider", default=None, metavar="PROVIDER",
+        help="LLM backend: ollama | openrouter | openai | custom (default: from settings / ollama)",
     )
 
     # cortex

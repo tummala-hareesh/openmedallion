@@ -10,6 +10,29 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [2026.6.3] — 2026-06-05
+
+### Added
+
+- **Multi-provider LLM support** — `cerebrum` now works with any LLM backend, not just local Ollama:
+  - `"openrouter"` — OpenRouter.ai (access to GPT-4o, Claude 3.5 Sonnet, Llama 3, Mistral, etc.)
+  - `"openai"` — OpenAI API directly
+  - Any OpenAI-compatible endpoint (LM Studio, Groq, vLLM, Anyscale, Together AI…) via `base_url`
+  - `"ollama"` remains the default — no breaking change for existing local setups
+- `cerebrum/llm.py` — `LLMClient` Protocol, `OllamaClient`, `OpenAICompatibleClient`, and `get_client(provider, model, *, api_key, base_url)` factory
+- `CerebrumPipeline` — new `provider=`, `api_key=`, and `base_url=` constructor parameters; `ollama_base_url` removed
+- `settings.py` — three new settings: `LLM_PROVIDER` (`MEDALLION_LLM_PROVIDER`), `LLM_API_KEY` (`MEDALLION_LLM_API_KEY`), `LLM_BASE_URL` (`MEDALLION_LLM_BASE_URL`)
+- `settings.yaml` — new `llm.provider`, `llm.api_key`, and `llm.base_url` keys
+- `medallion query` / `medallion ask` — new `--provider` flag to select the LLM backend at the CLI
+
+### Changed
+
+- `neuron` 503 error message is now provider-aware: Ollama gets "Start it with: ollama serve"; other providers get a generic connectivity message
+- `neuron` now returns HTTP 503 (not 500) on 401/403 from LLM provider — surfaces authentication failures clearly
+- `examples/settings.yaml.example` updated to document all provider options with commented examples
+
+---
+
 ## [2026.6.2] — 2026-06-05
 
 ### Added

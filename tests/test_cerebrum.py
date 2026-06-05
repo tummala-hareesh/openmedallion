@@ -1,17 +1,23 @@
 """tests/test_cerebrum.py — Unit tests for openmedallion.cerebrum.
 
-All tests use real DuckDB against temp Parquet fixtures; Ollama is mocked
-so no running LLM is required.
+All tests use real DuckDB against temp Parquet fixtures; LLM calls are
+replaced with mock callables so no running server is required.
 """
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import polars as pl
 import pytest
 
 from openmedallion.cerebrum.executor    import execute
+from openmedallion.cerebrum.llm         import (
+    LLMClient,
+    OllamaClient,
+    OpenAICompatibleClient,
+    get_client,
+)
 from openmedallion.cerebrum.pipeline    import CerebrumPipeline, QueryResult
 from openmedallion.cerebrum.prompt      import build_prompt, system_prompt
 from openmedallion.cerebrum.recommender import recommend
@@ -223,16 +229,53 @@ class TestRecommender:
         assert isinstance(result, str)
 
 
+# ── get_client factory ────────────────────────────────────────────────────────
+
+class TestGetClient:
+    def test_ollama_returns_ollama_client(self):
+        client = get_client("ollama", "llama3.2", base_url="http://localhost:11434")
+        assert isinstance(client, OllamaClient)
+
+    def test_openrouter_returns_openai_compatible(self):
+        client = get_client("openrouter", "openai/gpt-4o", api_key="sk-test")
+        assert isinstance(client, OpenAICompatibleClient)
+
+    def test_openai_returns_openai_compatible(self):
+        client = get_client("openai", "gpt-4o", api_key="sk-test")
+        assert isinstance(client, OpenAICompatibleClient)
+
+    def test_custom_with_base_url_returns_openai_compatible(self):
+        client = get_client("lmstudio", "local-model", api_key="ignored",
+                            base_url="http://localhost:1234/v1")
+        assert isinstance(client, OpenAICompatibleClient)
+
+    def test_openrouter_without_api_key_raises(self):
+        with pytest.raises(ValueError, match="API key"):
+            with patch("openmedallion.cerebrum.llm.settings") as mock_settings:
+                mock_settings.LLM_API_KEY = None
+                mock_settings.OLLAMA_URL  = "http://localhost:11434"
+                get_client("openrouter", "openai/gpt-4o")
+
+    def test_unknown_provider_without_base_url_raises(self):
+        with pytest.raises(ValueError, match="base_url"):
+            with patch("openmedallion.cerebrum.llm.settings") as mock_settings:
+                mock_settings.LLM_API_KEY = "sk-test"   # key present; should fail on missing base_url
+                mock_settings.OLLAMA_URL  = "http://localhost:11434"
+                get_client("mycompany-llm", "custom-model")
+
+    def test_client_satisfies_protocol(self):
+        client = get_client("ollama", "llama3.2", base_url="http://localhost:11434")
+        assert isinstance(client, LLMClient)
+
+
 # ── pipeline (integration, mocked LLM) ───────────────────────────────────────
 
 class TestCerebrumPipeline:
     def test_ask_returns_query_result(self, silver_dir):
         good_sql = "SELECT * FROM orders LIMIT 1"
-        pipeline = CerebrumPipeline(silver_dir)
-
-        with patch("openmedallion.cerebrum.pipeline._llm.query") as mock_llm:
-            mock_llm.side_effect = [good_sql, "Show the first order row"]
-            result = pipeline.ask("Show me one order")
+        mock_llm = MagicMock(side_effect=[good_sql, "Show the first order row"])
+        pipeline = CerebrumPipeline(silver_dir, _client=mock_llm)
+        result   = pipeline.ask("Show me one order")
 
         assert isinstance(result, QueryResult)
         assert result.sql == good_sql
@@ -243,32 +286,47 @@ class TestCerebrumPipeline:
     def test_ask_retries_bad_sql(self, silver_dir):
         bad_sql  = "DELETE FROM orders"
         good_sql = "SELECT COUNT(*) AS n FROM orders"
-        pipeline = CerebrumPipeline(silver_dir)
-
-        with patch("openmedallion.cerebrum.pipeline._llm.query") as mock_llm:
-            # call sequence: initial SQL (bad) → retry SQL (good) → recommender
-            mock_llm.side_effect = [bad_sql, good_sql, "Count all orders"]
-            result = pipeline.ask("How many orders?")
+        # call sequence: initial SQL (bad) → retry SQL (good) → recommender
+        mock_llm = MagicMock(side_effect=[bad_sql, good_sql, "Count all orders"])
+        pipeline = CerebrumPipeline(silver_dir, _client=mock_llm)
+        result   = pipeline.ask("How many orders?")
 
         assert result.sql == good_sql
         assert result.result["n"][0] == 3
 
     def test_ask_raises_after_max_retries(self, silver_dir):
-        pipeline = CerebrumPipeline(silver_dir)
-        always_bad = "DROP TABLE orders"
+        mock_llm = MagicMock(return_value="DROP TABLE orders")
+        pipeline = CerebrumPipeline(silver_dir, _client=mock_llm)
 
-        with patch("openmedallion.cerebrum.pipeline._llm.query") as mock_llm:
-            mock_llm.return_value = always_bad
-            with pytest.raises(ValueError):
-                pipeline.ask("destroy everything")
+        with pytest.raises(ValueError):
+            pipeline.ask("destroy everything")
 
     def test_result_columns(self, silver_dir):
-        sql = "SELECT region, SUM(amount) AS total FROM orders GROUP BY region"
-        pipeline = CerebrumPipeline(silver_dir)
-
-        with patch("openmedallion.cerebrum.pipeline._llm.query") as mock_llm:
-            mock_llm.side_effect = [sql, "Revenue by region"]
-            result = pipeline.ask("revenue by region")
+        sql      = "SELECT region, SUM(amount) AS total FROM orders GROUP BY region"
+        mock_llm = MagicMock(side_effect=[sql, "Revenue by region"])
+        pipeline = CerebrumPipeline(silver_dir, _client=mock_llm)
+        result   = pipeline.ask("revenue by region")
 
         assert "region" in result.result.columns
         assert "total"  in result.result.columns
+
+    def test_default_provider_is_ollama(self, silver_dir):
+        with patch("openmedallion.cerebrum.llm.get_client") as mock_factory:
+            mock_factory.return_value = MagicMock(side_effect=["SELECT 1", "q"])
+            CerebrumPipeline(silver_dir, model="llama3.2")
+            mock_factory.assert_called_once_with(
+                "ollama", "llama3.2", api_key=None, base_url=None
+            )
+
+    def test_openrouter_provider_forwarded(self, silver_dir):
+        with patch("openmedallion.cerebrum.llm.get_client") as mock_factory:
+            mock_factory.return_value = MagicMock()
+            CerebrumPipeline(
+                silver_dir,
+                provider="openrouter",
+                model="openai/gpt-4o",
+                api_key="sk-test",
+            )
+            mock_factory.assert_called_once_with(
+                "openrouter", "openai/gpt-4o", api_key="sk-test", base_url=None
+            )

@@ -3,10 +3,10 @@
 Flow:
     build_schema_context
         → build_prompt
-        → llm.query          (first LLM call — generates SQL)
-        → validate_and_fix   (allowlist + DuckDB EXPLAIN, up to 2 retries)
-        → execute            (DuckDB → Polars DataFrame)
-        → recommend          (second LLM call — canonical question string)
+        → LLMClient        (first call — generates SQL)
+        → validate_and_fix (allowlist + DuckDB EXPLAIN, up to 2 retries)
+        → execute          (DuckDB → Polars DataFrame)
+        → recommend        (second call — canonical question string)
 """
 from __future__ import annotations
 
@@ -42,9 +42,20 @@ class CerebrumPipeline:
     silver_dir:
         Path to the silver layer containing the Parquet tables.
     model:
-        Ollama model tag (default: ``"llama3.2"``).
-    ollama_base_url:
-        Base URL of the Ollama server.
+        Model identifier passed to the LLM provider (e.g. ``"llama3.2"``,
+        ``"openai/gpt-4o"``, ``"mistral"``).
+    provider:
+        LLM backend: ``"ollama"`` (default), ``"openrouter"``, ``"openai"``,
+        or any custom label with a matching ``base_url``.
+    api_key:
+        API key for non-Ollama providers.  Falls back to
+        ``MEDALLION_LLM_API_KEY`` env var / ``settings.yaml``.
+    base_url:
+        Override the provider's default endpoint URL (e.g. a self-hosted
+        OpenAI-compatible server such as LM Studio or vLLM).
+    _client:
+        Inject a pre-built :class:`~openmedallion.cerebrum.llm.LLMClient`
+        directly, bypassing the factory.  Intended for testing only.
     """
 
     def __init__(
@@ -52,16 +63,20 @@ class CerebrumPipeline:
         silver_dir: str | Path,
         *,
         model: str = "llama3.2",
-        ollama_base_url: str = "http://localhost:11434",
+        provider: str = "ollama",
+        api_key: str | None = None,
+        base_url: str | None = None,
+        _client: Callable[[str], str] | None = None,
     ) -> None:
         self._silver_dir = Path(silver_dir)
-        self._model      = model
-        self._base_url   = ollama_base_url
+        self._client = _client or _llm.get_client(
+            provider, model, api_key=api_key, base_url=base_url
+        )
 
     # ── internal ─────────────────────────────────────────────────────────────
 
     def _llm_call(self, prompt_text: str) -> str:
-        return _llm.query(prompt_text, model=self._model, base_url=self._base_url)
+        return self._client(prompt_text)
 
     # ── public API ────────────────────────────────────────────────────────────
 

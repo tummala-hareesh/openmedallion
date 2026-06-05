@@ -21,7 +21,12 @@ settings.yaml format
 
 Environment variable reference
 ------------------------------
-    MEDALLION_LLM_MODEL       Ollama model tag            (default: llama3.2)
+    MEDALLION_LLM_PROVIDER    LLM backend                 (default: ollama)
+                              Choices: ollama | openrouter | openai | <custom>
+    MEDALLION_LLM_MODEL       Model identifier            (default: llama3.2)
+                              Ollama tag or provider model ID (e.g. openai/gpt-4o)
+    MEDALLION_LLM_API_KEY     API key for non-Ollama providers (unset = Ollama only)
+    MEDALLION_LLM_BASE_URL    Override provider endpoint URL  (unset = provider default)
     MEDALLION_OLLAMA_URL      Ollama base URL             (default: http://localhost:11434)
     MEDALLION_PROJECTS_ROOT   Parent dir of project dirs  (default: .)
     MEDALLION_API_KEY         Bearer token for neuron     (unset = auth disabled)
@@ -61,9 +66,12 @@ _llm = _y.get("llm",    {})
 _nrn = _y.get("neuron", {})
 _ctx = _y.get("cortex", {})
 
-# ── LLM / Ollama ──────────────────────────────────────────────────────────────
-LLM_MODEL  : str = _env("MEDALLION_LLM_MODEL")  or _llm.get("model",      "llama3.2")
-OLLAMA_URL : str = _env("MEDALLION_OLLAMA_URL")  or _llm.get("ollama_url", "http://localhost:11434")
+# ── LLM provider ──────────────────────────────────────────────────────────────
+LLM_PROVIDER : str        = _env("MEDALLION_LLM_PROVIDER") or _llm.get("provider",  "ollama")
+LLM_MODEL    : str        = _env("MEDALLION_LLM_MODEL")    or _llm.get("model",      "llama3.2")
+LLM_API_KEY  : str | None = _env("MEDALLION_LLM_API_KEY")  or _llm.get("api_key")
+LLM_BASE_URL : str | None = _env("MEDALLION_LLM_BASE_URL") or _llm.get("base_url")
+OLLAMA_URL   : str        = _env("MEDALLION_OLLAMA_URL")    or _llm.get("ollama_url", "http://localhost:11434")
 
 # ── Neuron server ─────────────────────────────────────────────────────────────
 PROJECTS_ROOT : str        = _env("MEDALLION_PROJECTS_ROOT") or _nrn.get("projects_root", ".")

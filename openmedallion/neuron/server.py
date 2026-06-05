@@ -12,8 +12,11 @@ GET /health
 Environment variables
 ---------------------
 MEDALLION_PROJECTS_ROOT   Parent directory of per-project folders (default: ".")
-MEDALLION_LLM_MODEL       Ollama model tag (default: "llama3.2")
-MEDALLION_OLLAMA_URL      Ollama base URL   (default: "http://localhost:11434")
+MEDALLION_LLM_PROVIDER    LLM backend: ollama | openrouter | openai | custom (default: "ollama")
+MEDALLION_LLM_MODEL       Model identifier (default: "llama3.2")
+MEDALLION_LLM_API_KEY     API key for non-Ollama providers
+MEDALLION_LLM_BASE_URL    Override provider endpoint URL
+MEDALLION_OLLAMA_URL      Ollama base URL (default: "http://localhost:11434")
 MEDALLION_API_KEY         If set, enables bearer-token auth
 MEDALLION_RATE_LIMIT      Max requests/min per IP (default: 60)
 MEDALLION_AUDIT_LOG       JSONL audit log path (default: "medallion_audit.jsonl")
@@ -75,21 +78,33 @@ async def query_endpoint(
     pipeline = CerebrumPipeline(
         silver,
         model=settings.LLM_MODEL,
-        ollama_base_url=settings.OLLAMA_URL,
+        provider=settings.LLM_PROVIDER,
+        api_key=settings.LLM_API_KEY,
+        base_url=settings.LLM_BASE_URL,
     )
 
     try:
         qr = pipeline.ask(body.question)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code in (401, 403):
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    f"LLM provider '{settings.LLM_PROVIDER}' rejected the request "
+                    "(authentication failed). Check MEDALLION_LLM_API_KEY."
+                ),
+            )
+        raise HTTPException(status_code=500, detail=str(exc))
     except (httpx.ConnectError, httpx.ConnectTimeout):
-        raise HTTPException(
-            status_code=503,
-            detail=(
-                f"Ollama is not reachable at {settings.OLLAMA_URL}. "
-                "Start it with: ollama serve"
-            ),
-        )
+        if settings.LLM_PROVIDER == "ollama":
+            _url = settings.LLM_BASE_URL or settings.OLLAMA_URL
+            detail = f"Ollama is not reachable at {_url}. Start it with: ollama serve"
+        else:
+            _url = settings.LLM_BASE_URL or settings.LLM_PROVIDER
+            detail = f"LLM provider '{settings.LLM_PROVIDER}' is not reachable at {_url}."
+        raise HTTPException(status_code=503, detail=detail)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
