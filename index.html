@@ -1583,6 +1583,11 @@
 <td>Parquet + CSV for BI tools</td>
 </tr>
 <tr>
+<td>🔍 Explore</td>
+<td>ydata-profiling / pygwalker</td>
+<td>HTML data-quality and exploration reports</td>
+</tr>
+<tr>
 <td>🔗 Orchestration</td>
 <td>Hamilton</td>
 <td>DAG wiring and execution order</td>
@@ -1594,8 +1599,10 @@
 <div class="highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>pip<span class="w"> </span>install<span class="w"> </span>openmedallion
 </span></code></pre></div>
 <p>Optional extras:</p>
-<div class="highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;openmedallion[s3]&quot;</span><span class="w">      </span><span class="c1"># S3 support via s3fs + boto3</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;openmedallion[oracle]&quot;</span><span class="w">  </span><span class="c1"># Oracle DB support via oracledb</span>
+<div class="highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;openmedallion[s3]&quot;</span><span class="w">       </span><span class="c1"># S3 support via s3fs + boto3</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;openmedallion[oracle]&quot;</span><span class="w">   </span><span class="c1"># Oracle DB support via oracledb</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;openmedallion[profile]&quot;</span><span class="w">  </span><span class="c1"># Data profiling reports via ydata-profiling</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;openmedallion[explore]&quot;</span><span class="w">  </span><span class="c1"># Interactive exploration reports via pygwalker</span>
 </span></code></pre></div>
 <blockquote>
 <p>Requires Python 3.11+</p>
@@ -1866,8 +1873,12 @@
 <td>✅ 2026.4.1</td>
 </tr>
 <tr>
-<td>LazyFrame UDF contract</td>
-<td>🔜 2026.5</td>
+<td><code>select:</code> column projection + <code>credentials_file:</code></td>
+<td>✅ 2026.5.4</td>
+</tr>
+<tr>
+<td>Inline <code>explore:</code> — profiling + interactive reports</td>
+<td>✅ unreleased</td>
 </tr>
 <tr>
 <td>Schema contract enforcement</td>

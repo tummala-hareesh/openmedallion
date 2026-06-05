@@ -981,6 +981,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#inline-explore" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inline Explore
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Inline Explore">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#explore" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        explore[]
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#validation-rules" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1524,6 +1552,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#inline-explore" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inline Explore
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Inline Explore">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#explore" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        explore[]
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#validation-rules" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1905,6 +1961,12 @@ tables are printed before ingestion starts.</p>
 <td>merge</td>
 <td>Primary key column for upsert.</td>
 </tr>
+<tr>
+<td><code>explore</code></td>
+<td>list</td>
+<td>—</td>
+<td>List of report specs to generate after this table is written. See <a href="#inline-explore">Inline explore</a>.</td>
+</tr>
 </tbody>
 </table>
 <h3 id="destination"><code>destination</code><a class="headerlink" href="#destination" title="Permanent link">&para;</a></h3>
@@ -1996,6 +2058,12 @@ tables are printed before ingestion starts.</p>
 <td>list</td>
 <td>—</td>
 <td>Ordered list of transform steps.</td>
+</tr>
+<tr>
+<td><code>explore</code></td>
+<td>list</td>
+<td>—</td>
+<td>List of report specs to generate after this table is written. See <a href="#inline-explore">Inline explore</a>.</td>
 </tr>
 </tbody>
 </table>
@@ -2189,6 +2257,12 @@ Calls a Python function. See <a href="../../concepts/udf-guide/#1-silver-base-ta
 <td>✅</td>
 <td>Parquet filename to write under <code>paths.gold/&lt;project&gt;/</code>.</td>
 </tr>
+<tr>
+<td><code>explore</code></td>
+<td>list</td>
+<td>—</td>
+<td>List of report specs to generate after this aggregation is written. See <a href="#inline-explore">Inline explore</a>.</td>
+</tr>
 </tbody>
 </table>
 <h3 id="metrics"><code>metrics[]</code><a class="headerlink" href="#metrics" title="Permanent link">&para;</a></h3>
@@ -2253,6 +2327,90 @@ Calls a Python function. See <a href="../../concepts/udf-guide/#1-silver-base-ta
 </tr>
 </tbody>
 </table>
+<hr />
+<h2 id="inline-explore">Inline Explore<a class="headerlink" href="#inline-explore" title="Permanent link">&para;</a></h2>
+<p>Add an <code>explore:</code> list directly to any table entry in <code>bronze.yaml</code>, <code>silver.yaml</code>, or <code>gold.yaml</code>. Reports are generated immediately after the Parquet file for that table is written — no separate <code>explore.yaml</code> or <code>paths.explore</code> key needed.</p>
+<div class="highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># bronze.yaml — on a source table</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">employees</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span><span class="nt">explore</span><span class="p">:</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">report_type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">profile</span>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">      </span><span class="nt">output_file</span><span class="p">:</span><span class="w">  </span><span class="l l-Scalar l-Scalar-Plain">employees_profile.html</span>
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">      </span><span class="nt">title</span><span class="p">:</span><span class="w">        </span><span class="s">&quot;Employees</span><span class="nv"> </span><span class="s">Bronze</span><span class="nv"> </span><span class="s">Quality&quot;</span>
+</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>
+</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="c1"># silver.yaml — on a transformed table</span>
+</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source_file</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">employees.parquet</span>
+</span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="w">  </span><span class="nt">explore</span><span class="p">:</span>
+</span><span id="__span-12-11"><a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">report_type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">walker</span>
+</span><span id="__span-12-12"><a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="w">      </span><span class="nt">output_file</span><span class="p">:</span><span class="w">  </span><span class="l l-Scalar l-Scalar-Plain">employees_explorer.html</span>
+</span><span id="__span-12-13"><a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a><span class="w">      </span><span class="nt">title</span><span class="p">:</span><span class="w">        </span><span class="s">&quot;Employees</span><span class="nv"> </span><span class="s">Explorer&quot;</span>
+</span><span id="__span-12-14"><a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>
+</span><span id="__span-12-15"><a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a><span class="c1"># gold.yaml — on an aggregation</span>
+</span><span id="__span-12-16"><a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a><span class="nt">aggregations</span><span class="p">:</span>
+</span><span id="__span-12-17"><a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">output_file</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">headcount.parquet</span>
+</span><span id="__span-12-18"><a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a><span class="w">    </span><span class="nt">explore</span><span class="p">:</span>
+</span><span id="__span-12-19"><a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">report_type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">profile</span>
+</span><span id="__span-12-20"><a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a><span class="w">        </span><span class="nt">output_file</span><span class="p">:</span><span class="w">  </span><span class="l l-Scalar l-Scalar-Plain">headcount_profile.html</span>
+</span><span id="__span-12-21"><a id="__codelineno-12-21" name="__codelineno-12-21" href="#__codelineno-12-21"></a><span class="w">        </span><span class="nt">title</span><span class="p">:</span><span class="w">        </span><span class="s">&quot;Headcount</span><span class="nv"> </span><span class="s">by</span><span class="nv"> </span><span class="s">Department&quot;</span>
+</span></code></pre></div>
+<h3 id="explore"><code>explore[]</code><a class="headerlink" href="#explore" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>report_type</code></td>
+<td>enum</td>
+<td>✅</td>
+<td><code>profile</code> (ydata-profiling HTML report) or <code>walker</code> (pygwalker interactive explorer).</td>
+</tr>
+<tr>
+<td><code>output_file</code></td>
+<td>string</td>
+<td>✅</td>
+<td>HTML filename to write.</td>
+</tr>
+<tr>
+<td><code>title</code></td>
+<td>string</td>
+<td>—</td>
+<td>Optional title shown in the report.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Report output paths</strong> — reports are co-located with their layer's data under an <code>add-ons/</code> subdirectory:</p>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Output path</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bronze</td>
+<td><code>paths.bronze/add-ons/&lt;output_file&gt;</code></td>
+</tr>
+<tr>
+<td>Silver</td>
+<td><code>paths.silver/add-ons/&lt;output_file&gt;</code></td>
+</tr>
+<tr>
+<td>Gold</td>
+<td><code>paths.gold/add-ons/&lt;project&gt;/&lt;output_file&gt;</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Optional dependencies</strong> — install the extras for the report type you want:</p>
+<div class="highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;openmedallion[profile]&quot;</span><span class="w">   </span><span class="c1"># ydata-profiling &gt;= 4.0</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;openmedallion[explore]&quot;</span><span class="w">   </span><span class="c1"># pygwalker &gt;= 0.4</span>
+</span></code></pre></div>
+<p>If the optional dependency is not installed, the report is silently skipped with a notice. An unknown <code>report_type</code> also prints a warning and skips without aborting the run.</p>
 <hr />
 <h2 id="validation-rules">Validation Rules<a class="headerlink" href="#validation-rules" title="Permanent link">&para;</a></h2>
 <p><code>_validate_config()</code> checks the following automatically after loading:</p>
