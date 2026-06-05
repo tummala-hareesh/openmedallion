@@ -160,16 +160,19 @@ def cmd_query(args: argparse.Namespace) -> None:
     print(f"  🗂️   silver  →  {silver_dir}")
     print(f"  ❓  question →  {args.question}\n")
 
+    def _on_step(msg: str) -> None:
+        print(f"  ·  {msg}...", flush=True)
+
     try:
         import httpx
         pipeline = CerebrumPipeline(silver_dir, model=model, ollama_base_url=ollama_url)
-        qr = pipeline.ask(args.question)
+        qr = pipeline.ask(args.question, on_step=_on_step)
     except (httpx.ConnectError, httpx.ConnectTimeout):
-        print(f"  ❌  Ollama is not reachable at {ollama_url}")
+        print(f"\n  ❌  Ollama is not reachable at {ollama_url}")
         print("       Start it with: ollama serve")
         sys.exit(1)
     except Exception as exc:
-        print(f"  ❌  {exc}")
+        print(f"\n  ❌  {exc}")
         sys.exit(1)
 
     rows = qr.result.to_dicts()
@@ -226,8 +229,11 @@ def cmd_ask(args: argparse.Namespace) -> None:
     os.environ["MEDALLION_PROJECTS_ROOT"] = args.projects
     os.environ["MEDALLION_LLM_MODEL"]     = model
 
-    print(f"  🧠  neuron  →  http://localhost:{args.port}")
-    print(f"  🤖  model   →  {model}\n")
+    base = f"http://localhost:{args.port}"
+    print(f"  🧠  neuron  →  {base}")
+    print(f"  🤖  model   →  {model}")
+    print(f"  📋  api docs →  {base}/docs")
+    print(f"  ❤️   health  →  {base}/health\n")
 
     from openmedallion.neuron.server import app as neuron_app
     uvicorn.run(neuron_app, host="0.0.0.0", port=args.port)

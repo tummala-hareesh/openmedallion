@@ -23,3 +23,15 @@
 {"ts": "2026-06-05T06:34:30Z", "method": "POST", "path": "/query", "client": "127.0.0.1", "status": 503, "latency_ms": 85.23}
 {"ts": "2026-06-05T12:48:39Z", "method": "GET", "path": "/", "client": "127.0.0.1", "status": 404, "latency_ms": 0.77}
 {"ts": "2026-06-05T13:33:36Z", "method": "GET", "path": "/", "client": "127.0.0.1", "status": 404, "latency_ms": 0.74}
+{"ts": "2026-06-05T14:08:13Z", "method": "GET", "path": "/docs", "client": "127.0.0.1", "status": 200, "latency_ms": 2.1}
+{"ts": "2026-06-05T14:08:14Z", "method": "GET", "path": "/openapi.json", "client": "127.0.0.1", "status": 200, "latency_ms": 75.64}
+{"ts": "2026-06-05T14:08:29Z", "method": "GET", "path": "/", "client": "127.0.0.1", "status": 404, "latency_ms": 0.99}
+{"ts": "2026-06-05T14:08:37Z", "method": "GET", "path": "/docs", "client": "127.0.0.1", "status": 200, "latency_ms": 2.95}
+{"ts": "2026-06-05T14:08:38Z", "method": "GET", "path": "/openapi.json", "client": "127.0.0.1", "status": 200, "latency_ms": 0.56}
+{"ts": "2026-06-05T14:08:52Z", "method": "GET", "path": "/docs", "client": "127.0.0.1", "status": 200, "latency_ms": 14.84}
+{"ts": "2026-06-05T14:08:53Z", "method": "GET", "path": "/openapi.json", "client": "127.0.0.1", "status": 200, "latency_ms": 3.33}
+{"ts": "2026-06-05T14:09:12Z", "method": "GET", "path": "/health", "client": "127.0.0.1", "status": 200, "latency_ms": 1.17}
+{"ts": "2026-06-05T14:09:14Z", "method": "GET", "path": "/health", "client": "127.0.0.1", "status": 200, "latency_ms": 0.54}
+{"ts": "2026-06-05T14:12:20Z", "method": "GET", "path": "/docs", "client": "127.0.0.1", "status": 200, "latency_ms": 1.77}
+{"ts": "2026-06-05T14:12:21Z", "method": "GET", "path": "/openapi.json", "client": "127.0.0.1", "status": 200, "latency_ms": 30.2}
+{"ts": "2026-06-05T14:14:32Z", "method": "POST", "path": "/query", "client": "127.0.0.1", "status": 422, "latency_ms": 106572.17}
