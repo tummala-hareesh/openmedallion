@@ -1,0 +1,28 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    height: 100%;
+    overflow: hidden;
+    font-family: 'DM Sans', system-ui, sans-serif;
+    background: #F8FAFC;
+}
+
+* { box-sizing: border-box; }
+
+/* Scrollbar styling for chat history and content areas */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+
+/* Dash loading overlay tweak */
+._dash-loading { opacity: 0.6; }
+
+/* Remove default Plotly graph drag cursor */
+.js-plotly-plot .plotly .cursor-crosshair { cursor: default; }
+
+/* Dropdown menu z-index fix inside sidebar layout */
+.Select-menu-outer { z-index: 1000 !important; }
+.VirtualizedSelectFocusedOption { background: #ECFDF5 !important; }

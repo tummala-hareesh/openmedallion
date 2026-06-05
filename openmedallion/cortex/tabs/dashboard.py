@@ -1,67 +1,85 @@
-"""cortex/tabs/dashboard.py — Dashboard tab: KPI cards + charts + filters + PDF export."""
+"""cortex/tabs/dashboard.py — Dynamic dashboard tab.
+
+Layout adapts to every query result:
+  - 1-row aggregation    → large centred KPI card(s)
+  - Time-series data     → line chart (full-width or side-by-side)
+  - Distribution intent  → pie + bar
+  - Comparison intent    → bar chart(s) per metric
+  - General categorical  → bar + pie (if cardinality ≤ 8)
+  - Pure-numeric multi   → histograms
+
+All chart decisions are made by ``cortex.viz.build_dashboard``.
+"""
 from __future__ import annotations
 
-import plotly.graph_objects as go
-import polars as pl
+import datetime
+
 from dash import Input, Output, callback, dcc, html
 import dash_bootstrap_components as dbc
 
-from openmedallion.cortex.charts import bar_chart, kpi_card, line_chart, pie_chart
+from openmedallion.cortex.viz import build_dashboard
+from openmedallion.cortex.theme import BORDER, FONT_UI, TEXT_MUTED, WHITE
 
 
 def layout() -> html.Div:
     return html.Div([
-        # Filter + PDF export row
+
+        # ── Filter + export row ───────────────────────────────────────────
         dbc.Row([
             dbc.Col([
-                html.Label("Region", className="text-muted small"),
+                html.Label(
+                    "Region",
+                    style={
+                        "fontSize": "11px", "fontWeight": "600", "color": TEXT_MUTED,
+                        "textTransform": "uppercase", "letterSpacing": "0.7px",
+                        "display": "block", "marginBottom": "4px",
+                    },
+                ),
                 dcc.Dropdown(
-                    id="filter-region", multi=True,
-                    placeholder="All regions…",
+                    id="filter-region", multi=True, placeholder="All regions…",
+                    style={"fontSize": "13px", "fontFamily": FONT_UI},
                 ),
             ], width=3),
             dbc.Col([
-                html.Label("Category", className="text-muted small"),
+                html.Label(
+                    "Category",
+                    style={
+                        "fontSize": "11px", "fontWeight": "600", "color": TEXT_MUTED,
+                        "textTransform": "uppercase", "letterSpacing": "0.7px",
+                        "display": "block", "marginBottom": "4px",
+                    },
+                ),
                 dcc.Dropdown(
-                    id="filter-category", multi=True,
-                    placeholder="All categories…",
+                    id="filter-category", multi=True, placeholder="All categories…",
+                    style={"fontSize": "13px", "fontFamily": FONT_UI},
                 ),
             ], width=3),
             dbc.Col(
                 dbc.Button(
-                    "Export PDF", id="btn-pdf",
-                    color="outline-danger", size="sm",
+                    "Export PDF", id="btn-pdf", color="outline-secondary", size="sm",
+                    style={"fontFamily": FONT_UI, "fontSize": "12.5px"},
                 ),
-                width="auto",
-                className="d-flex align-items-end pb-1",
+                width="auto", className="d-flex align-items-end pb-1",
             ),
-        ], className="mb-3"),
-        dcc.Download(id="download-pdf"),
-
-        # KPI cards
-        dbc.Row(id="kpi-row", className="mb-3"),
-
-        # Line + bar charts
-        dbc.Row([
-            dbc.Col(dcc.Graph(id="chart-bar"),  width=6),
-            dbc.Col(dcc.Graph(id="chart-line"), width=6),
-        ], className="mb-3"),
-
-        # Pie chart
-        dbc.Row([
-            dbc.Col(dcc.Graph(id="chart-pie"), width=5),
             dbc.Col(
                 html.Div(
-                    id="dashboard-placeholder",
-                    style={"height": "300px"},
+                    id="dashboard-refresh-time",
+                    style={"fontSize": "11px", "color": TEXT_MUTED, "textAlign": "right", "paddingBottom": "2px"},
                 ),
-                width=7,
+                className="d-flex align-items-end justify-content-end pb-1",
             ),
-        ]),
-    ], style={"padding": "20px"})
+        ], className="mb-3"),
+
+        dcc.Download(id="download-pdf"),
+
+        # ── Dynamic content — rebuilt on every query ──────────────────────
+        html.Div(id="dashboard-dynamic-content"),
+
+    ], style={"padding": "24px 28px"})
 
 
 def register_callbacks() -> None:
+
     @callback(
         Output("filter-region",   "options"),
         Output("filter-category", "options"),
@@ -70,30 +88,27 @@ def register_callbacks() -> None:
     def update_filter_options(rows):
         if not rows:
             return [], []
+        import polars as pl
         df = pl.DataFrame(rows)
         return _unique_opts(df, "region"), _unique_opts(df, "category")
 
     @callback(
-        Output("kpi-row",    "children"),
-        Output("chart-bar",  "figure"),
-        Output("chart-line", "figure"),
-        Output("chart-pie",  "figure"),
-        Input("store-query-results", "data"),
-        Input("filter-region",       "value"),
-        Input("filter-category",     "value"),
+        Output("dashboard-dynamic-content", "children"),
+        Output("dashboard-refresh-time",    "children"),
+        Input("store-query-results",        "data"),
+        Input("store-last-question",        "data"),
+        Input("filter-region",              "value"),
+        Input("filter-category",            "value"),
     )
-    def update_dashboard(rows, regions, categories):
-        if not rows:
-            return _empty_kpi_row(), _empty_fig(), _empty_fig(), _empty_fig()
-
-        df = _apply_filters(pl.DataFrame(rows), regions, categories)
-
-        return (
-            _build_kpi_row(df),
-            _best_bar(df),
-            _best_line(df),
-            _best_pie(df),
+    def update_dashboard(rows, question, regions, categories):
+        now = datetime.datetime.now().strftime("Refreshed %b %d, %H:%M")
+        content = build_dashboard(
+            rows or [],
+            question=question or "",
+            regions=regions,
+            categories=categories,
         )
+        return content, (now if rows else "")
 
     @callback(
         Output("download-pdf", "data"),
@@ -101,109 +116,13 @@ def register_callbacks() -> None:
         prevent_initial_call=True,
     )
     def export_pdf(n_clicks):
-        # PDF export requires kaleido; stub returns None (no-op)
         return None
 
 
-# ── private helpers ───────────────────────────────────────────────────────────
+# ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _unique_opts(df: pl.DataFrame, col: str) -> list[dict]:
+def _unique_opts(df, col: str) -> list[dict]:
     if col not in df.columns:
         return []
     vals = df[col].drop_nulls().unique().sort().to_list()
     return [{"label": str(v), "value": v} for v in vals]
-
-
-def _apply_filters(
-    df: pl.DataFrame,
-    regions: list | None,
-    categories: list | None,
-) -> pl.DataFrame:
-    if regions and "region" in df.columns:
-        df = df.filter(pl.col("region").is_in(regions))
-    if categories and "category" in df.columns:
-        df = df.filter(pl.col("category").is_in(categories))
-    return df
-
-
-def _numeric_cols(df: pl.DataFrame) -> list[str]:
-    return [c for c in df.columns if df[c].dtype.is_numeric()]
-
-
-def _string_cols(df: pl.DataFrame) -> list[str]:
-    return [c for c in df.columns if df[c].dtype in (pl.String, pl.Categorical)]
-
-
-def _build_kpi_row(df: pl.DataFrame) -> list:
-    num_cols = _numeric_cols(df)[:4]
-    if not num_cols:
-        return _empty_kpi_row()
-    return [
-        dbc.Col(
-            dcc.Graph(
-                figure=kpi_card(col.replace("_", " ").title(), round(float(df[col].sum()), 2)),
-                config={"displayModeBar": False},
-            ),
-            width=3,
-        )
-        for col in num_cols
-    ]
-
-
-def _empty_kpi_row() -> list:
-    labels = ["Total Revenue", "Orders", "Avg Value", "Customers"]
-    return [
-        dbc.Col(
-            dcc.Graph(
-                figure=kpi_card(lbl, 0, color="#adb5bd"),
-                config={"displayModeBar": False},
-            ),
-            width=3,
-        )
-        for lbl in labels
-    ]
-
-
-def _empty_fig() -> go.Figure:
-    fig = go.Figure()
-    fig.update_layout(
-        paper_bgcolor="#f8f9fa",
-        plot_bgcolor="#f8f9fa",
-        xaxis_visible=False,
-        yaxis_visible=False,
-        annotations=[{
-            "text": "Ask a question to populate charts",
-            "x": 0.5, "y": 0.5,
-            "xref": "paper", "yref": "paper",
-            "showarrow": False,
-            "font": {"color": "#adb5bd", "size": 13},
-        }],
-    )
-    return fig
-
-
-def _best_bar(df: pl.DataFrame) -> go.Figure:
-    str_cols = _string_cols(df)
-    num_cols = _numeric_cols(df)
-    if str_cols and num_cols:
-        x_lbl = str_cols[0].replace("_", " ").title()
-        y_lbl = num_cols[0].replace("_", " ").title()
-        return bar_chart(df, x=str_cols[0], y=num_cols[0], title=f"{y_lbl} by {x_lbl}")
-    return _empty_fig()
-
-
-def _best_line(df: pl.DataFrame) -> go.Figure:
-    str_cols = _string_cols(df)
-    num_cols = _numeric_cols(df)
-    if str_cols and num_cols:
-        return line_chart(df, x=str_cols[0], y=num_cols[:2], title="Trend")
-    return _empty_fig()
-
-
-def _best_pie(df: pl.DataFrame) -> go.Figure:
-    str_cols = _string_cols(df)
-    num_cols = _numeric_cols(df)
-    if str_cols and num_cols:
-        lbl = num_cols[0].replace("_", " ").title()
-        return pie_chart(df, names=str_cols[0], values=num_cols[0], title=f"{lbl} Distribution")
-    return _empty_fig()

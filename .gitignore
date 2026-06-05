@@ -42,3 +42,5 @@ settings.yaml
 CLAUDE.md
 PLAN.md
 graphify-out/*
+.gstack/
+medallion_audit.jsonl
