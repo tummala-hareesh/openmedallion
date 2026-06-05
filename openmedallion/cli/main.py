@@ -21,6 +21,22 @@ medallion run <project> [--layer LAYER] [--projects PATH] [--no-explore]
 
     --projects  Override the project root directory (default: . — current directory).
 
+medallion ask <project> [--projects PATH] [--port PORT] [--model MODEL]
+    Start the cerebrum LLM engine + neuron FastAPI server on :8000.
+    Requires: openmedallion[cerebrum]
+
+    --projects  Project root directory (default: . — current directory).
+    --port      Port for the neuron HTTP server (default: 8000).
+    --model     Ollama model tag (default: llama3.2).
+
+medallion cortex <project> [--neuron-url URL] [--port PORT] [--debug]
+    Start the Dash cortex UI on :8050 (connects to neuron at --neuron-url).
+    Requires: openmedallion[cortex]
+
+    --neuron-url  URL of the running neuron server (default: http://localhost:8000).
+    --port        Port for the Dash server (default: 8050).
+    --debug       Enable Dash hot-reload (development mode).
+
 Examples
 --------
     medallion init      sales_project
@@ -28,6 +44,10 @@ Examples
     medallion run       sales_project --layer bronze
     medallion run       sales_project --layer explore
     medallion run       sales_project --no-explore
+    medallion ask       sales_project
+    medallion ask       sales_project --model mistral --port 8001
+    medallion cortex    sales_project
+    medallion cortex    sales_project --neuron-url http://localhost:8001 --debug
 """
 import argparse
 import sys
@@ -103,6 +123,53 @@ def cmd_run(args: argparse.Namespace) -> None:
     print(f"{'━' * _W}\n")
 
 
+def cmd_ask(args: argparse.Namespace) -> None:
+    _W = 58
+    print(f"\n{'━' * _W}")
+    print(f"  medallion  ·  ask  ·  {args.project}")
+    print(f"{'━' * _W}\n")
+
+    try:
+        import uvicorn
+    except ImportError:
+        print("  ❌  uvicorn not installed — run: pip install 'openmedallion[cerebrum]'")
+        sys.exit(1)
+
+    import os
+    os.environ["MEDALLION_PROJECTS_ROOT"] = args.projects
+    os.environ["MEDALLION_LLM_MODEL"]     = args.model
+
+    print(f"  🧠  neuron  →  http://localhost:{args.port}")
+    print(f"  🤖  model   →  {args.model}\n")
+
+    from openmedallion.neuron.server import app as neuron_app
+    uvicorn.run(neuron_app, host="0.0.0.0", port=args.port)
+
+
+def cmd_cortex(args: argparse.Namespace) -> None:
+    _W = 58
+    print(f"\n{'━' * _W}")
+    print(f"  medallion  ·  cortex  ·  {args.project}")
+    print(f"{'━' * _W}\n")
+
+    try:
+        import dash  # noqa: F401
+    except ImportError:
+        print("  ❌  dash not installed — run: pip install 'openmedallion[cortex]'")
+        sys.exit(1)
+
+    print(f"  🖥️   cortex  →  http://localhost:{args.port}")
+    print(f"  🔗  neuron  →  {args.neuron_url}\n")
+
+    from openmedallion.cortex.app import run as cortex_run
+    cortex_run(
+        args.project,
+        neuron_url=args.neuron_url,
+        port=args.port,
+        debug=args.debug,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Path helpers
 # ---------------------------------------------------------------------------
@@ -163,12 +230,52 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Skip all inline explore: report generation in every layer",
     )
 
+    # ask
+    p_ask = sub.add_parser(
+        "ask",
+        help="Start cerebrum + neuron LLM query server (requires [cerebrum] extra)",
+    )
+    p_ask.add_argument("project", help="Project name")
+    p_ask.add_argument(
+        "--projects", default=".", metavar="PATH",
+        help="Parent directory containing the project folder (default: .)",
+    )
+    p_ask.add_argument(
+        "--port", type=int, default=8000, metavar="PORT",
+        help="Port for the neuron HTTP server (default: 8000)",
+    )
+    p_ask.add_argument(
+        "--model", default="llama3.2", metavar="MODEL",
+        help="Ollama model tag (default: llama3.2)",
+    )
+
+    # cortex
+    p_cortex = sub.add_parser(
+        "cortex",
+        help="Start Dash cortex UI on :8050 (requires [cortex] extra)",
+    )
+    p_cortex.add_argument("project", help="Project name")
+    p_cortex.add_argument(
+        "--neuron-url", default="http://localhost:8000", metavar="URL",
+        help="Base URL of the running neuron server (default: http://localhost:8000)",
+    )
+    p_cortex.add_argument(
+        "--port", type=int, default=8050, metavar="PORT",
+        help="Port for the Dash server (default: 8050)",
+    )
+    p_cortex.add_argument(
+        "--debug", action="store_true", default=False,
+        help="Enable Dash hot-reload (development mode)",
+    )
+
     return parser
 
 
 _HANDLERS = {
-    "init": cmd_init,
-    "run":  cmd_run,
+    "init":   cmd_init,
+    "run":    cmd_run,
+    "ask":    cmd_ask,
+    "cortex": cmd_cortex,
 }
 
 

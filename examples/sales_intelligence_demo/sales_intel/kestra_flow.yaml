@@ -1,0 +1,45 @@
+id: sales_intel
+namespace: openmedallion.examples
+description: "Bronze → Silver → Gold pipeline for the sales_intelligence_demo."
+
+tasks:
+
+  - id: seed_bronze
+    type: io.kestra.plugin.scripts.python.Commands
+    warningOnStdErr: false
+    commands:
+      - python seed.py
+    workingDirectory: /app/examples/sales_intelligence_demo
+
+  - id: run_silver
+    type: io.kestra.plugin.scripts.python.Commands
+    warningOnStdErr: false
+    commands:
+      - medallion run sales_intel --layer silver
+    workingDirectory: /app/examples/sales_intelligence_demo
+    dependsOn:
+      - seed_bronze
+
+  - id: run_gold
+    type: io.kestra.plugin.scripts.python.Commands
+    warningOnStdErr: false
+    commands:
+      - medallion run sales_intel --layer gold
+    workingDirectory: /app/examples/sales_intelligence_demo
+    dependsOn:
+      - run_silver
+
+  - id: show_cerebrum
+    type: io.kestra.plugin.scripts.python.Commands
+    warningOnStdErr: false
+    commands:
+      - python show_cerebrum.py
+    workingDirectory: /app/examples/sales_intelligence_demo
+    dependsOn:
+      - run_silver
+
+# Uncomment to enable a scheduled refresh:
+# triggers:
+#   - id: daily_refresh
+#     type: io.kestra.plugin.core.trigger.Schedule
+#     cron: "0 6 * * *"   # every day at 06:00 UTC

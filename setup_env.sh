@@ -30,7 +30,8 @@ create_venv() {
     uv pip install -r pyproject.toml --python "$VENV_DIR/bin/python"
 
     echo "==> Installing openmedallion (editable)..."
-    uv pip install -e . --python "$VENV_DIR/bin/python"
+    #uv pip install -e . --python "$VENV_DIR/bin/python"
+    uv pip install -e ".[cerebrum,cortex,neuron]" --python "$VENV_DIR/bin/python"
 
     echo "==> Installing ipykernel..."
     uv pip install ipykernel --python "$VENV_DIR/bin/python"

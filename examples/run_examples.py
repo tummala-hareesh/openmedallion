@@ -56,6 +56,15 @@ EXAMPLES = [
         "clean": ["data", "oracle_hr/data/bronze", "oracle_hr/data/silver",
                   "oracle_hr/data/gold"],
     },
+    {
+        "name":  "sales_intelligence_demo",
+        "dir":   "sales_intelligence_demo",
+        "setup": [PY, "seed.py"],
+        "run":   [MDL, "run", "sales_intel", "--no-explore"],
+        "clean": ["data"],
+        # show_cerebrum.py runs after gold to exercise the cerebrum components
+        "post":  [PY, "show_cerebrum.py"],
+    },
 ]
 
 # ---------------------------------------------------------------------------
@@ -103,19 +112,24 @@ def main() -> int:
         t0 = time.perf_counter()
         rc_setup, log_setup = _run(ex["setup"], cwd=root)
         rc_run,   log_run   = _run(ex["run"],   cwd=root) if rc_setup == 0 else (1, "")
+        rc_post,  log_post  = (
+            _run(ex["post"], cwd=root)
+            if rc_run == 0 and "post" in ex
+            else (0, "")
+        )
         elapsed = time.perf_counter() - t0
 
-        passed = (rc_setup == 0 and rc_run == 0)
+        passed = (rc_setup == 0 and rc_run == 0 and rc_post == 0)
         status = f"{GREEN}PASS{RESET}" if passed else f"{RED}FAIL{RESET}"
         print(f"{status}  {elapsed:5.1f}s")
 
         if not passed:
             # Show last 20 lines of output so the error is visible inline.
-            lines = (log_setup + log_run).strip().splitlines()
+            lines = (log_setup + log_run + log_post).strip().splitlines()
             for line in lines[-20:]:
                 print(f"    {YELLOW}{line}{RESET}")
 
-        results.append((name, passed, elapsed, log_setup + log_run))
+        results.append((name, passed, elapsed, log_setup + log_run + log_post))
 
     # ── Summary ──────────────────────────────────────────────────────────────
     passed_n = sum(1 for _, ok, *_ in results if ok)

@@ -1,0 +1,49 @@
+bronze_to_silver:
+  tables:
+    - source_file: transactions.parquet
+      output_file:  transactions.parquet
+      explore:
+        - report_type: profile
+          output_file:  transactions_profile.html
+          title:        "Transactions Silver Quality"
+      transforms:
+        - type: cast
+          columns:
+            txn_id:  Int64
+            rep_id:  Int64
+            amount:  Float64
+            units:   Int64
+
+    - source_file: reps.parquet
+      output_file:  reps.parquet
+      explore:
+        # Walker gives an interactive drag-and-drop explorer —
+        # perfect for a small lookup table like reps.
+        - report_type: walker
+          output_file:  reps_explorer.html
+          title:        "Sales Reps Explorer"
+      transforms:
+        - type: cast
+          columns:
+            rep_id: Int64
+
+    - source_file: targets.parquet
+      output_file:  targets.parquet
+      transforms:
+        - type: cast
+          columns:
+            target_amount: Float64
+
+  derived_tables:
+    - output_file: rep_performance.parquet
+      udf:
+        file: sales_intel/backend/udf/silver/enrich.py
+        function: build_rep_performance
+      explore:
+        # Walker is ideal for ad-hoc exploration of the joined performance table.
+        - report_type: walker
+          output_file:  rep_performance_explorer.html
+          title:        "Rep Performance Explorer"
+        - report_type: profile
+          output_file:  rep_performance_profile.html
+          title:        "Rep Performance Quality"
