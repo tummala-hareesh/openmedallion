@@ -1356,25 +1356,25 @@
 <thead>
 <tr>
 <th>Mode</th>
-<th>Config key</th>
+<th>Config keys</th>
 <th>Behaviour</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>replace</code></td>
-<td>(default)</td>
-<td>Full overwrite each run</td>
+<td>— (default)</td>
+<td>Full overwrite each run. Use for small lookup/reference tables where source rows can be deleted.</td>
 </tr>
 <tr>
 <td><code>append</code></td>
 <td><code>cursor_column</code>, <code>initial_value</code></td>
-<td>Adds only rows newer than the cursor</td>
+<td>Pulls only rows newer than the cursor and appends to the existing Parquet. Use for immutable event or log tables.</td>
 </tr>
 <tr>
 <td><code>merge</code></td>
-<td><code>primary_key</code></td>
-<td>Full upsert — new rows insert, existing rows update</td>
+<td><code>primary_key</code>, <code>merge_key</code></td>
+<td>Upserts rows: updates existing rows matched by <code>merge_key</code>, inserts new ones. Combine with <code>cursor_column</code> to also limit what is fetched from the source. Use for tables where rows are updated after their first write.</td>
 </tr>
 </tbody>
 </table>
