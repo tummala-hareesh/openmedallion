@@ -59,11 +59,11 @@ Run the dlt pipeline and return a mapping of table name → Parquet path for eve
 
 **Incremental modes:**
 
-| Mode | Config key | Behaviour |
+| Mode | Config keys | Behaviour |
 | --- | --- | --- |
-| `replace` | (default) | Full overwrite each run |
-| `append` | `cursor_column`, `initial_value` | Adds only rows newer than the cursor |
-| `merge` | `primary_key` | Full upsert — new rows insert, existing rows update |
+| `replace` | — (default) | Full overwrite each run. Use for small lookup/reference tables where source rows can be deleted. |
+| `append` | `cursor_column`, `initial_value` | Pulls only rows newer than the cursor and appends to the existing Parquet. Use for immutable event or log tables. |
+| `merge` | `primary_key`, `merge_key` | Upserts rows: updates existing rows matched by `merge_key`, inserts new ones. Combine with `cursor_column` to also limit what is fetched from the source. Use for tables where rows are updated after their first write. |
 
 **Example:**
 

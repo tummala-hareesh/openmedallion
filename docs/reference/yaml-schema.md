@@ -175,10 +175,53 @@ source:
 | `select` | list[string] | — | Column names to ingest. Omit to ingest all columns. For SQL sources the projection is pushed to the database; for local_files it is applied after reading. Always include the `cursor_column` when using `append` mode. |
 | `incremental` | object | — | Omit for full-replace each run. |
 | `incremental.mode` | enum | — | `replace` (default), `append`, or `merge`. |
-| `incremental.cursor_column` | string | append | Column used to track the high-watermark. |
+| `incremental.cursor_column` | string | append | Column used to track the high-watermark. Always include this column in `select`. |
 | `incremental.initial_value` | string | append | Value to use on the very first run. |
-| `incremental.primary_key` | string | merge | Primary key column for upsert. |
+| `incremental.primary_key` | string or list | merge | Column(s) that uniquely identify a row in the Parquet file (used to build the file index). |
+| `incremental.merge_key` | string or list | merge | Column(s) used to match incoming rows against existing rows. Usually identical to `primary_key`. |
 | `explore` | list | — | List of report specs to generate after this table is written. See [Inline explore](#inline-explore). |
+
+#### Incremental modes
+
+| Mode | When to use | Required keys |
+| --- | --- | --- |
+| `replace` | Small lookup/reference tables. Full re-pull and overwrite every run. Safe when source rows can be deleted. | — |
+| `append` | Immutable event or log tables. Fetches only rows newer than the cursor and appends to the existing Parquet. No deduplication. | `cursor_column`, `initial_value` |
+| `merge` | Tables where rows can be updated after their first write (e.g. a permit whose status changes over time). Upserts by `merge_key` — updates matching rows, inserts new ones. | `primary_key`, `merge_key` |
+
+`merge` and `cursor_column` can be combined: the cursor limits how many rows are fetched from the source database, while `merge_key` controls how they land in the Parquet file. This is the right pattern for large tables where only recent rows are added but existing rows may also change.
+
+```yaml
+# Large table — limit source pull by cursor, upsert by primary key
+- name: folder
+  incremental:
+    mode: merge
+    primary_key: folderrsn
+    merge_key: folderrsn
+    cursor_column: indate
+    initial_value: "2025-01-01 00:00:00"
+
+# Lookup table — full re-pull every run, upsert to avoid duplicates across runs
+- name: validstatus
+  incremental:
+    mode: merge
+    primary_key: statuscode
+    merge_key: statuscode
+
+# Composite key — child records keyed on two columns
+- name: folderprocess
+  incremental:
+    mode: merge
+    primary_key: [folderrsn, processrsn]
+    merge_key: [folderrsn, processrsn]
+
+# Append-only event log
+- name: audit_log
+  incremental:
+    mode: append
+    cursor_column: created_at
+    initial_value: "2024-01-01T00:00:00"
+```
 
 ### `destination`
 
