@@ -488,9 +488,10 @@ class BronzeLoader:
                 if isinstance(join_key, list):
                     join_key = join_key[0]
 
+                ref_table = f"{schema}.{ref['name']}" if schema else ref["name"]
                 filter_clause = (
                     f"{join_key} IN ("
-                    f"SELECT {join_key} FROM {filter_propagate} WHERE {ref_filter})"
+                    f"SELECT {join_key} FROM {ref_table} WHERE {ref_filter})"
                 )
 
             if filter_clause:
@@ -500,7 +501,9 @@ class BronzeLoader:
                 kwargs["query_adapter_callback"] = (
                     lambda sel, _t, _sql=filter_clause: sel.where(_sa_text(_sql))
                 )
-            resources.append(sql_table(**kwargs)) # pyright: ignore[reportArgumentType]
+            alias = tbl.get("alias") or tbl["name"]
+            resource = sql_table(**kwargs).with_name(alias) # pyright: ignore[reportArgumentType]
+            resources.append(resource)
 
         return resources
 
@@ -530,41 +533,51 @@ class BronzeLoader:
 
     def _collect_parquets(self) -> dict[str, str]:
         results = {}
-        tables_cfg  = self.src.get("tables", [])
-        table_names = [t["name"] for t in tables_cfg]
+        tables_cfg = self.src.get("tables", [])
 
-        # alias: user-defined output name; falls back to source table name
-        per_table_alias   = {t["name"]: t.get("alias") or t["name"] for t in tables_cfg}
-
-        if not table_names and self.src.get("resource"):
-            table_names = [self.src["resource"]]
-            # REST/filesystem: top-level alias applies to the single resource
-            resource_alias = self.src.get("alias") or self.src["resource"]
-            per_table_alias[self.src["resource"]] = resource_alias
-
-        # Per-table select and explore lookups (SQL / local_files sources).
-        # Filesystem / REST sources use a single top-level select key instead.
-        per_table_select  = {t["name"]: t["select"]  for t in tables_cfg if t.get("select")}
-        per_table_explore = {t["name"]: t["explore"] for t in tables_cfg if t.get("explore")}
-
-        # dlt always writes shards to {bucket_url}/{dataset_name}/{table}/
+        # dlt always writes shards to {bucket_url}/{dataset_name}/{resource_name}/
         # dataset_name is hardcoded as "bronze" in _build_pipeline above
         bucket_url = self.dst["bucket_url"]
 
-        for name in table_names:
-            alias     = per_table_alias.get(name, name)
-            shard_dir = storage.join(bucket_url, "bronze", name)
+        if not tables_cfg and self.src.get("resource"):
+            # REST / filesystem source: single resource, optional top-level alias
+            name  = self.src["resource"]
+            alias = self.src.get("alias") or name
+            shard_dir = storage.join(bucket_url, "bronze", alias)
             shards    = _ls_shards(shard_dir)
             if self.debug_enabled:
-                print(f"[DEBUG] _collect_parquets: table={name!r}, alias={alias!r}, shard_dir={shard_dir!r}, shards_found={len(shards)}, select={per_table_select.get(name) or self.src.get('select')!r}")
+                print(f"[DEBUG] _collect_parquets: resource={name!r}, alias={alias!r}, shard_dir={shard_dir!r}, shards_found={len(shards)}")
+            if shards:
+                dfs = [_read_shard(s) for s in shards]
+                df  = pl.concat(dfs) if len(dfs) > 1 else dfs[0]
+                if cols := self.src.get("select"):
+                    df = df.select(cols)
+                out = storage.join(self.bronze_path, f"{alias}.parquet")
+                storage.mkdir(self.bronze_path)
+                storage.write_parquet(df, out)
+                print(f"📥  [bronze] merged {len(shards)} shard(s) → {out}")
+                results[alias] = out
+            return results
+
+        # SQL / local_files: iterate each table config entry individually so that
+        # two entries sharing the same Oracle table name but different aliases
+        # (e.g. folder + folder_ub) are collected into separate Parquet files.
+        for tbl in tables_cfg:
+            name  = tbl["name"]
+            alias = tbl.get("alias") or name
+            # _sql_source renames each dlt resource to its alias via .with_name(),
+            # so shards land under the alias directory, not the Oracle table name.
+            shard_dir = storage.join(bucket_url, "bronze", alias)
+            shards    = _ls_shards(shard_dir)
+            if self.debug_enabled:
+                print(f"[DEBUG] _collect_parquets: table={name!r}, alias={alias!r}, shard_dir={shard_dir!r}, shards_found={len(shards)}, select={tbl.get('select') or self.src.get('select')!r}")
             if not shards:
-                print(f"⚠️   [bronze] no shards found for '{name}' at {shard_dir}")
+                print(f"⚠️   [bronze] no shards found for '{alias}' at {shard_dir}")
                 continue
 
             dfs = [_read_shard(s) for s in shards]
             df  = pl.concat(dfs) if len(dfs) > 1 else dfs[0]
-            cols = per_table_select.get(name) or self.src.get("select")
-            if cols:
+            if cols := tbl.get("select") or self.src.get("select"):
                 df = df.select(cols)
 
             out = storage.join(self.bronze_path, f"{alias}.parquet")
@@ -572,7 +585,7 @@ class BronzeLoader:
             storage.write_parquet(df, out)
             print(f"📥  [bronze] merged {len(shards)} shard(s) → {out}")
             results[alias] = out
-            if self.explore_enabled and (explore_specs := per_table_explore.get(name)):
+            if self.explore_enabled and (explore_specs := tbl.get("explore")):
                 from pathlib import Path as _Path
                 from openmedallion.pipeline.explore import _dispatch_reports
                 _dispatch_reports(
