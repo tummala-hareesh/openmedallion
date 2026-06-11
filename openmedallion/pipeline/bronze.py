@@ -275,10 +275,11 @@ class BronzeLoader:
         storage.mkdir(self.bronze_path)
         results: dict[str, str] = {}
         for tbl in self.src.get("tables", []):
-            name = tbl["name"]
-            path = tbl["path"]
+            name  = tbl["name"]
+            alias = tbl.get("alias") or name
+            path  = tbl["path"]
             if self.debug_enabled:
-                print(f"[DEBUG] local_files: table={name!r}, path={path!r}, select={tbl.get('select')!r}")
+                print(f"[DEBUG] local_files: table={name!r}, alias={alias!r}, path={path!r}, select={tbl.get('select')!r}")
             if path.endswith(".csv"):
                 df = pl.read_csv(path)
             elif path.endswith(".parquet"):
@@ -287,10 +288,10 @@ class BronzeLoader:
                 raise ValueError(f"[bronze] unsupported local file format: {path}")
             if cols := tbl.get("select"):
                 df = df.select(cols)
-            out = storage.join(self.bronze_path, f"{name}.parquet")
+            out = storage.join(self.bronze_path, f"{alias}.parquet")
             storage.write_parquet(df, out)
             print(f"📥  [bronze] {path} → {out}  ({len(df)} rows)")
-            results[name] = out
+            results[alias] = out
             if self.explore_enabled and (explore_specs := tbl.get("explore")):
                 from pathlib import Path as _Path
                 from openmedallion.pipeline.explore import _dispatch_reports
@@ -528,8 +529,14 @@ class BronzeLoader:
         tables_cfg  = self.src.get("tables", [])
         table_names = [t["name"] for t in tables_cfg]
 
+        # alias: user-defined output name; falls back to source table name
+        per_table_alias   = {t["name"]: t.get("alias") or t["name"] for t in tables_cfg}
+
         if not table_names and self.src.get("resource"):
             table_names = [self.src["resource"]]
+            # REST/filesystem: top-level alias applies to the single resource
+            resource_alias = self.src.get("alias") or self.src["resource"]
+            per_table_alias[self.src["resource"]] = resource_alias
 
         # Per-table select and explore lookups (SQL / local_files sources).
         # Filesystem / REST sources use a single top-level select key instead.
@@ -541,10 +548,11 @@ class BronzeLoader:
         bucket_url = self.dst["bucket_url"]
 
         for name in table_names:
+            alias     = per_table_alias.get(name, name)
             shard_dir = storage.join(bucket_url, "bronze", name)
             shards    = _ls_shards(shard_dir)
             if self.debug_enabled:
-                print(f"[DEBUG] _collect_parquets: table={name!r}, shard_dir={shard_dir!r}, shards_found={len(shards)}, select={per_table_select.get(name) or self.src.get('select')!r}")
+                print(f"[DEBUG] _collect_parquets: table={name!r}, alias={alias!r}, shard_dir={shard_dir!r}, shards_found={len(shards)}, select={per_table_select.get(name) or self.src.get('select')!r}")
             if not shards:
                 print(f"⚠️   [bronze] no shards found for '{name}' at {shard_dir}")
                 continue
@@ -555,11 +563,11 @@ class BronzeLoader:
             if cols:
                 df = df.select(cols)
 
-            out = storage.join(self.bronze_path, f"{name}.parquet")
+            out = storage.join(self.bronze_path, f"{alias}.parquet")
             storage.mkdir(self.bronze_path)
             storage.write_parquet(df, out)
             print(f"📥  [bronze] merged {len(shards)} shard(s) → {out}")
-            results[name] = out
+            results[alias] = out
             if self.explore_enabled and (explore_specs := per_table_explore.get(name)):
                 from pathlib import Path as _Path
                 from openmedallion.pipeline.explore import _dispatch_reports

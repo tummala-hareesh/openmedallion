@@ -87,6 +87,8 @@ def _validate_config(cfg: dict) -> None:
                 )
         if src_type in ("sql_database", "local_files"):
             for i, tbl in enumerate(source.get("tables", [])):
+                if "alias" in tbl:
+                    require_str(tbl["alias"], f"{prefix}.tables[{i}].alias")
                 if "select" in tbl:
                     _require_str_list(tbl["select"], f"{prefix}.tables[{i}].select")
                 if "explore" in tbl:
@@ -94,6 +96,8 @@ def _validate_config(cfg: dict) -> None:
                         tbl["explore"], f"{prefix}.tables[{i}].explore", require, require_str
                     )
         else:
+            if "alias" in source:
+                require_str(source["alias"], f"{prefix}.alias")
             if "select" in source:
                 _require_str_list(source["select"], f"{prefix}.select")
 
