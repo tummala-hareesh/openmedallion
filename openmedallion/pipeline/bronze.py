@@ -455,7 +455,7 @@ class BronzeLoader:
             # adapter corrupts dlt's incremental cursor tracking. Column pruning
             # for SQL sources is applied in _collect_parquets() instead.
             filter_clause     = tbl.get("filter")
-            filter_propagate  = tbl.get("filter_propogate", None)
+            filter_propagate  = tbl.get("filter_propagate", None)
 
             if filter_clause and filter_propagate:
                 raise ValueError(
@@ -465,10 +465,14 @@ class BronzeLoader:
             if filter_propagate:
                 if self.debug_enabled:
                     print(f"[DEBUG] _sql_source: filter_propagate={filter_propagate!r} for table={tbl['name']!r}")
-                ref = next((t for t in tables_cfg if t["name"] == filter_propagate), None)
+                ref = next(
+                    (t for t in tables_cfg if (t.get("alias") or t["name"]) == filter_propagate),
+                    None,
+                )
                 if ref is None:
                     raise ValueError(
-                        f"[bronze] filter_propagate: table '{filter_propagate}' not found in source config."
+                        f"[bronze] filter_propagate: table '{filter_propagate}' not found in source config "
+                        f"(match by alias, then name)."
                     )
                 ref_filter = ref.get("filter")
                 if not ref_filter:
