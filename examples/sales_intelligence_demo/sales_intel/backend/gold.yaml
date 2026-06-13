@@ -1,4 +1,13 @@
 silver_to_gold:
+
+  # Embed all gold Parquet files as tables inside a single .duckdb file.
+  # Use mode: tables here so the file can be shared with stakeholders
+  # without needing to ship the Parquet files alongside it.
+  duckdb:
+    enabled: true
+    path: data/gold/gold.duckdb
+    mode: tables  # self-contained — share this file standalone
+
   projects:
     - name: sales_intel
       aggregations:

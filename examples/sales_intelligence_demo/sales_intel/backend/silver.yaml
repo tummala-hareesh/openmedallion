@@ -1,4 +1,13 @@
 bronze_to_silver:
+
+  # Register all silver Parquet files as DuckDB views after the silver run.
+  # mode: views  — lightweight pointer; data stays in Parquet (good for local cerebrum queries)
+  # mode: tables — copies data into DuckDB; file is self-contained and shareable standalone
+  duckdb:
+    enabled: true
+    path: data/silver/silver.duckdb
+    mode: views   # recommended default
+
   tables:
     - source_file: transactions.parquet
       output_file:  transactions.parquet

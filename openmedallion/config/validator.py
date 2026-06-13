@@ -4,6 +4,7 @@ _VALID_SOURCE_TYPES    = {"sql_database", "rest_api", "filesystem", "local_files
 _VALID_TRANSFORM_TYPES = {"rename", "cast", "drop", "udf"}
 _VALID_DIALECTS        = {"oracle", "postgres", "mysql", "mssql", "sqlite"}
 _VALID_REPORT_TYPES    = {"profile", "walker"}
+_VALID_DUCKDB_MODES    = {"views", "tables"}
 
 
 def _validate_explore_specs(specs: list, path: str, require, require_str) -> None:
@@ -117,9 +118,22 @@ def _validate_config(cfg: dict) -> None:
     elif has_source:
         _validate_source(cfg["source"], "source")
 
+    def _validate_duckdb(block: dict, prefix: str) -> None:
+        if "enabled" in block:
+            require(isinstance(block["enabled"], bool), f"{prefix}.enabled must be a bool")
+        if "path" in block:
+            require_str(block["path"], f"{prefix}.path")
+        mode = block.get("mode", "views")
+        require(
+            mode in _VALID_DUCKDB_MODES,
+            f"{prefix}.mode must be one of {sorted(_VALID_DUCKDB_MODES)}, got '{mode}'"
+        )
+
     # bronze_to_silver (optional block)
     b2s = cfg.get("bronze_to_silver")
     if b2s is not None:
+        if duck := b2s.get("duckdb"):
+            _validate_duckdb(duck, "bronze_to_silver.duckdb")
         tables = b2s.get("tables", [])
         require_list(tables, "bronze_to_silver.tables")
         for i, tbl in enumerate(tables):
@@ -148,6 +162,8 @@ def _validate_config(cfg: dict) -> None:
     # silver_to_gold (optional block)
     s2g = cfg.get("silver_to_gold")
     if s2g is not None:
+        if duck := s2g.get("duckdb"):
+            _validate_duckdb(duck, "silver_to_gold.duckdb")
         projects = s2g.get("projects", [])
         require_list(projects, "silver_to_gold.projects")
         for i, proj in enumerate(projects):

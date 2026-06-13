@@ -38,6 +38,7 @@ class GoldAggregator:
         self.silver_path     = cfg["paths"]["silver"]
         self.gold_root       = cfg["paths"]["gold"]
         self.projects        = cfg["silver_to_gold"]["projects"]
+        self.duckdb_cfg      = cfg["silver_to_gold"].get("duckdb")
         self._udf_cache:     dict[str, object] = {}
         self.explore_enabled = cfg.get("_explore", True)
 
@@ -74,6 +75,17 @@ class GoldAggregator:
                     )
 
             results[name] = paths
+
+        if self.duckdb_cfg and self.duckdb_cfg.get("enabled", False):
+            from openmedallion.pipeline.duckdb_views import register
+            for project in self.projects:
+                project_dir = storage.join(self.gold_root, project["name"])
+                register(
+                    parquet_dir = project_dir,
+                    db_path     = self.duckdb_cfg["path"],
+                    mode        = self.duckdb_cfg.get("mode", "views"),
+                )
+
         return results
 
     def _apply_agg(self, df: pl.DataFrame, agg: dict) -> pl.DataFrame:

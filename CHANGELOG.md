@@ -18,6 +18,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Declarative DuckDB registration for silver and gold layers** — add a `duckdb:` block inside `bronze_to_silver:` or `silver_to_gold:` in the layer YAML to automatically write a `.duckdb` file after the layer runs. Two modes: `views` (lightweight pointer, data stays in Parquet — default, recommended for local use and `cerebrum`) and `tables` (data embedded, file is self-contained and shareable standalone — recommended for gold). All gold project subdirectories are registered into a single file. Implemented in new `pipeline/duckdb_views.py`; `silver.py`, `gold.py`, `config/validator.py` updated. Example YAML added to `sales_intelligence_demo`. (`pipeline/duckdb_views.py`, `pipeline/silver.py`, `pipeline/gold.py`, `config/validator.py`)
+
 - **Early table-name validation in `_probe_connection()`** — configured table names from `bronze.yaml` are now cross-checked against actual schema tables immediately after connecting. Missing tables raise `ValueError: [bronze] table(s) not found in schema X: [...]. Available: [...]` before any data movement starts. Each configured table is also printed with ✅/❌ during the probe. (`bronze.py: _probe_connection`)
 
 - **`filter:` + `filter_propagate:` can now be combined** on the same table entry. Previously a `ValueError` was raised if both were set. Now the propagated subquery (`key IN (SELECT key FROM ref WHERE ref_filter)`) is prepended and the explicit `filter:` is appended with `AND`. (`bronze.py: _sql_source`)

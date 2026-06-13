@@ -32,6 +32,7 @@ class SilverTransformer:
         self.silver_path     = cfg["paths"]["silver"]
         self.tables          = cfg["bronze_to_silver"].get("tables", [])
         self.derived         = cfg["bronze_to_silver"].get("derived_tables", [])
+        self.duckdb_cfg      = cfg["bronze_to_silver"].get("duckdb")
         self._udf_cache:     dict[str, object] = {}
         self.explore_enabled = cfg.get("_explore", True)
 
@@ -83,6 +84,14 @@ class SilverTransformer:
                     specs   = explore_specs,
                     context = "explore/silver",
                 )
+
+        if self.duckdb_cfg and self.duckdb_cfg.get("enabled", False):
+            from openmedallion.pipeline.duckdb_views import register
+            register(
+                parquet_dir = self.silver_path,
+                db_path     = self.duckdb_cfg["path"],
+                mode        = self.duckdb_cfg.get("mode", "views"),
+            )
 
         return results
 
