@@ -75,9 +75,14 @@ def _bronze_template() -> dict:
     }
 
 
-def _silver_template(project: str) -> dict:
+def _silver_template(project: str, path_data: str = "data") -> dict:
     return {
         "bronze_to_silver": {
+            "duckdb": {
+                "enabled": False,
+                "path": f"{path_data}/silver/silver.duckdb",
+                "mode": "views",
+            },
             "tables": [{
                 "source_file": "MY_TABLE.parquet",
                 "output_file": "my_table.parquet",
@@ -117,9 +122,15 @@ def _silver_template(project: str) -> dict:
     }
 
 
-def _gold_template(project: str) -> dict:
+def _gold_template(project: str, path_data: str = "data") -> dict:
     return {
-        "silver_to_gold": {"projects": [{"name": "default", "aggregations": [{
+        "silver_to_gold": {
+            "duckdb": {
+                "enabled": False,
+                "path": f"{path_data}/gold/gold.duckdb",
+                "mode": "views",
+            },
+            "projects": [{"name": "default", "aggregations": [{
             "source_file": "my_table.parquet",
             "pre_agg_udf": {"file": f"{project}/backend/udf/gold/transforms.py",
                             "function": "prepare_my_table"},
@@ -264,9 +275,12 @@ medallion --help
 ├── bronze/
 │   └── add-ons/       ← bronze HTML explore reports
 ├── silver/
+│   ├── *.parquet      ← silver Parquet files
+│   ├── silver.duckdb  ← (optional) DuckDB views/tables — set duckdb.enabled: true in silver.yaml
 │   └── add-ons/       ← silver HTML explore reports
 ├── gold/
 │   ├── default/       ← gold Parquet per project
+│   ├── gold.duckdb    ← (optional) DuckDB views/tables — set duckdb.enabled: true in gold.yaml
 │   └── add-ons/
 │       └── default/   ← gold HTML explore reports
 └── export/
@@ -322,6 +336,37 @@ Requires optional extras: `pip install "openmedallion[profile]"` and/or
 `pip install "openmedallion[explore]"`
 
 Or open `ipynb/walkthrough.ipynb` in Jupyter for a step-by-step guided run.
+
+---
+
+## DuckDB Access (optional)
+
+Enable declarative DuckDB registration by setting `duckdb.enabled: true` in
+`backend/silver.yaml` or `backend/gold.yaml`.  A `.duckdb` file is written
+automatically after each layer run.
+
+```yaml
+# backend/silver.yaml
+bronze_to_silver:
+  duckdb:
+    enabled: true
+    path: {path_data}/silver/silver.duckdb
+    mode: views    # views (lightweight, local use) | tables (self-contained, shareable)
+```
+
+| Mode | File size | Share standalone | Best for |
+|------|-----------|-----------------|---------|
+| `views` | Tiny | ❌ (needs Parquet files too) | Local queries, notebooks, cerebrum |
+| `tables` | ≈ Parquet total | ✅ | Sending to colleagues, attaching to reports |
+
+Once generated, query directly from Python or any DuckDB-compatible tool (DBeaver, Harlequin, etc.):
+
+```python
+import duckdb
+con = duckdb.connect("{path_data}/silver/silver.duckdb")
+print(con.execute("SELECT * FROM my_table LIMIT 5").pl())
+con.close()
+```
 
 ---
 
@@ -509,7 +554,34 @@ def _walkthrough_notebook(project: str, path_data: str = "data") -> str:
             "    print(pl.read_parquet(f))",
         ]),
         md([
-            "## Step 4 — Explore (optional)\n",
+            "## Step 4 — DuckDB (optional)\n",
+            "\n",
+            "Enable DuckDB registration in `backend/silver.yaml` or `backend/gold.yaml` by setting\n",
+            "`duckdb.enabled: true`.  The `.duckdb` file is written automatically after each layer run.\n",
+            "\n",
+            "Two modes:\n",
+            "- `views` — lightweight pointer; data stays in Parquet. Good for local use and cerebrum.\n",
+            "- `tables` — data copied into DuckDB; file is self-contained and shareable standalone.\n",
+        ]),
+        code([
+            "# Query silver Parquet directly via an in-memory DuckDB connection\n",
+            "# (no .duckdb file needed — just point at the Parquet files)\n",
+            "import duckdb\n",
+            "\n",
+            f"silver_db = '{path_data}/silver/silver.duckdb'\n",
+            "# If duckdb.enabled: true in silver.yaml, connect to the pre-built file:\n",
+            "# con = duckdb.connect(silver_db)\n",
+            "#\n",
+            "# Or create an in-memory connection and register on the fly:\n",
+            "con = duckdb.connect()\n",
+            f"for f in sorted(Path('{path_data}/silver').glob('*.parquet')):\n",
+            "    con.execute(f\"CREATE OR REPLACE VIEW {{f.stem}} AS SELECT * FROM read_parquet('{{f}}')\") \n",
+            "print(con.execute('SHOW TABLES').fetchdf())\n",
+            "# con.execute('SELECT * FROM my_table LIMIT 5').pl()\n",
+            "con.close()",
+        ]),
+        md([
+            "## Step 5 — Explore (optional)\n",
             "\n",
             "Generate HTML reports from gold outputs.\n",
             "Requires: `pip install 'openmedallion[profile]'` and/or `pip install 'openmedallion[explore]'`\n",
@@ -599,8 +671,8 @@ def init_project(
     backend_dir.mkdir(parents=True)
     for path, data in [
         (backend_dir / "bronze.yaml", _bronze_template()),
-        (backend_dir / "silver.yaml", _silver_template(project)),
-        (backend_dir / "gold.yaml",   _gold_template(project)),
+        (backend_dir / "silver.yaml", _silver_template(project, path_data)),
+        (backend_dir / "gold.yaml",   _gold_template(project, path_data)),
     ]:
         with open(path, "w") as f:
             yaml.dump(data, f, default_flow_style=False, sort_keys=False)

@@ -237,6 +237,14 @@ source:
 
 ```yaml
 bronze_to_silver:
+
+  # Optional: register all silver Parquet files as DuckDB views or tables
+  # after the silver run completes.
+  duckdb:
+    enabled: true                        # false or omit to skip (default: false)
+    path: data/silver/silver.duckdb      # where to write the .duckdb file
+    mode: views                          # views (default) | tables
+
   tables:
     - source_file: ORDERS.parquet     # filename in bronze directory
       output_file: orders.parquet     # filename to write in silver directory
@@ -264,6 +272,23 @@ bronze_to_silver:
         function: build_enriched
       select: [order_id, product_id, line_revenue]   # optional column projection
 ```
+
+### `bronze_to_silver.duckdb`
+
+Optional block. When `enabled: true`, all `*.parquet` files in `paths.silver` are registered in a DuckDB file after the silver run completes.
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `enabled` | bool | `false` | Set to `true` to activate DuckDB registration. |
+| `path` | string | — | Path to write the `.duckdb` file. Created automatically if absent. |
+| `mode` | enum | `views` | `views` — lightweight pointer, data stays in Parquet, **not** standalone-shareable. `tables` — data copied into DuckDB, file is self-contained and shareable. |
+
+**When to use each mode:**
+
+| Mode | File size | Shareable alone | Best for |
+| --- | --- | --- | --- |
+| `views` | Tiny | ❌ (needs Parquet files) | Local use, `cerebrum` queries, notebooks |
+| `tables` | ≈ Parquet total | ✅ | Sharing with colleagues, attaching to reports |
 
 ### `bronze_to_silver.tables[]`
 
@@ -334,6 +359,14 @@ Each entry must have a `type` field. Valid types: `rename`, `cast`, `drop`, `udf
 
 ```yaml
 silver_to_gold:
+
+  # Optional: register all gold Parquet files as DuckDB views or tables
+  # after the gold run completes. All projects are registered into one file.
+  duckdb:
+    enabled: true                      # false or omit to skip (default: false)
+    path: data/gold/gold.duckdb        # where to write the .duckdb file
+    mode: tables                       # tables recommended for gold (shareable)
+
   projects:
     - name: analytics                     # subfolder under paths.gold
       aggregations:
@@ -354,6 +387,16 @@ silver_to_gold:
           select: [order_id, amount, status]
           output_file: orders_flat.parquet
 ```
+
+### `silver_to_gold.duckdb`
+
+Optional block. Same semantics as [`bronze_to_silver.duckdb`](#bronze_to_silverduckdb). When `enabled: true`, Parquet files from **all** gold project subdirectories are registered into a single `.duckdb` file after the gold run completes.
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `enabled` | bool | `false` | Set to `true` to activate DuckDB registration. |
+| `path` | string | — | Path to write the `.duckdb` file. |
+| `mode` | enum | `views` | `views` or `tables`. Recommend `tables` for gold (shareable). |
 
 ### `silver_to_gold.projects[]`
 
@@ -461,3 +504,7 @@ If the optional dependency is not installed, the report is silently skipped with
 | UDF transform blocks must have `file` and `function` | `transforms[0] (udf): 'file' is required` |
 | `silver_to_gold.projects[i].name` required | `silver_to_gold.projects[0].name is required` |
 | `pre_agg_udf` blocks must have `file` and `function` | `pre_agg_udf: 'file' is required` |
+| `bronze_to_silver.duckdb.enabled` must be a bool | `bronze_to_silver.duckdb.enabled must be a bool` |
+| `bronze_to_silver.duckdb.mode` must be `views` or `tables` | `bronze_to_silver.duckdb.mode must be one of ...` |
+| `silver_to_gold.duckdb.enabled` must be a bool | `silver_to_gold.duckdb.enabled must be a bool` |
+| `silver_to_gold.duckdb.mode` must be `views` or `tables` | `silver_to_gold.duckdb.mode must be one of ...` |
