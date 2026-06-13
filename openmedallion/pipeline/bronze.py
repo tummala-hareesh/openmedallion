@@ -413,9 +413,10 @@ class BronzeLoader:
             print(f"  {mark}  {name}")
 
         if missing:
+            available = sorted(db_tables)
             raise ValueError(
                 f"[bronze] table(s) not found in {label}: {missing}. "
-                f"Check spelling in your bronze.yaml."
+                f"Available: {available}"
             )
 
     def _sql_source(self):
@@ -457,11 +458,6 @@ class BronzeLoader:
             filter_clause     = tbl.get("filter")
             filter_propagate  = tbl.get("filter_propagate", None)
 
-            if filter_clause and filter_propagate:
-                raise ValueError(
-                    f"[bronze] table '{tbl['name']}': use either 'filter' or 'filter_propagate', not both."
-                )
-
             if filter_propagate:
                 if self.debug_enabled:
                     print(f"[DEBUG] _sql_source: filter_propagate={filter_propagate!r} for table={tbl['name']!r}")
@@ -489,9 +485,14 @@ class BronzeLoader:
                     join_key = join_key[0]
 
                 ref_table = f"{schema}.{ref['name']}" if schema else ref["name"]
-                filter_clause = (
+                propagate_clause = (
                     f"{join_key} IN ("
                     f"SELECT {join_key} FROM {ref_table} WHERE {ref_filter})"
+                )
+                filter_clause = (
+                    f"{propagate_clause} AND {filter_clause}"
+                    if filter_clause
+                    else propagate_clause
                 )
 
             if filter_clause:
@@ -577,6 +578,12 @@ class BronzeLoader:
 
             dfs = [_read_shard(s) for s in shards]
             df  = pl.concat(dfs) if len(dfs) > 1 else dfs[0]
+            inc = tbl.get("incremental", {})
+            if len(shards) > 1 and inc.get("mode") == "merge":
+                pk = inc.get("primary_key")
+                if pk:
+                    pk = [pk] if isinstance(pk, str) else list(pk)
+                    df = df.unique(subset=pk, keep="last")
             if cols := tbl.get("select") or self.src.get("select"):
                 df = df.select(cols)
 

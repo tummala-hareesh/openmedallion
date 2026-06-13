@@ -10,6 +10,20 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [2026.6.9] — 2026-06-12
+
+### Fixed
+
+- **Bronze `merge` mode actually merges** — `_collect_parquets()` now deduplicates on `primary_key` (keeping the last shard's version of each row) when `incremental.mode == "merge"` and multiple shards are present. Previously, each pipeline run appended new shards and `pl.concat` produced duplicate rows for tables like `folderprocess` and `folderprocessattempt`. (`bronze.py: _collect_parquets`)
+
+### Added
+
+- **Early table-name validation in `_probe_connection()`** — configured table names from `bronze.yaml` are now cross-checked against actual schema tables immediately after connecting. Missing tables raise `ValueError: [bronze] table(s) not found in schema X: [...]. Available: [...]` before any data movement starts. Each configured table is also printed with ✅/❌ during the probe. (`bronze.py: _probe_connection`)
+
+- **`filter:` + `filter_propagate:` can now be combined** on the same table entry. Previously a `ValueError` was raised if both were set. Now the propagated subquery (`key IN (SELECT key FROM ref WHERE ref_filter)`) is prepended and the explicit `filter:` is appended with `AND`. (`bronze.py: _sql_source`)
+
+---
+
 ## [2026.6.5] — 2026-06-05
 
 ### Added
