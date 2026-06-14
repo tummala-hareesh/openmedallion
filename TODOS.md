@@ -1,5 +1,10 @@
 # TODOS
 
+## Implementation Rules
+
+- **TDD first** — write pytests before any code change. Tests must fail before implementation begins.
+- **Docs + examples** — every implemented TODO must also update relevant `docs/` pages and at least one example in `examples/` to reflect the new capability.
+
 ---
 
 ## WON'T DO: Pandera for DataFrame schema validation
