@@ -2213,10 +2213,11 @@ wheels = [
 
 [[package]]
 name = "openmedallion"
-version = "2026.6.8"
+version = "2026.6.9"
 source = { editable = "." }
 dependencies = [
     { name = "dlt", extra = ["filesystem", "parquet", "sql-database"] },
+    { name = "duckdb" },
     { name = "polars" },
     { name = "pyyaml" },
     { name = "setuptools" },
@@ -2226,7 +2227,6 @@ dependencies = [
 
 [package.optional-dependencies]
 cerebrum = [
-    { name = "duckdb" },
     { name = "fastapi" },
     { name = "httpx" },
     { name = "uvicorn" },
@@ -2276,7 +2276,7 @@ requires-dist = [
     { name = "dash", marker = "extra == 'cortex'", specifier = ">=2.17" },
     { name = "dash-bootstrap-components", marker = "extra == 'cortex'", specifier = ">=1.6" },
     { name = "dlt", extras = ["filesystem", "sql-database", "parquet"], specifier = ">=1.4" },
-    { name = "duckdb", marker = "extra == 'cerebrum'", specifier = ">=0.10" },
+    { name = "duckdb", specifier = ">=0.10" },
     { name = "fastapi", marker = "extra == 'cerebrum'", specifier = ">=0.111" },
     { name = "httpx", marker = "extra == 'cerebrum'", specifier = ">=0.27" },
     { name = "httpx", marker = "extra == 'cortex'", specifier = ">=0.27" },
