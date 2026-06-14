@@ -2275,8 +2275,8 @@ tables are printed before ingestion starts.</p>
 </tbody>
 </table>
 <h3 id="transforms"><code>transforms[]</code><a class="headerlink" href="#transforms" title="Permanent link">&para;</a></h3>
-<p>Each entry must have a <code>type</code> field. Valid types: <code>rename</code>, <code>cast</code>, <code>drop</code>, <code>udf</code>.</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:4"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><input id="__tabbed_1_4" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">rename</label><label for="__tabbed_1_2">cast</label><label for="__tabbed_1_3">drop</label><label for="__tabbed_1_4">udf</label></div>
+<p>Each entry must have a <code>type</code> field. Valid types: <code>rename</code>, <code>cast</code>, <code>drop</code>, <code>udf</code>, <code>fillna</code>, <code>clip</code>, <code>normalize</code>, <code>deduplicate</code>, <code>filter_rows</code>, <code>map_values</code>, <code>allowed_values</code>, <code>coerce_bool</code>.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:12"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><input id="__tabbed_1_4" name="__tabbed_1" type="radio" /><input id="__tabbed_1_5" name="__tabbed_1" type="radio" /><input id="__tabbed_1_6" name="__tabbed_1" type="radio" /><input id="__tabbed_1_7" name="__tabbed_1" type="radio" /><input id="__tabbed_1_8" name="__tabbed_1" type="radio" /><input id="__tabbed_1_9" name="__tabbed_1" type="radio" /><input id="__tabbed_1_10" name="__tabbed_1" type="radio" /><input id="__tabbed_1_11" name="__tabbed_1" type="radio" /><input id="__tabbed_1_12" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">rename</label><label for="__tabbed_1_2">cast</label><label for="__tabbed_1_3">drop</label><label for="__tabbed_1_4">udf</label><label for="__tabbed_1_5">fillna</label><label for="__tabbed_1_6">clip</label><label for="__tabbed_1_7">normalize</label><label for="__tabbed_1_8">deduplicate</label><label for="__tabbed_1_9">filter_rows</label><label for="__tabbed_1_10">map_values</label><label for="__tabbed_1_11">allowed_values</label><label for="__tabbed_1_12">coerce_bool</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <p><div class="highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">rename</span>
@@ -2336,6 +2336,97 @@ Calls a Python function. See <a href="../../concepts/udf-guide/#1-silver-base-ta
 </tbody>
 </table>
 </div>
+<div class="tabbed-block">
+<p><div class="highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">fillna</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span><span class="nt">columns</span><span class="p">:</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">    </span><span class="nt">score</span><span class="p">:</span><span class="w">  </span><span class="l l-Scalar l-Scalar-Plain">0</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">    </span><span class="nt">status</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;unknown&quot;</span>
+</span></code></pre></div>
+Fills null values per column with a literal value. Non-null values are unchanged.</p>
+</div>
+<div class="tabbed-block">
+<p><div class="highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Numeric — clamp to [min, max] (either bound is optional)</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">clip</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span><span class="nt">columns</span><span class="p">:</span>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">    </span><span class="nt">age</span><span class="p">:</span><span class="w">    </span><span class="p p-Indicator">{</span><span class="nt">min</span><span class="p">:</span><span class="w"> </span><span class="nv">0</span><span class="p p-Indicator">,</span><span class="nt"> max</span><span class="p">:</span><span class="w"> </span><span class="nv">120</span><span class="p p-Indicator">}</span>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">    </span><span class="nt">score</span><span class="p">:</span><span class="w">  </span><span class="p p-Indicator">{</span><span class="nt">min</span><span class="p">:</span><span class="w"> </span><span class="nv">0</span><span class="p p-Indicator">}</span>
+</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>
+</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="c1"># Date / Datetime — ISO 8601 string bounds</span>
+</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">clip</span>
+</span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="w">  </span><span class="nt">columns</span><span class="p">:</span>
+</span><span id="__span-13-10"><a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="w">    </span><span class="nt">hired_date</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">min</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;2000-01-01&quot;</span><span class="p p-Indicator">,</span><span class="nt"> max</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;2024-12-31&quot;</span><span class="p p-Indicator">}</span>
+</span><span id="__span-13-11"><a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a><span class="w">    </span><span class="nt">created_at</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">max</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;2025-01-01&quot;</span><span class="p p-Indicator">}</span>
+</span></code></pre></div>
+Clamps numeric, <code>Date</code>, or <code>Datetime</code> columns to a min/max range. Values outside the range are replaced with the boundary value.</p>
+</div>
+<div class="tabbed-block">
+<p><div class="highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">normalize</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span><span class="nt">columns</span><span class="p">:</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">    </span><span class="nt">email</span><span class="p">:</span><span class="w">    </span><span class="l l-Scalar l-Scalar-Plain">lower</span><span class="w">        </span><span class="c1"># upper | lower | strip | strip_lower</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">    </span><span class="nt">category</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">strip_lower</span>
+</span></code></pre></div>
+Standardises string columns. <code>strip_lower</code> strips whitespace then lowercases.</p>
+</div>
+<div class="tabbed-block">
+<p><div class="highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">deduplicate</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">  </span><span class="nt">subset</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">customer_id</span><span class="p p-Indicator">]</span><span class="w">   </span><span class="c1"># omit to use all columns</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">  </span><span class="nt">keep</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">first</span><span class="w">             </span><span class="c1"># first (default) | last | none</span>
+</span></code></pre></div>
+Removes duplicate rows. <code>keep: none</code> drops all rows that appear more than once.</p>
+</div>
+<div class="tabbed-block">
+<p><div class="highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">filter_rows</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span><span class="nt">expr</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;status</span><span class="nv"> </span><span class="s">!=</span><span class="nv"> </span><span class="s">&#39;deleted&#39;</span><span class="nv"> </span><span class="s">AND</span><span class="nv"> </span><span class="s">score</span><span class="nv"> </span><span class="s">&gt;=</span><span class="nv"> </span><span class="s">0&quot;</span>
+</span></code></pre></div>
+Keeps only rows that satisfy a SQL expression (evaluated by DuckDB via <code>pl.sql_expr</code>). Use this to drop sentinel, test, or out-of-range rows.</p>
+</div>
+<div class="tabbed-block">
+<p><div class="highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">map_values</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span><span class="nt">column</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">status</span>
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">  </span><span class="nt">mapping</span><span class="p">:</span>
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">    </span><span class="nt">A</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">active</span>
+</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="w">    </span><span class="nt">B</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">blocked</span>
+</span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="w">  </span><span class="nt">default</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">unknown</span><span class="w">        </span><span class="c1"># optional — omit to keep unmapped values as-is</span>
+</span></code></pre></div>
+Replaces categorical values using a lookup dict. Unmapped values keep their original value unless <code>default</code> is set.</p>
+</div>
+<div class="tabbed-block">
+<p><div class="highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">allowed_values</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">  </span><span class="nt">columns</span><span class="p">:</span>
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">    </span><span class="nt">status</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">active</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">pending</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">closed</span><span class="p p-Indicator">]</span>
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="w">    </span><span class="nt">tier</span><span class="p">:</span><span class="w">   </span><span class="p p-Indicator">[</span><span class="nv">gold</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">silver</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">bronze</span><span class="p p-Indicator">]</span>
+</span></code></pre></div>
+Validates string columns against an allowlist. Values not in the list become <code>null</code> (the row is kept). To drop out-of-range rows instead, use <code>filter_rows</code>.</p>
+</div>
+<div class="tabbed-block">
+<p><div class="highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">coerce_bool</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="w">  </span><span class="nt">columns</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">is_active</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">has_consent</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">opted_in</span><span class="p p-Indicator">]</span>
+</span></code></pre></div>
+Converts string representations of booleans to <code>Boolean</code> dtype. Recognised values (case-insensitive):</p>
+<table>
+<thead>
+<tr>
+<th>Result</th>
+<th>Accepted strings</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>true</code></td>
+<td><code>true</code>, <code>yes</code>, <code>1</code>, <code>on</code></td>
+</tr>
+<tr>
+<td><code>false</code></td>
+<td><code>false</code>, <code>no</code>, <code>0</code>, <code>off</code></td>
+</tr>
+<tr>
+<td><code>null</code></td>
+<td>anything else</td>
+</tr>
+</tbody>
+</table>
+<p>Columns that are already <code>Boolean</code> pass through unchanged.</p>
+</div>
 </div>
 </div>
 <h3 id="bronze_to_silverderived_tables"><code>bronze_to_silver.derived_tables[]</code><a class="headerlink" href="#bronze_to_silverderived_tables" title="Permanent link">&para;</a></h3>
@@ -2371,34 +2462,41 @@ Calls a Python function. See <a href="../../concepts/udf-guide/#1-silver-base-ta
 </table>
 <hr />
 <h2 id="goldyaml">gold.yaml<a class="headerlink" href="#goldyaml" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nt">silver_to_gold</span><span class="p">:</span>
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>
-</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span><span class="c1"># Optional: register all gold Parquet files as DuckDB views or tables</span>
-</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">  </span><span class="c1"># after the gold run completes. All projects are registered into one file.</span>
-</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">  </span><span class="nt">duckdb</span><span class="p">:</span>
-</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">                      </span><span class="c1"># false or omit to skip (default: false)</span>
-</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">    </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">data/gold/gold.duckdb</span><span class="w">        </span><span class="c1"># where to write the .duckdb file</span>
-</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="w">    </span><span class="nt">mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tables</span><span class="w">                       </span><span class="c1"># tables recommended for gold (shareable)</span>
-</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>
-</span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="w">  </span><span class="nt">projects</span><span class="p">:</span>
-</span><span id="__span-12-11"><a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">analytics</span><span class="w">                     </span><span class="c1"># subfolder under paths.gold</span>
-</span><span id="__span-12-12"><a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="w">      </span><span class="nt">aggregations</span><span class="p">:</span>
-</span><span id="__span-12-13"><a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source_file</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">orders.parquet</span><span class="w">     </span><span class="c1"># silver filename to read</span>
-</span><span id="__span-12-14"><a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a><span class="w">          </span><span class="nt">pre_agg_udf</span><span class="p">:</span><span class="w">                    </span><span class="c1"># (optional) runs before group_by</span>
-</span><span id="__span-12-15"><a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a><span class="w">            </span><span class="nt">file</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">projects/my_project/udf/gold/transforms.py</span>
-</span><span id="__span-12-16"><a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a><span class="w">            </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">prepare_orders</span>
-</span><span id="__span-12-17"><a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a><span class="w">            </span><span class="nt">args</span><span class="p">:</span>
-</span><span id="__span-12-18"><a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a><span class="w">              </span><span class="nt">include_region</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-</span><span id="__span-12-19"><a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a><span class="w">          </span><span class="nt">group_by</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">customer_id</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">region</span><span class="p p-Indicator">]</span><span class="w"> </span><span class="c1"># columns to group on</span>
-</span><span id="__span-12-20"><a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a><span class="w">          </span><span class="nt">metrics</span><span class="p">:</span>
-</span><span id="__span-12-21"><a id="__codelineno-12-21" name="__codelineno-12-21" href="#__codelineno-12-21"></a><span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">column</span><span class="p">:</span><span class="w"> </span><span class="nv">order_id</span><span class="p p-Indicator">,</span><span class="nt"> agg</span><span class="p">:</span><span class="w"> </span><span class="nv">count</span><span class="p p-Indicator">,</span><span class="nt"> alias</span><span class="p">:</span><span class="w"> </span><span class="nv">total_orders</span><span class="p p-Indicator">}</span>
-</span><span id="__span-12-22"><a id="__codelineno-12-22" name="__codelineno-12-22" href="#__codelineno-12-22"></a><span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">column</span><span class="p">:</span><span class="w"> </span><span class="nv">amount</span><span class="p p-Indicator">,</span><span class="nt">   agg</span><span class="p">:</span><span class="w"> </span><span class="nv">sum</span><span class="p p-Indicator">,</span><span class="nt">   alias</span><span class="p">:</span><span class="w"> </span><span class="nv">total_revenue</span><span class="p p-Indicator">}</span>
-</span><span id="__span-12-23"><a id="__codelineno-12-23" name="__codelineno-12-23" href="#__codelineno-12-23"></a><span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">column</span><span class="p">:</span><span class="w"> </span><span class="nv">amount</span><span class="p p-Indicator">,</span><span class="nt">   agg</span><span class="p">:</span><span class="w"> </span><span class="nv">mean</span><span class="p p-Indicator">,</span><span class="nt">  alias</span><span class="p">:</span><span class="w"> </span><span class="nv">avg_order_value</span><span class="p p-Indicator">}</span>
-</span><span id="__span-12-24"><a id="__codelineno-12-24" name="__codelineno-12-24" href="#__codelineno-12-24"></a><span class="w">          </span><span class="nt">output_file</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">customer_summary.parquet</span>
-</span><span id="__span-12-25"><a id="__codelineno-12-25" name="__codelineno-12-25" href="#__codelineno-12-25"></a>
-</span><span id="__span-12-26"><a id="__codelineno-12-26" name="__codelineno-12-26" href="#__codelineno-12-26"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source_file</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">orders.parquet</span><span class="w">     </span><span class="c1"># pass-through (no group_by)</span>
-</span><span id="__span-12-27"><a id="__codelineno-12-27" name="__codelineno-12-27" href="#__codelineno-12-27"></a><span class="w">          </span><span class="nt">select</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">order_id</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">amount</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">status</span><span class="p p-Indicator">]</span>
-</span><span id="__span-12-28"><a id="__codelineno-12-28" name="__codelineno-12-28" href="#__codelineno-12-28"></a><span class="w">          </span><span class="nt">output_file</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">orders_flat.parquet</span>
+<div class="highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="nt">silver_to_gold</span><span class="p">:</span>
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="w">  </span><span class="c1"># Optional: register all gold Parquet files as DuckDB views or tables</span>
+</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="w">  </span><span class="c1"># after the gold run completes. All projects are registered into one file.</span>
+</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="w">  </span><span class="nt">duckdb</span><span class="p">:</span>
+</span><span id="__span-20-6"><a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">                      </span><span class="c1"># false or omit to skip (default: false)</span>
+</span><span id="__span-20-7"><a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a><span class="w">    </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">data/gold/gold.duckdb</span><span class="w">        </span><span class="c1"># where to write the .duckdb file</span>
+</span><span id="__span-20-8"><a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a><span class="w">    </span><span class="nt">mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tables</span><span class="w">                       </span><span class="c1"># tables recommended for gold (shareable)</span>
+</span><span id="__span-20-9"><a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a>
+</span><span id="__span-20-10"><a id="__codelineno-20-10" name="__codelineno-20-10" href="#__codelineno-20-10"></a><span class="w">  </span><span class="nt">projects</span><span class="p">:</span>
+</span><span id="__span-20-11"><a id="__codelineno-20-11" name="__codelineno-20-11" href="#__codelineno-20-11"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">analytics</span><span class="w">                     </span><span class="c1"># subfolder under paths.gold</span>
+</span><span id="__span-20-12"><a id="__codelineno-20-12" name="__codelineno-20-12" href="#__codelineno-20-12"></a><span class="w">      </span><span class="nt">aggregations</span><span class="p">:</span>
+</span><span id="__span-20-13"><a id="__codelineno-20-13" name="__codelineno-20-13" href="#__codelineno-20-13"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source_file</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">orders.parquet</span><span class="w">     </span><span class="c1"># silver filename to read</span>
+</span><span id="__span-20-14"><a id="__codelineno-20-14" name="__codelineno-20-14" href="#__codelineno-20-14"></a><span class="w">          </span><span class="nt">pre_agg_udf</span><span class="p">:</span><span class="w">                    </span><span class="c1"># (optional) runs before group_by</span>
+</span><span id="__span-20-15"><a id="__codelineno-20-15" name="__codelineno-20-15" href="#__codelineno-20-15"></a><span class="w">            </span><span class="nt">file</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">projects/my_project/udf/gold/transforms.py</span>
+</span><span id="__span-20-16"><a id="__codelineno-20-16" name="__codelineno-20-16" href="#__codelineno-20-16"></a><span class="w">            </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">prepare_orders</span>
+</span><span id="__span-20-17"><a id="__codelineno-20-17" name="__codelineno-20-17" href="#__codelineno-20-17"></a><span class="w">            </span><span class="nt">args</span><span class="p">:</span>
+</span><span id="__span-20-18"><a id="__codelineno-20-18" name="__codelineno-20-18" href="#__codelineno-20-18"></a><span class="w">              </span><span class="nt">include_region</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-20-19"><a id="__codelineno-20-19" name="__codelineno-20-19" href="#__codelineno-20-19"></a><span class="w">          </span><span class="nt">group_by</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">customer_id</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">region</span><span class="p p-Indicator">]</span><span class="w"> </span><span class="c1"># columns to group on</span>
+</span><span id="__span-20-20"><a id="__codelineno-20-20" name="__codelineno-20-20" href="#__codelineno-20-20"></a><span class="w">          </span><span class="nt">metrics</span><span class="p">:</span>
+</span><span id="__span-20-21"><a id="__codelineno-20-21" name="__codelineno-20-21" href="#__codelineno-20-21"></a><span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">column</span><span class="p">:</span><span class="w"> </span><span class="nv">order_id</span><span class="p p-Indicator">,</span><span class="nt"> agg</span><span class="p">:</span><span class="w"> </span><span class="nv">count</span><span class="p p-Indicator">,</span><span class="nt">          alias</span><span class="p">:</span><span class="w"> </span><span class="nv">total_orders</span><span class="p p-Indicator">}</span>
+</span><span id="__span-20-22"><a id="__codelineno-20-22" name="__codelineno-20-22" href="#__codelineno-20-22"></a><span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">column</span><span class="p">:</span><span class="w"> </span><span class="nv">amount</span><span class="p p-Indicator">,</span><span class="nt">   agg</span><span class="p">:</span><span class="w"> </span><span class="nv">sum</span><span class="p p-Indicator">,</span><span class="nt">             alias</span><span class="p">:</span><span class="w"> </span><span class="nv">total_revenue</span><span class="p p-Indicator">}</span>
+</span><span id="__span-20-23"><a id="__codelineno-20-23" name="__codelineno-20-23" href="#__codelineno-20-23"></a><span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">column</span><span class="p">:</span><span class="w"> </span><span class="nv">amount</span><span class="p p-Indicator">,</span><span class="nt">   agg</span><span class="p">:</span><span class="w"> </span><span class="nv">mean</span><span class="p p-Indicator">,</span><span class="nt">            alias</span><span class="p">:</span><span class="w"> </span><span class="nv">avg_order_value</span><span class="p p-Indicator">}</span>
+</span><span id="__span-20-24"><a id="__codelineno-20-24" name="__codelineno-20-24" href="#__codelineno-20-24"></a><span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">column</span><span class="p">:</span><span class="w"> </span><span class="nv">amount</span><span class="p p-Indicator">,</span><span class="nt">   agg</span><span class="p">:</span><span class="w"> </span><span class="nv">median</span><span class="p p-Indicator">,</span><span class="nt">          alias</span><span class="p">:</span><span class="w"> </span><span class="nv">median_order_value</span><span class="p p-Indicator">}</span>
+</span><span id="__span-20-25"><a id="__codelineno-20-25" name="__codelineno-20-25" href="#__codelineno-20-25"></a><span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">column</span><span class="p">:</span><span class="w"> </span><span class="nv">amount</span><span class="p p-Indicator">,</span><span class="nt">   agg</span><span class="p">:</span><span class="w"> </span><span class="nv">count_distinct</span><span class="p p-Indicator">,</span><span class="nt">  alias</span><span class="p">:</span><span class="w"> </span><span class="nv">unique_amounts</span><span class="p p-Indicator">}</span>
+</span><span id="__span-20-26"><a id="__codelineno-20-26" name="__codelineno-20-26" href="#__codelineno-20-26"></a><span class="w">          </span><span class="nt">having</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;total_orders</span><span class="nv"> </span><span class="s">&gt;</span><span class="nv"> </span><span class="s">1&quot;</span><span class="w">     </span><span class="c1"># post-agg filter</span>
+</span><span id="__span-20-27"><a id="__codelineno-20-27" name="__codelineno-20-27" href="#__codelineno-20-27"></a><span class="w">          </span><span class="nt">sort</span><span class="p">:</span>
+</span><span id="__span-20-28"><a id="__codelineno-20-28" name="__codelineno-20-28" href="#__codelineno-20-28"></a><span class="w">            </span><span class="nt">columns</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">total_revenue</span><span class="p p-Indicator">]</span>
+</span><span id="__span-20-29"><a id="__codelineno-20-29" name="__codelineno-20-29" href="#__codelineno-20-29"></a><span class="w">            </span><span class="nt">descending</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-20-30"><a id="__codelineno-20-30" name="__codelineno-20-30" href="#__codelineno-20-30"></a><span class="w">          </span><span class="nt">limit</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">100</span>
+</span><span id="__span-20-31"><a id="__codelineno-20-31" name="__codelineno-20-31" href="#__codelineno-20-31"></a><span class="w">          </span><span class="nt">output_file</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">customer_summary.parquet</span>
+</span><span id="__span-20-32"><a id="__codelineno-20-32" name="__codelineno-20-32" href="#__codelineno-20-32"></a>
+</span><span id="__span-20-33"><a id="__codelineno-20-33" name="__codelineno-20-33" href="#__codelineno-20-33"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source_file</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">orders.parquet</span><span class="w">     </span><span class="c1"># pass-through (no group_by)</span>
+</span><span id="__span-20-34"><a id="__codelineno-20-34" name="__codelineno-20-34" href="#__codelineno-20-34"></a><span class="w">          </span><span class="nt">select</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">order_id</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">amount</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">status</span><span class="p p-Indicator">]</span>
+</span><span id="__span-20-35"><a id="__codelineno-20-35" name="__codelineno-20-35" href="#__codelineno-20-35"></a><span class="w">          </span><span class="nt">output_file</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">orders_flat.parquet</span>
 </span></code></pre></div>
 <h3 id="silver_to_goldduckdb"><code>silver_to_gold.duckdb</code><a class="headerlink" href="#silver_to_goldduckdb" title="Permanent link">&para;</a></h3>
 <p>Optional block. Same semantics as <a href="#bronze_to_silverduckdb"><code>bronze_to_silver.duckdb</code></a>. When <code>enabled: true</code>, Parquet files from <strong>all</strong> gold project subdirectories are registered into a single <code>.duckdb</code> file after the gold run completes.</p>
@@ -2499,6 +2597,24 @@ Calls a Python function. See <a href="../../concepts/udf-guide/#1-silver-base-ta
 <td>Pass-through mode: select columns without aggregating.</td>
 </tr>
 <tr>
+<td><code>having</code></td>
+<td>string</td>
+<td>—</td>
+<td>SQL expression to filter rows <strong>after</strong> aggregation (equivalent to SQL <code>HAVING</code>). Applied before <code>sort</code> and <code>limit</code>.</td>
+</tr>
+<tr>
+<td><code>sort</code></td>
+<td>object</td>
+<td>—</td>
+<td>Sort the result. Keys: <code>columns</code> (list[string], required) and <code>descending</code> (bool, default <code>false</code>).</td>
+</tr>
+<tr>
+<td><code>limit</code></td>
+<td>int</td>
+<td>—</td>
+<td>Keep only the top N rows. Applied after <code>sort</code>.</td>
+</tr>
+<tr>
 <td><code>output_file</code></td>
 <td>string</td>
 <td>✅</td>
@@ -2512,6 +2628,7 @@ Calls a Python function. See <a href="../../concepts/udf-guide/#1-silver-base-ta
 </tr>
 </tbody>
 </table>
+<p><strong>Execution order within an aggregation:</strong> <code>group_by</code> → <code>having</code> → <code>sort</code> → <code>limit</code>.</p>
 <h3 id="metrics"><code>metrics[]</code><a class="headerlink" href="#metrics" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -2533,13 +2650,68 @@ Calls a Python function. See <a href="../../concepts/udf-guide/#1-silver-base-ta
 <td><code>agg</code></td>
 <td>enum</td>
 <td>✅</td>
-<td><code>count</code>, <code>sum</code>, <code>mean</code>, <code>min</code>, or <code>max</code>.</td>
+<td>Aggregation function — see table below.</td>
 </tr>
 <tr>
 <td><code>alias</code></td>
 <td>string</td>
 <td>✅</td>
 <td>Output column name in the result.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Supported <code>agg</code> values:</strong></p>
+<table>
+<thead>
+<tr>
+<th><code>agg</code></th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>count</code></td>
+<td>Row count (no <code>column</code> required)</td>
+</tr>
+<tr>
+<td><code>sum</code></td>
+<td>Sum of values</td>
+</tr>
+<tr>
+<td><code>mean</code></td>
+<td>Arithmetic mean</td>
+</tr>
+<tr>
+<td><code>min</code></td>
+<td>Minimum value</td>
+</tr>
+<tr>
+<td><code>max</code></td>
+<td>Maximum value</td>
+</tr>
+<tr>
+<td><code>median</code></td>
+<td>Median value</td>
+</tr>
+<tr>
+<td><code>std</code></td>
+<td>Sample standard deviation</td>
+</tr>
+<tr>
+<td><code>var</code></td>
+<td>Sample variance</td>
+</tr>
+<tr>
+<td><code>first</code></td>
+<td>First value in group (insertion order)</td>
+</tr>
+<tr>
+<td><code>last</code></td>
+<td>Last value in group (insertion order)</td>
+</tr>
+<tr>
+<td><code>count_distinct</code></td>
+<td>Count of unique non-null values</td>
 </tr>
 </tbody>
 </table>
@@ -2577,27 +2749,27 @@ Calls a Python function. See <a href="../../concepts/udf-guide/#1-silver-base-ta
 <hr />
 <h2 id="inline-explore">Inline Explore<a class="headerlink" href="#inline-explore" title="Permanent link">&para;</a></h2>
 <p>Add an <code>explore:</code> list directly to any table entry in <code>bronze.yaml</code>, <code>silver.yaml</code>, or <code>gold.yaml</code>. Reports are generated immediately after the Parquet file for that table is written — no separate <code>explore.yaml</code> or <code>paths.explore</code> key needed.</p>
-<div class="highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># bronze.yaml — on a source table</span>
-</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">employees</span>
-</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span><span class="nt">explore</span><span class="p">:</span>
-</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">report_type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">profile</span>
-</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">      </span><span class="nt">output_file</span><span class="p">:</span><span class="w">  </span><span class="l l-Scalar l-Scalar-Plain">employees_profile.html</span>
-</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="w">      </span><span class="nt">title</span><span class="p">:</span><span class="w">        </span><span class="s">&quot;Employees</span><span class="nv"> </span><span class="s">Bronze</span><span class="nv"> </span><span class="s">Quality&quot;</span>
-</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>
-</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="c1"># silver.yaml — on a transformed table</span>
-</span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source_file</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">employees.parquet</span>
-</span><span id="__span-13-10"><a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="w">  </span><span class="nt">explore</span><span class="p">:</span>
-</span><span id="__span-13-11"><a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">report_type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">walker</span>
-</span><span id="__span-13-12"><a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a><span class="w">      </span><span class="nt">output_file</span><span class="p">:</span><span class="w">  </span><span class="l l-Scalar l-Scalar-Plain">employees_explorer.html</span>
-</span><span id="__span-13-13"><a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a><span class="w">      </span><span class="nt">title</span><span class="p">:</span><span class="w">        </span><span class="s">&quot;Employees</span><span class="nv"> </span><span class="s">Explorer&quot;</span>
-</span><span id="__span-13-14"><a id="__codelineno-13-14" name="__codelineno-13-14" href="#__codelineno-13-14"></a>
-</span><span id="__span-13-15"><a id="__codelineno-13-15" name="__codelineno-13-15" href="#__codelineno-13-15"></a><span class="c1"># gold.yaml — on an aggregation</span>
-</span><span id="__span-13-16"><a id="__codelineno-13-16" name="__codelineno-13-16" href="#__codelineno-13-16"></a><span class="nt">aggregations</span><span class="p">:</span>
-</span><span id="__span-13-17"><a id="__codelineno-13-17" name="__codelineno-13-17" href="#__codelineno-13-17"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">output_file</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">headcount.parquet</span>
-</span><span id="__span-13-18"><a id="__codelineno-13-18" name="__codelineno-13-18" href="#__codelineno-13-18"></a><span class="w">    </span><span class="nt">explore</span><span class="p">:</span>
-</span><span id="__span-13-19"><a id="__codelineno-13-19" name="__codelineno-13-19" href="#__codelineno-13-19"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">report_type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">profile</span>
-</span><span id="__span-13-20"><a id="__codelineno-13-20" name="__codelineno-13-20" href="#__codelineno-13-20"></a><span class="w">        </span><span class="nt">output_file</span><span class="p">:</span><span class="w">  </span><span class="l l-Scalar l-Scalar-Plain">headcount_profile.html</span>
-</span><span id="__span-13-21"><a id="__codelineno-13-21" name="__codelineno-13-21" href="#__codelineno-13-21"></a><span class="w">        </span><span class="nt">title</span><span class="p">:</span><span class="w">        </span><span class="s">&quot;Headcount</span><span class="nv"> </span><span class="s">by</span><span class="nv"> </span><span class="s">Department&quot;</span>
+<div class="highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="c1"># bronze.yaml — on a source table</span>
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">employees</span>
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="w">  </span><span class="nt">explore</span><span class="p">:</span>
+</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">report_type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">profile</span>
+</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a><span class="w">      </span><span class="nt">output_file</span><span class="p">:</span><span class="w">  </span><span class="l l-Scalar l-Scalar-Plain">employees_profile.html</span>
+</span><span id="__span-21-6"><a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a><span class="w">      </span><span class="nt">title</span><span class="p">:</span><span class="w">        </span><span class="s">&quot;Employees</span><span class="nv"> </span><span class="s">Bronze</span><span class="nv"> </span><span class="s">Quality&quot;</span>
+</span><span id="__span-21-7"><a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a>
+</span><span id="__span-21-8"><a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a><span class="c1"># silver.yaml — on a transformed table</span>
+</span><span id="__span-21-9"><a id="__codelineno-21-9" name="__codelineno-21-9" href="#__codelineno-21-9"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source_file</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">employees.parquet</span>
+</span><span id="__span-21-10"><a id="__codelineno-21-10" name="__codelineno-21-10" href="#__codelineno-21-10"></a><span class="w">  </span><span class="nt">explore</span><span class="p">:</span>
+</span><span id="__span-21-11"><a id="__codelineno-21-11" name="__codelineno-21-11" href="#__codelineno-21-11"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">report_type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">walker</span>
+</span><span id="__span-21-12"><a id="__codelineno-21-12" name="__codelineno-21-12" href="#__codelineno-21-12"></a><span class="w">      </span><span class="nt">output_file</span><span class="p">:</span><span class="w">  </span><span class="l l-Scalar l-Scalar-Plain">employees_explorer.html</span>
+</span><span id="__span-21-13"><a id="__codelineno-21-13" name="__codelineno-21-13" href="#__codelineno-21-13"></a><span class="w">      </span><span class="nt">title</span><span class="p">:</span><span class="w">        </span><span class="s">&quot;Employees</span><span class="nv"> </span><span class="s">Explorer&quot;</span>
+</span><span id="__span-21-14"><a id="__codelineno-21-14" name="__codelineno-21-14" href="#__codelineno-21-14"></a>
+</span><span id="__span-21-15"><a id="__codelineno-21-15" name="__codelineno-21-15" href="#__codelineno-21-15"></a><span class="c1"># gold.yaml — on an aggregation</span>
+</span><span id="__span-21-16"><a id="__codelineno-21-16" name="__codelineno-21-16" href="#__codelineno-21-16"></a><span class="nt">aggregations</span><span class="p">:</span>
+</span><span id="__span-21-17"><a id="__codelineno-21-17" name="__codelineno-21-17" href="#__codelineno-21-17"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">output_file</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">headcount.parquet</span>
+</span><span id="__span-21-18"><a id="__codelineno-21-18" name="__codelineno-21-18" href="#__codelineno-21-18"></a><span class="w">    </span><span class="nt">explore</span><span class="p">:</span>
+</span><span id="__span-21-19"><a id="__codelineno-21-19" name="__codelineno-21-19" href="#__codelineno-21-19"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">report_type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">profile</span>
+</span><span id="__span-21-20"><a id="__codelineno-21-20" name="__codelineno-21-20" href="#__codelineno-21-20"></a><span class="w">        </span><span class="nt">output_file</span><span class="p">:</span><span class="w">  </span><span class="l l-Scalar l-Scalar-Plain">headcount_profile.html</span>
+</span><span id="__span-21-21"><a id="__codelineno-21-21" name="__codelineno-21-21" href="#__codelineno-21-21"></a><span class="w">        </span><span class="nt">title</span><span class="p">:</span><span class="w">        </span><span class="s">&quot;Headcount</span><span class="nv"> </span><span class="s">by</span><span class="nv"> </span><span class="s">Department&quot;</span>
 </span></code></pre></div>
 <h3 id="explore"><code>explore[]</code><a class="headerlink" href="#explore" title="Permanent link">&para;</a></h3>
 <table>
@@ -2654,8 +2826,8 @@ Calls a Python function. See <a href="../../concepts/udf-guide/#1-silver-base-ta
 </tbody>
 </table>
 <p><strong>Optional dependencies</strong> — install the extras for the report type you want:</p>
-<div class="highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;openmedallion[profile]&quot;</span><span class="w">   </span><span class="c1"># ydata-profiling &gt;= 4.0</span>
-</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;openmedallion[explore]&quot;</span><span class="w">   </span><span class="c1"># pygwalker &gt;= 0.4</span>
+<div class="highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;openmedallion[profile]&quot;</span><span class="w">   </span><span class="c1"># ydata-profiling &gt;= 4.0</span>
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;openmedallion[explore]&quot;</span><span class="w">   </span><span class="c1"># pygwalker &gt;= 0.4</span>
 </span></code></pre></div>
 <p>If the optional dependency is not installed, the report is silently skipped with a notice. An unknown <code>report_type</code> also prints a warning and skips without aborting the run.</p>
 <hr />
