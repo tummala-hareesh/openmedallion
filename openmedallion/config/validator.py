@@ -1,8 +1,10 @@
 """config/validator.py — structural validation for a merged project config dict."""
 
 _VALID_SOURCE_TYPES    = {"sql_database", "rest_api", "filesystem", "local_files"}
-_VALID_TRANSFORM_TYPES = {"rename", "cast", "drop", "udf"}
+_VALID_TRANSFORM_TYPES = {"rename", "cast", "drop", "udf", "fillna", "clip", "normalize", "deduplicate", "filter_rows", "map_values", "allowed_values", "coerce_bool"}
 _VALID_DIALECTS        = {"oracle", "postgres", "mysql", "mssql", "sqlite"}
+_VALID_NORMALIZE_OPS   = {"upper", "lower", "strip", "strip_lower"}
+_VALID_AGG_TYPES       = {"count", "sum", "mean", "min", "max", "median", "std", "var", "first", "last", "count_distinct"}
 _VALID_REPORT_TYPES    = {"profile", "walker"}
 _VALID_DUCKDB_MODES    = {"views", "tables"}
 
@@ -151,6 +153,33 @@ def _validate_config(cfg: dict) -> None:
                 if tx_type == "udf":
                     require("file" in tx, f"{tx_path} (udf): 'file' is required")
                     require("function" in tx, f"{tx_path} (udf): 'function' is required")
+                if tx_type == "fillna":
+                    require(isinstance(tx.get("columns"), dict), f"{tx_path} (fillna): 'columns' must be a dict")
+                if tx_type == "clip":
+                    require(isinstance(tx.get("columns"), dict), f"{tx_path} (clip): 'columns' must be a dict")
+                if tx_type == "normalize":
+                    cols = tx.get("columns")
+                    require(isinstance(cols, dict), f"{tx_path} (normalize): 'columns' must be a dict")
+                    if isinstance(cols, dict):
+                        for c, op in cols.items():
+                            require(op in _VALID_NORMALIZE_OPS,
+                                    f"{tx_path} (normalize): op '{op}' for column '{c}' must be one of {sorted(_VALID_NORMALIZE_OPS)}")
+                if tx_type == "filter_rows":
+                    require(isinstance(tx.get("expr"), str) and tx.get("expr", "").strip(),
+                            f"{tx_path} (filter_rows): 'expr' must be a non-empty string")
+                if tx_type == "map_values":
+                    require(isinstance(tx.get("column"), str) and tx.get("column", "").strip(),
+                            f"{tx_path} (map_values): 'column' must be a non-empty string")
+                    require(isinstance(tx.get("mapping"), dict), f"{tx_path} (map_values): 'mapping' must be a dict")
+                if tx_type == "allowed_values":
+                    require(isinstance(tx.get("columns"), dict), f"{tx_path} (allowed_values): 'columns' must be a dict mapping column names to lists")
+                    if isinstance(tx.get("columns"), dict):
+                        for c, vals in tx["columns"].items():
+                            require(isinstance(vals, list) and len(vals) > 0,
+                                    f"{tx_path} (allowed_values): values for column '{c}' must be a non-empty list")
+                if tx_type == "coerce_bool":
+                    require(isinstance(tx.get("columns"), list) and len(tx.get("columns", [])) > 0,
+                            f"{tx_path} (coerce_bool): 'columns' must be a non-empty list of column names")
             if "explore" in tbl:
                 _validate_explore_specs(tbl["explore"], f"{path}.explore", require, require_str)
 
@@ -177,6 +206,21 @@ def _validate_config(cfg: dict) -> None:
                     udf_path = f"{path}.aggregations[{j}].pre_agg_udf"
                     require("file" in udf_block, f"{udf_path}: 'file' is required")
                     require("function" in udf_block, f"{udf_path}: 'function' is required")
+                agg_path = f"{path}.aggregations[{j}]"
+                for mi, m in enumerate(agg.get("metrics", [])):
+                    agg_type = m.get("agg")
+                    require(agg_type in _VALID_AGG_TYPES,
+                            f"{agg_path}.metrics[{mi}].agg must be one of {sorted(_VALID_AGG_TYPES)}, got '{agg_type}'")
+                if "having" in agg:
+                    require(isinstance(agg["having"], str) and agg["having"].strip(),
+                            f"{agg_path}.having must be a non-empty string")
+                if "sort" in agg:
+                    sort_block = agg["sort"]
+                    require(isinstance(sort_block.get("columns"), list) and sort_block["columns"],
+                            f"{agg_path}.sort.columns must be a non-empty list")
+                if "limit" in agg:
+                    require(isinstance(agg["limit"], int) and agg["limit"] > 0,
+                            f"{agg_path}.limit must be a positive integer")
                 if "explore" in agg:
                     _validate_explore_specs(
                         agg["explore"], f"{path}.aggregations[{j}].explore", require, require_str

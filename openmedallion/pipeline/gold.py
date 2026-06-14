@@ -18,11 +18,17 @@ from openmedallion.contracts.udf import load_udf, check_return
 
 
 AGG_MAP = {
-    "count": lambda _: pl.len(),
-    "sum":   lambda c: pl.col(c).sum(),
-    "mean":  lambda c: pl.col(c).mean(),
-    "min":   lambda c: pl.col(c).min(),
-    "max":   lambda c: pl.col(c).max(),
+    "count":          lambda _: pl.len(),
+    "sum":            lambda c: pl.col(c).sum(),
+    "mean":           lambda c: pl.col(c).mean(),
+    "min":            lambda c: pl.col(c).min(),
+    "max":            lambda c: pl.col(c).max(),
+    "median":         lambda c: pl.col(c).median(),
+    "std":            lambda c: pl.col(c).std(),
+    "var":            lambda c: pl.col(c).var(),
+    "first":          lambda c: pl.col(c).first(),
+    "last":           lambda c: pl.col(c).last(),
+    "count_distinct": lambda c: pl.col(c).n_unique(),
 }
 
 
@@ -98,7 +104,21 @@ class GoldAggregator:
             AGG_MAP[m["agg"]](m.get("column")).alias(m["alias"])
             for m in metrics
         ]
-        return df.group_by(groups).agg(exprs) if groups else df.select(exprs)
+        result = df.group_by(groups).agg(exprs) if groups else df.select(exprs)
+
+        if having := agg.get("having"):
+            result = result.lazy().filter(pl.sql_expr(having)).collect()
+
+        if sort_cfg := agg.get("sort"):
+            result = result.sort(
+                sort_cfg["columns"],
+                descending=sort_cfg.get("descending", False),
+            )
+
+        if limit := agg.get("limit"):
+            result = result.head(limit)
+
+        return result
 
     def _call_udf(self, df: pl.DataFrame, step: dict) -> pl.DataFrame:
         fn, kwargs = load_udf(step, cache=self._udf_cache, layer="gold")

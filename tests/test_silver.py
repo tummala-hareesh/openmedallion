@@ -279,3 +279,186 @@ def fn(silver_dir) -> pl.DataFrame:
         result = pl.read_parquet(silver_dir / "out.parquet")
         assert result.columns == ["id", "a"]
         assert "b" not in result.columns
+
+
+class TestDeclarativeTransforms:
+    """Tests for T-TODO-5: fillna, clip, normalize, deduplicate, filter_rows, map_values."""
+
+    def _run(self, tmp_path, df, transforms):
+        write_bronze(tmp_path, "t.parquet", df)
+        cfg = make_cfg(tmp_path, tables=[{
+            "source_file": "t.parquet", "output_file": "out.parquet",
+            "transforms": transforms,
+        }])
+        SilverTransformer(cfg).transform()
+        return pl.read_parquet(tmp_path / "silver" / "out.parquet")
+
+    def test_fillna_fills_nulls(self, tmp_path):
+        df = pl.DataFrame({"a": [1, None, 3], "b": [None, "x", None]})
+        result = self._run(tmp_path, df, [{"type": "fillna", "columns": {"a": 0, "b": "NA"}}])
+        assert result["a"].to_list() == [1, 0, 3]
+        assert result["b"].to_list() == ["NA", "x", "NA"]
+
+    def test_fillna_leaves_non_null_unchanged(self, tmp_path):
+        df = pl.DataFrame({"x": [1, 2, 3]})
+        result = self._run(tmp_path, df, [{"type": "fillna", "columns": {"x": 99}}])
+        assert result["x"].to_list() == [1, 2, 3]
+
+    def test_clip_clamps_numeric(self, tmp_path):
+        df = pl.DataFrame({"val": [-10, 0, 5, 15, 100]})
+        result = self._run(tmp_path, df, [{"type": "clip", "columns": {"val": {"min": 0, "max": 10}}}])
+        assert result["val"].to_list() == [0, 0, 5, 10, 10]
+
+    def test_clip_min_only(self, tmp_path):
+        df = pl.DataFrame({"val": [-5, 0, 5]})
+        result = self._run(tmp_path, df, [{"type": "clip", "columns": {"val": {"min": 0}}}])
+        assert result["val"].to_list() == [0, 0, 5]
+
+    def test_clip_max_only(self, tmp_path):
+        df = pl.DataFrame({"val": [1, 5, 20]})
+        result = self._run(tmp_path, df, [{"type": "clip", "columns": {"val": {"max": 10}}}])
+        assert result["val"].to_list() == [1, 5, 10]
+
+    def test_normalize_upper(self, tmp_path):
+        df = pl.DataFrame({"name": ["alice", "Bob", "CAROL"]})
+        result = self._run(tmp_path, df, [{"type": "normalize", "columns": {"name": "upper"}}])
+        assert result["name"].to_list() == ["ALICE", "BOB", "CAROL"]
+
+    def test_normalize_lower(self, tmp_path):
+        df = pl.DataFrame({"name": ["Alice", "BOB"]})
+        result = self._run(tmp_path, df, [{"type": "normalize", "columns": {"name": "lower"}}])
+        assert result["name"].to_list() == ["alice", "bob"]
+
+    def test_normalize_strip(self, tmp_path):
+        df = pl.DataFrame({"code": ["  A1  ", " B2"]})
+        result = self._run(tmp_path, df, [{"type": "normalize", "columns": {"code": "strip"}}])
+        assert result["code"].to_list() == ["A1", "B2"]
+
+    def test_normalize_strip_lower(self, tmp_path):
+        df = pl.DataFrame({"tag": ["  FOO  ", " Bar"]})
+        result = self._run(tmp_path, df, [{"type": "normalize", "columns": {"tag": "strip_lower"}}])
+        assert result["tag"].to_list() == ["foo", "bar"]
+
+    def test_deduplicate_removes_duplicates(self, tmp_path):
+        df = pl.DataFrame({"id": [1, 1, 2], "val": [10, 10, 20]})
+        result = self._run(tmp_path, df, [{"type": "deduplicate", "subset": ["id"]}])
+        assert len(result) == 2
+        assert sorted(result["id"].to_list()) == [1, 2]
+
+    def test_deduplicate_no_subset_uses_all_columns(self, tmp_path):
+        df = pl.DataFrame({"a": [1, 1, 2], "b": [1, 1, 2]})
+        result = self._run(tmp_path, df, [{"type": "deduplicate"}])
+        assert len(result) == 2
+
+    def test_deduplicate_keep_last(self, tmp_path):
+        df = pl.DataFrame({"id": [1, 1], "val": [10, 99]})
+        result = self._run(tmp_path, df, [{"type": "deduplicate", "subset": ["id"], "keep": "last"}])
+        assert len(result) == 1
+        assert result["val"][0] == 99
+
+    def test_filter_rows_drops_matching_rows(self, tmp_path):
+        df = pl.DataFrame({"status": ["active", "deleted", "active"], "id": [1, 2, 3]})
+        result = self._run(tmp_path, df, [{"type": "filter_rows", "expr": "status != 'deleted'"}])
+        assert len(result) == 2
+        assert 2 not in result["id"].to_list()
+
+    def test_filter_rows_numeric_expr(self, tmp_path):
+        df = pl.DataFrame({"score": [10, -1, 50, -999]})
+        result = self._run(tmp_path, df, [{"type": "filter_rows", "expr": "score >= 0"}])
+        assert result["score"].to_list() == [10, 50]
+
+    def test_map_values_replaces_categories(self, tmp_path):
+        df = pl.DataFrame({"status": ["A", "B", "C", "A"]})
+        result = self._run(tmp_path, df, [{"type": "map_values", "column": "status",
+                                           "mapping": {"A": "active", "B": "blocked"}}])
+        assert result["status"].to_list() == ["active", "blocked", "C", "active"]
+
+    def test_map_values_with_default(self, tmp_path):
+        df = pl.DataFrame({"status": ["A", "B", "unknown"]})
+        result = self._run(tmp_path, df, [{"type": "map_values", "column": "status",
+                                           "mapping": {"A": "active"}, "default": "other"}])
+        assert result["status"].to_list() == ["active", "other", "other"]
+
+    # --- clip extended to date columns ---
+
+    def test_clip_date_min_max(self, tmp_path):
+        import datetime
+        df = pl.DataFrame({"dt": [
+            datetime.date(2019, 1, 1),
+            datetime.date(2020, 6, 15),
+            datetime.date(2025, 12, 31),
+        ]})
+        result = self._run(tmp_path, df, [{"type": "clip", "columns": {
+            "dt": {"min": "2020-01-01", "max": "2024-12-31"}
+        }}])
+        assert result["dt"][0] == datetime.date(2020, 1, 1)   # clamped to min
+        assert result["dt"][1] == datetime.date(2020, 6, 15)  # unchanged
+        assert result["dt"][2] == datetime.date(2024, 12, 31) # clamped to max
+
+    def test_clip_date_min_only(self, tmp_path):
+        import datetime
+        df = pl.DataFrame({"dt": [datetime.date(2018, 1, 1), datetime.date(2022, 1, 1)]})
+        result = self._run(tmp_path, df, [{"type": "clip", "columns": {"dt": {"min": "2020-01-01"}}}])
+        assert result["dt"][0] == datetime.date(2020, 1, 1)
+        assert result["dt"][1] == datetime.date(2022, 1, 1)
+
+    def test_clip_datetime_max_only(self, tmp_path):
+        import datetime
+        df = pl.DataFrame({"ts": pl.Series([
+            datetime.datetime(2023, 1, 1),
+            datetime.datetime(2026, 6, 1),
+        ])})
+        result = self._run(tmp_path, df, [{"type": "clip", "columns": {"ts": {"max": "2025-01-01"}}}])
+        assert result["ts"][0] == datetime.datetime(2023, 1, 1)
+        assert result["ts"][1] == datetime.datetime(2025, 1, 1)
+
+    # --- allowed_values for strings ---
+
+    def test_allowed_values_nulls_non_members(self, tmp_path):
+        df = pl.DataFrame({"status": ["active", "deleted", "pending", "unknown"]})
+        result = self._run(tmp_path, df, [{"type": "allowed_values", "columns": {
+            "status": ["active", "pending"]
+        }}])
+        assert result["status"].to_list() == ["active", None, "pending", None]
+
+    def test_allowed_values_multiple_columns(self, tmp_path):
+        df = pl.DataFrame({"s": ["a", "z"], "t": ["x", "y"]})
+        result = self._run(tmp_path, df, [{"type": "allowed_values", "columns": {
+            "s": ["a", "b"],
+            "t": ["x"],
+        }}])
+        assert result["s"].to_list() == ["a", None]
+        assert result["t"].to_list() == ["x", None]
+
+    def test_allowed_values_all_valid_unchanged(self, tmp_path):
+        df = pl.DataFrame({"code": ["A", "B", "A"]})
+        result = self._run(tmp_path, df, [{"type": "allowed_values", "columns": {"code": ["A", "B", "C"]}}])
+        assert result["code"].to_list() == ["A", "B", "A"]
+
+    # --- coerce_bool ---
+
+    def test_coerce_bool_truthy_strings(self, tmp_path):
+        df = pl.DataFrame({"flag": ["true", "yes", "1", "on", "TRUE", "Yes"]})
+        result = self._run(tmp_path, df, [{"type": "coerce_bool", "columns": ["flag"]}])
+        assert result["flag"].to_list() == [True, True, True, True, True, True]
+
+    def test_coerce_bool_falsy_strings(self, tmp_path):
+        df = pl.DataFrame({"flag": ["false", "no", "0", "off", "FALSE", "No"]})
+        result = self._run(tmp_path, df, [{"type": "coerce_bool", "columns": ["flag"]}])
+        assert result["flag"].to_list() == [False, False, False, False, False, False]
+
+    def test_coerce_bool_unknown_becomes_null(self, tmp_path):
+        df = pl.DataFrame({"flag": ["true", "maybe", "1", "nope"]})
+        result = self._run(tmp_path, df, [{"type": "coerce_bool", "columns": ["flag"]}])
+        assert result["flag"].to_list() == [True, None, True, None]
+
+    def test_coerce_bool_already_bool_passthrough(self, tmp_path):
+        df = pl.DataFrame({"flag": [True, False, True]})
+        result = self._run(tmp_path, df, [{"type": "coerce_bool", "columns": ["flag"]}])
+        assert result["flag"].to_list() == [True, False, True]
+
+    def test_coerce_bool_multiple_columns(self, tmp_path):
+        df = pl.DataFrame({"a": ["yes", "no"], "b": ["1", "0"]})
+        result = self._run(tmp_path, df, [{"type": "coerce_bool", "columns": ["a", "b"]}])
+        assert result["a"].to_list() == [True, False]
+        assert result["b"].to_list() == [True, False]

@@ -37,6 +37,18 @@ bronze_to_silver:
         - type: cast
           columns:
             customer_id: Int64
+        # Validate tier against known values — unexpected values become null
+        - type: allowed_values
+          columns:
+            tier: [gold, silver, bronze]
+        # Standardise region to lowercase and strip any whitespace
+        - type: normalize
+          columns:
+            region: strip_lower
+        # Fill any null region with a sentinel rather than propagating null
+        - type: fillna
+          columns:
+            region: "unknown"
 
   derived_tables:
     - output_file: order_lines_enriched.parquet

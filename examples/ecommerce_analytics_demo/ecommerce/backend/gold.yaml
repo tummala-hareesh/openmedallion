@@ -3,15 +3,21 @@ silver_to_gold:
     - name: ecommerce
       aggregations:
         # Revenue + margin breakdown per product category
+        # sort descending by revenue; only include categories with >1 order
         - source_file: order_lines_enriched.parquet
           pre_agg_udf:
             file: ecommerce/backend/udf/gold/metrics.py
             function: add_metrics
           group_by: [category]
           metrics:
-            - {column: line_revenue,  agg: sum,   alias: total_revenue}
-            - {column: margin_amount, agg: sum,   alias: total_margin}
-            - {column: order_id,      agg: count, alias: num_orders}
+            - {column: line_revenue,  agg: sum,    alias: total_revenue}
+            - {column: margin_amount, agg: sum,    alias: total_margin}
+            - {column: line_revenue,  agg: median, alias: median_order_value}
+            - {column: order_id,      agg: count,  alias: num_orders}
+          having: "num_orders > 1"
+          sort:
+            columns: [total_revenue]
+            descending: true
           output_file: revenue_by_category.parquet
           explore:
             - report_type: profile
@@ -21,12 +27,17 @@ silver_to_gold:
             #   output_file:  revenue_by_category_explorer.html
             #   title:        "Revenue by Category Explorer"
 
-        # Lifetime value + order count per customer
+        # Lifetime value + order count per customer — top 5 by spend
         - source_file: order_lines_enriched.parquet
           group_by: [customer_id, name, region, tier]
           metrics:
-            - {column: line_revenue, agg: sum,   alias: total_spent}
-            - {column: order_id,     agg: count, alias: num_orders}
+            - {column: line_revenue, agg: sum,            alias: total_spent}
+            - {column: line_revenue, agg: std,            alias: spend_std}
+            - {column: order_id,     agg: count_distinct, alias: num_orders}
+          sort:
+            columns: [total_spent]
+            descending: true
+          limit: 5
           output_file: top_customers.parquet
           explore:
             - report_type: profile

@@ -10,6 +10,36 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [2026.6.9] — 2026-06-14 (silver transforms + gold utilities)
+
+### Added
+
+- **Declarative silver transforms** — 8 new built-in transform types in `pipeline/silver.py:_apply()`, removing the need for UDFs on common operations. All types are validated by `config/validator.py` and documented in `docs/reference/yaml-schema.md`:
+
+  | Type | What it does |
+  | --- | --- |
+  | `fillna` | Fill nulls per column with a literal value |
+  | `clip` | Clamp numeric **or** `Date`/`Datetime` columns to `min`/`max` bounds (ISO string bounds for dates) |
+  | `normalize` | String standardisation: `upper`, `lower`, `strip`, `strip_lower` |
+  | `deduplicate` | Remove duplicate rows; optional `subset` and `keep` (`first`/`last`/`none`) |
+  | `filter_rows` | Keep rows matching a SQL expression via `pl.sql_expr` |
+  | `map_values` | Categorical replacement dict with optional `default` for unmatched values |
+  | `allowed_values` | String allowlist — values not in the list become `null` (row is kept) |
+  | `coerce_bool` | Coerce `true`/`yes`/`1`/`on` → `True`, `false`/`no`/`0`/`off` → `False`, else `null` (case-insensitive; already-bool columns pass through) |
+
+- **Declarative gold utilities** — post-aggregation controls and extended aggregation functions in `pipeline/gold.py:_apply_agg()`. Execution order: `group_by → having → sort → limit`:
+
+  - `having` — SQL expression filter applied after aggregation (equivalent to SQL `HAVING`)
+  - `sort` — order result by one or more columns with `descending: true/false`
+  - `limit` — keep the top N rows (composes with `sort`)
+  - Extended `AGG_MAP`: `median`, `std`, `var`, `first`, `last`, `count_distinct` added alongside the existing `count`, `sum`, `mean`, `min`, `max`
+
+- **`ecommerce_analytics_demo` updated** — `silver.yaml` now demonstrates `allowed_values`, `normalize`, and `fillna` on the customers table; `gold.yaml` uses `having`, `sort`, `limit`, `median`, `std`, and `count_distinct` on existing aggregations
+
+- **`docs/reference/yaml-schema.md` updated** — full tabbed reference for all 12 silver transform types; `aggregations[]` table extended with `having`/`sort`/`limit`; `metrics[]` table now lists all 11 `agg` values with descriptions
+
+---
+
 ## [2026.6.9] — 2026-06-12
 
 ### Fixed
@@ -181,7 +211,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - S3 support via `openmedallion[s3]` optional extra (s3fs + boto3)
 - LocalStack compatibility via `AWS_ENDPOINT_URL` environment variable
 
-[Unreleased]: https://github.com/tummala-hareesh/openmedallion/compare/v2026.6.2...HEAD
+[Unreleased]: https://github.com/tummala-hareesh/openmedallion/compare/v2026.6.9...HEAD
+[2026.6.9]: https://github.com/tummala-hareesh/openmedallion/compare/v2026.6.2...v2026.6.9
 [2026.6.2]: https://github.com/tummala-hareesh/openmedallion/compare/v2026.5.4...v2026.6.2
 [2026.5.4]: https://github.com/tummala-hareesh/openmedallion/compare/v2026.5.1...v2026.5.4
 [2026.5.1]: https://github.com/tummala-hareesh/openmedallion/compare/v2026.4.1...v2026.5.1

@@ -45,6 +45,8 @@ medallion run my_project --layer silver   # re-run a single layer
 
 - **Declarative YAML config** — define pipeline layers without writing boilerplate
 - **Incremental loads** — append and merge modes via dlt cursor columns and primary keys
+- **Rich silver transforms** — 12 built-in declarative transform types (`rename`, `cast`, `drop`, `fillna`, `clip`, `normalize`, `deduplicate`, `filter_rows`, `map_values`, `allowed_values`, `coerce_bool`, `udf`) — no Python needed for common operations
+- **Expressive gold aggregations** — 11 aggregation functions (`count`, `sum`, `mean`, `min`, `max`, `median`, `std`, `var`, `first`, `last`, `count_distinct`) plus `having`, `sort`, and `limit` post-aggregation controls
 - **Composable UDFs** — drop Python functions into `udf/silver/` or `udf/gold/`; no new framework to learn
 - **Local first** — run the full pipeline against Parquet files with zero cloud credentials
 - **Cloud portable** — swap `filesystem` for S3 in one line; logic stays unchanged
@@ -163,6 +165,23 @@ bronze_to_silver:
           columns:
             order_id: Int64
             amount:   Float64
+        - type: clip                          # clamp numeric or date columns
+          columns:
+            amount: {min: 0}
+            order_date: {min: "2020-01-01", max: "2030-12-31"}
+        - type: allowed_values               # null out unexpected categories
+          columns:
+            status: [pending, shipped, delivered, cancelled]
+        - type: normalize                    # strip whitespace + lowercase
+          columns:
+            region: strip_lower
+        - type: fillna                       # fill remaining nulls
+          columns:
+            region: "unknown"
+        - type: coerce_bool                  # "yes"/"1"/"true" → true, etc.
+          columns: [is_priority]
+        - type: deduplicate                  # remove exact duplicates
+          subset: [order_id]
         - type: udf
           file: udf/silver/enrich.py
           function: flag_large_orders
@@ -170,7 +189,9 @@ bronze_to_silver:
             threshold: 500.0
 ```
 
-**`gold.yaml`** — YAML-declared aggregations:
+**Built-in silver transform types:** `rename` · `cast` · `drop` · `fillna` · `clip` (numeric + date/datetime) · `normalize` (upper/lower/strip/strip_lower) · `deduplicate` · `filter_rows` (SQL expression) · `map_values` · `allowed_values` · `coerce_bool` · `udf`
+
+**`gold.yaml`** — YAML-declared aggregations with post-aggregation controls:
 
 ```yaml
 silver_to_gold:
@@ -180,10 +201,20 @@ silver_to_gold:
         - source_file: orders.parquet
           group_by: [customer_id]
           metrics:
-            - {column: order_id, agg: count, alias: total_orders}
-            - {column: amount,   agg: sum,   alias: total_spent}
+            - {column: order_id, agg: count,          alias: total_orders}
+            - {column: amount,   agg: sum,             alias: total_spent}
+            - {column: amount,   agg: median,          alias: median_order}
+            - {column: amount,   agg: std,             alias: spend_std}
+            - {column: order_id, agg: count_distinct,  alias: unique_products}
+          having: "total_orders > 1"         # filter after aggregation
+          sort:
+            columns: [total_spent]
+            descending: true
+          limit: 100                         # top N rows
           output_file: customer_summary.parquet
 ```
+
+**Built-in gold aggregations:** `count` · `sum` · `mean` · `min` · `max` · `median` · `std` · `var` · `first` · `last` · `count_distinct`
 
 ---
 
@@ -401,7 +432,11 @@ A great fit if you:
 | Natural-language queries (cerebrum + neuron + cortex) | ✅ 2026.6.2 |
 | `medallion query` — direct CLI Q&A without a server | ✅ 2026.6.2 |
 | Multi-provider LLM (Ollama, OpenRouter, OpenAI, custom) | ✅ 2026.6.3 |
-| Schema contract enforcement | 🔜 roadmap |
+| Declarative silver transforms (fillna, clip, normalize, deduplicate, filter_rows, map_values, allowed_values, coerce_bool) | ✅ 2026.6.9 |
+| Declarative gold utilities (having, sort, limit) + extended aggregations (median, std, var, first, last, count_distinct) | ✅ 2026.6.9 |
+| Schema contract enforcement (Pydantic config schemas) | 🔜 roadmap |
+| REST API multi-resource support | 🔜 roadmap |
+| Named filter fragments (`filter_defs`) | 🔜 roadmap |
 | Lineage + metadata helpers | 🔜 roadmap |
 | Additional cloud destinations | 🔜 roadmap |
 

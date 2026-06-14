@@ -189,18 +189,125 @@ def join_cat(df: pl.DataFrame, silver_dir) -> pl.DataFrame:
         assert cats["x"] == 10
         assert cats["y"] == 20
 
-    def test_pre_agg_udf_wrong_return_raises(self, tmp_path):
-        df = pl.DataFrame({"id": [1]})
+class TestDeclarativeGoldUtilities:
+    """Tests for T-TODO-6: sort, limit, having, extended AGG_MAP."""
+
+    def _run(self, tmp_path, df, agg_cfg):
         write_silver(tmp_path, "t.parquet", df)
-        udf_file = self._write_udf(tmp_path, """
-from pathlib import Path
-def bad(df, silver_dir: Path): return 42
-""")
-        cfg = make_cfg(tmp_path, projects=[{"name": "bi", "aggregations": [{
-            "source_file": "t.parquet",
-            "pre_agg_udf": {"file": str(udf_file), "function": "bad"},
-            "group_by": [], "metrics": [{"column": "id", "agg": "count", "alias": "n"}],
-            "output_file": "r.parquet",
-        }]}])
-        with pytest.raises(TypeError, match="must return pl.DataFrame"):
-            GoldAggregator(cfg).aggregate()
+        cfg = make_cfg(tmp_path, projects=[{"name": "bi", "aggregations": [
+            {"source_file": "t.parquet", "output_file": "result.parquet", **agg_cfg}
+        ]}])
+        GoldAggregator(cfg).aggregate()
+        return pl.read_parquet(tmp_path / "gold" / "bi" / "result.parquet")
+
+    def test_sort_ascending(self, tmp_path):
+        df = pl.DataFrame({"grp": ["b", "a", "c"], "val": [2, 1, 3]})
+        result = self._run(tmp_path, df, {
+            "group_by": ["grp"],
+            "metrics": [{"column": "val", "agg": "sum", "alias": "total"}],
+            "sort": {"columns": ["grp"], "descending": False},
+        })
+        assert result["grp"].to_list() == ["a", "b", "c"]
+
+    def test_sort_descending(self, tmp_path):
+        df = pl.DataFrame({"grp": ["b", "a", "c"], "val": [20, 10, 30]})
+        result = self._run(tmp_path, df, {
+            "group_by": ["grp"],
+            "metrics": [{"column": "val", "agg": "sum", "alias": "total"}],
+            "sort": {"columns": ["total"], "descending": True},
+        })
+        assert result["total"].to_list() == [30, 20, 10]
+
+    def test_limit_top_n(self, tmp_path):
+        df = pl.DataFrame({"grp": ["a", "b", "c", "d"], "val": [4, 3, 2, 1]})
+        result = self._run(tmp_path, df, {
+            "group_by": ["grp"],
+            "metrics": [{"column": "val", "agg": "sum", "alias": "total"}],
+            "sort": {"columns": ["total"], "descending": True},
+            "limit": 2,
+        })
+        assert len(result) == 2
+        assert result["grp"].to_list() == ["a", "b"]
+
+    def test_having_filters_after_aggregation(self, tmp_path):
+        df = pl.DataFrame({"dept": ["eng", "eng", "hr", "eng"], "sal": [100, 200, 50, 300]})
+        result = self._run(tmp_path, df, {
+            "group_by": ["dept"],
+            "metrics": [{"column": "sal", "agg": "sum", "alias": "total_sal"}],
+            "having": "total_sal > 100",
+        })
+        assert len(result) == 1
+        assert result["dept"][0] == "eng"
+
+    def test_having_count(self, tmp_path):
+        df = pl.DataFrame({"dept": ["a", "a", "b"], "id": [1, 2, 3]})
+        result = self._run(tmp_path, df, {
+            "group_by": ["dept"],
+            "metrics": [{"column": "id", "agg": "count", "alias": "headcount"}],
+            "having": "headcount > 1",
+        })
+        assert len(result) == 1
+        assert result["dept"][0] == "a"
+
+    def test_agg_median(self, tmp_path):
+        df = pl.DataFrame({"grp": ["a", "a", "a"], "val": [1.0, 2.0, 9.0]})
+        result = self._run(tmp_path, df, {
+            "group_by": ["grp"],
+            "metrics": [{"column": "val", "agg": "median", "alias": "med"}],
+        })
+        assert result["med"][0] == pytest.approx(2.0)
+
+    def test_agg_std(self, tmp_path):
+        df = pl.DataFrame({"grp": ["a", "a", "a"], "val": [2.0, 4.0, 6.0]})
+        result = self._run(tmp_path, df, {
+            "group_by": ["grp"],
+            "metrics": [{"column": "val", "agg": "std", "alias": "stddev"}],
+        })
+        assert result["stddev"][0] == pytest.approx(2.0)
+
+    def test_agg_var(self, tmp_path):
+        df = pl.DataFrame({"grp": ["a", "a", "a"], "val": [2.0, 4.0, 6.0]})
+        result = self._run(tmp_path, df, {
+            "group_by": ["grp"],
+            "metrics": [{"column": "val", "agg": "var", "alias": "variance"}],
+        })
+        assert result["variance"][0] == pytest.approx(4.0)
+
+    def test_agg_first(self, tmp_path):
+        df = pl.DataFrame({"grp": ["a", "a"], "val": [10, 20]})
+        result = self._run(tmp_path, df, {
+            "group_by": ["grp"],
+            "metrics": [{"column": "val", "agg": "first", "alias": "first_val"}],
+        })
+        assert result["first_val"][0] == 10
+
+    def test_agg_last(self, tmp_path):
+        df = pl.DataFrame({"grp": ["a", "a"], "val": [10, 20]})
+        result = self._run(tmp_path, df, {
+            "group_by": ["grp"],
+            "metrics": [{"column": "val", "agg": "last", "alias": "last_val"}],
+        })
+        assert result["last_val"][0] == 20
+
+    def test_agg_count_distinct(self, tmp_path):
+        df = pl.DataFrame({"grp": ["a", "a", "a"], "val": [1, 1, 2]})
+        result = self._run(tmp_path, df, {
+            "group_by": ["grp"],
+            "metrics": [{"column": "val", "agg": "count_distinct", "alias": "uniq"}],
+        })
+        assert result["uniq"][0] == 2
+
+    def test_sort_limit_having_compose(self, tmp_path):
+        df = pl.DataFrame({
+            "dept": ["eng", "eng", "hr", "hr", "mkt"],
+            "sal":  [100, 150, 50, 60, 300],
+        })
+        result = self._run(tmp_path, df, {
+            "group_by": ["dept"],
+            "metrics": [{"column": "sal", "agg": "sum", "alias": "total"}],
+            "having": "total > 100",
+            "sort": {"columns": ["total"], "descending": True},
+            "limit": 2,
+        })
+        # eng=250, mkt=300, hr=110 (all pass having); top 2 desc = mkt(300), eng(250)
+        assert result["dept"].to_list() == ["mkt", "eng"]

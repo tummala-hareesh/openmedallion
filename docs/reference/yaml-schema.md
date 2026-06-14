@@ -301,7 +301,7 @@ Optional block. When `enabled: true`, all `*.parquet` files in `paths.silver` ar
 
 ### `transforms[]`
 
-Each entry must have a `type` field. Valid types: `rename`, `cast`, `drop`, `udf`.
+Each entry must have a `type` field. Valid types: `rename`, `cast`, `drop`, `udf`, `fillna`, `clip`, `normalize`, `deduplicate`, `filter_rows`, `map_values`, `allowed_values`, `coerce_bool`.
 
 === "rename"
     ```yaml
@@ -345,6 +345,90 @@ Each entry must have a `type` field. Valid types: `rename`, `cast`, `drop`, `udf
     | `function` | ✅ | Name of the function to call. |
     | `args` | — | Dict of keyword arguments passed to the function. |
 
+=== "fillna"
+    ```yaml
+    - type: fillna
+      columns:
+        score:  0
+        status: "unknown"
+    ```
+    Fills null values per column with a literal value. Non-null values are unchanged.
+
+=== "clip"
+    ```yaml
+    # Numeric — clamp to [min, max] (either bound is optional)
+    - type: clip
+      columns:
+        age:    {min: 0, max: 120}
+        score:  {min: 0}
+
+    # Date / Datetime — ISO 8601 string bounds
+    - type: clip
+      columns:
+        hired_date: {min: "2000-01-01", max: "2024-12-31"}
+        created_at: {max: "2025-01-01"}
+    ```
+    Clamps numeric, `Date`, or `Datetime` columns to a min/max range. Values outside the range are replaced with the boundary value.
+
+=== "normalize"
+    ```yaml
+    - type: normalize
+      columns:
+        email:    lower        # upper | lower | strip | strip_lower
+        category: strip_lower
+    ```
+    Standardises string columns. `strip_lower` strips whitespace then lowercases.
+
+=== "deduplicate"
+    ```yaml
+    - type: deduplicate
+      subset: [customer_id]   # omit to use all columns
+      keep: first             # first (default) | last | none
+    ```
+    Removes duplicate rows. `keep: none` drops all rows that appear more than once.
+
+=== "filter_rows"
+    ```yaml
+    - type: filter_rows
+      expr: "status != 'deleted' AND score >= 0"
+    ```
+    Keeps only rows that satisfy a SQL expression (evaluated by DuckDB via `pl.sql_expr`). Use this to drop sentinel, test, or out-of-range rows.
+
+=== "map_values"
+    ```yaml
+    - type: map_values
+      column: status
+      mapping:
+        A: active
+        B: blocked
+      default: unknown        # optional — omit to keep unmapped values as-is
+    ```
+    Replaces categorical values using a lookup dict. Unmapped values keep their original value unless `default` is set.
+
+=== "allowed_values"
+    ```yaml
+    - type: allowed_values
+      columns:
+        status: [active, pending, closed]
+        tier:   [gold, silver, bronze]
+    ```
+    Validates string columns against an allowlist. Values not in the list become `null` (the row is kept). To drop out-of-range rows instead, use `filter_rows`.
+
+=== "coerce_bool"
+    ```yaml
+    - type: coerce_bool
+      columns: [is_active, has_consent, opted_in]
+    ```
+    Converts string representations of booleans to `Boolean` dtype. Recognised values (case-insensitive):
+
+    | Result | Accepted strings |
+    | --- | --- |
+    | `true` | `true`, `yes`, `1`, `on` |
+    | `false` | `false`, `no`, `0`, `off` |
+    | `null` | anything else |
+
+    Columns that are already `Boolean` pass through unchanged.
+
 ### `bronze_to_silver.derived_tables[]`
 
 | Key | Type | Required | Description |
@@ -378,9 +462,16 @@ silver_to_gold:
               include_region: true
           group_by: [customer_id, region] # columns to group on
           metrics:
-            - {column: order_id, agg: count, alias: total_orders}
-            - {column: amount,   agg: sum,   alias: total_revenue}
-            - {column: amount,   agg: mean,  alias: avg_order_value}
+            - {column: order_id, agg: count,          alias: total_orders}
+            - {column: amount,   agg: sum,             alias: total_revenue}
+            - {column: amount,   agg: mean,            alias: avg_order_value}
+            - {column: amount,   agg: median,          alias: median_order_value}
+            - {column: amount,   agg: count_distinct,  alias: unique_amounts}
+          having: "total_orders > 1"     # post-agg filter
+          sort:
+            columns: [total_revenue]
+            descending: true
+          limit: 100
           output_file: customer_summary.parquet
 
         - source_file: orders.parquet     # pass-through (no group_by)
@@ -414,16 +505,37 @@ Optional block. Same semantics as [`bronze_to_silver.duckdb`](#bronze_to_silverd
 | `group_by` | list[string] | — | Column names to group by. Omit for grand-total aggregation. |
 | `metrics` | list | — | Metric specs. Required unless `select` is used. |
 | `select` | list[string] | — | Pass-through mode: select columns without aggregating. |
+| `having` | string | — | SQL expression to filter rows **after** aggregation (equivalent to SQL `HAVING`). Applied before `sort` and `limit`. |
+| `sort` | object | — | Sort the result. Keys: `columns` (list[string], required) and `descending` (bool, default `false`). |
+| `limit` | int | — | Keep only the top N rows. Applied after `sort`. |
 | `output_file` | string | ✅ | Parquet filename to write under `paths.gold/<project>/`. |
 | `explore` | list | — | List of report specs to generate after this aggregation is written. See [Inline explore](#inline-explore). |
+
+**Execution order within an aggregation:** `group_by` → `having` → `sort` → `limit`.
 
 ### `metrics[]`
 
 | Key | Type | Required | Description |
 | --- | --- | --- | --- |
 | `column` | string | ✅ (except `count`) | Source column name. For `count`, any column works. |
-| `agg` | enum | ✅ | `count`, `sum`, `mean`, `min`, or `max`. |
+| `agg` | enum | ✅ | Aggregation function — see table below. |
 | `alias` | string | ✅ | Output column name in the result. |
+
+**Supported `agg` values:**
+
+| `agg` | Description |
+| --- | --- |
+| `count` | Row count (no `column` required) |
+| `sum` | Sum of values |
+| `mean` | Arithmetic mean |
+| `min` | Minimum value |
+| `max` | Maximum value |
+| `median` | Median value |
+| `std` | Sample standard deviation |
+| `var` | Sample variance |
+| `first` | First value in group (insertion order) |
+| `last` | Last value in group (insertion order) |
+| `count_distinct` | Count of unique non-null values |
 
 ### `pre_agg_udf`
 

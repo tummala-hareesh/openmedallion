@@ -109,9 +109,89 @@ class SilverTransformer:
             return df.drop(cols) if cols else df
         if t == "udf":
             return self._call_udf(df, step)
+        if t == "fillna":
+            return df.with_columns(
+                [pl.col(c).fill_null(v) for c, v in step["columns"].items()]
+            )
+        if t == "clip":
+            exprs = []
+            for col, bounds in step["columns"].items():
+                dtype = df[col].dtype
+                if dtype in (pl.Date, pl.Datetime):
+                    # parse string bounds to the column's native type
+                    def _lit_date(val: str, dt=dtype):
+                        if dt == pl.Date:
+                            import datetime as _dt
+                            return pl.lit(_dt.date.fromisoformat(val))
+                        return pl.lit(val).str.to_datetime()
+                    expr = pl.col(col)
+                    if "min" in bounds:
+                        expr = pl.when(expr < _lit_date(bounds["min"])).then(_lit_date(bounds["min"])).otherwise(expr)
+                    if "max" in bounds:
+                        expr = pl.when(expr > _lit_date(bounds["max"])).then(_lit_date(bounds["max"])).otherwise(expr)
+                    exprs.append(expr.alias(col))
+                else:
+                    expr = pl.col(col)
+                    if "min" in bounds:
+                        expr = expr.clip(lower_bound=bounds["min"])
+                    if "max" in bounds:
+                        expr = expr.clip(upper_bound=bounds["max"])
+                    exprs.append(expr)
+            return df.with_columns(exprs)
+        if t == "normalize":
+            _OPS = {
+                "upper":       lambda e: e.str.to_uppercase(),
+                "lower":       lambda e: e.str.to_lowercase(),
+                "strip":       lambda e: e.str.strip_chars(),
+                "strip_lower": lambda e: e.str.strip_chars().str.to_lowercase(),
+            }
+            exprs = []
+            for col, op in step["columns"].items():
+                if op not in _OPS:
+                    raise ValueError(f"[silver] normalize: unknown op '{op}'. Allowed: {sorted(_OPS)}")
+                exprs.append(_OPS[op](pl.col(col)))
+            return df.with_columns(exprs)
+        if t == "deduplicate":
+            subset = step.get("subset") or None
+            keep   = step.get("keep", "first")
+            return df.unique(subset=subset, keep=keep, maintain_order=True)
+        if t == "filter_rows":
+            return df.lazy().filter(pl.sql_expr(step["expr"])).collect()
+        if t == "allowed_values":
+            exprs = []
+            for col, allowed in step["columns"].items():
+                exprs.append(
+                    pl.when(pl.col(col).is_in(allowed)).then(pl.col(col)).otherwise(pl.lit(None)).alias(col)
+                )
+            return df.with_columns(exprs)
+        if t == "coerce_bool":
+            _TRUTHY  = {"true", "yes", "1", "on"}
+            _FALSY   = {"false", "no", "0", "off"}
+            exprs = []
+            for col in step["columns"]:
+                if df[col].dtype == pl.Boolean:
+                    exprs.append(pl.col(col))
+                else:
+                    lower = pl.col(col).cast(pl.Utf8).str.to_lowercase()
+                    exprs.append(
+                        pl.when(lower.is_in(list(_TRUTHY))).then(pl.lit(True))
+                          .when(lower.is_in(list(_FALSY))).then(pl.lit(False))
+                          .otherwise(pl.lit(None))
+                          .alias(col)
+                    )
+            return df.with_columns(exprs)
+        if t == "map_values":
+            col     = step["column"]
+            mapping = step["mapping"]
+            default = step.get("default")
+            when_chain = pl.when(pl.col(col) == list(mapping.keys())[0]).then(pl.lit(list(mapping.values())[0]))
+            for k, v in list(mapping.items())[1:]:
+                when_chain = when_chain.when(pl.col(col) == k).then(pl.lit(v))
+            fallback = pl.lit(default) if default is not None else pl.col(col)
+            return df.with_columns(when_chain.otherwise(fallback).alias(col))
         raise ValueError(
             f"[silver] Unknown transform type: '{t}'. "
-            f"Allowed: rename, cast, drop, udf"
+            f"Allowed: rename, cast, drop, udf, fillna, clip, normalize, deduplicate, filter_rows, map_values, allowed_values, coerce_bool"
         )
 
     def _call_udf(self, df: pl.DataFrame, step: dict) -> pl.DataFrame:
