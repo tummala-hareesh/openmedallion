@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "openmedallion"
-version = "2026.6.11"
+version = "2026.7.1"
 description = "Declarative medallion pipelines in pure open-source Python — local first, cloud portable, fast by default."
 readme = "README.md"
 license = { text = "MIT" }
@@ -42,7 +42,8 @@ dependencies = [
     "pyyaml>=6.0",
     "setuptools>=70.0,<=81.0",
     "tqdm>=4.67.3",
-    "duckdb>=0.10"
+    "duckdb>=0.10",
+    "pydantic>=2.0"
 ]
 
 [project.optional-dependencies]

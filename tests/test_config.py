@@ -287,3 +287,107 @@ class TestValidateConfig:
             "filter": "status = 'ACTIVE'",
         }]
         _validate_config(cfg)
+
+
+class TestPydanticSchema:
+    """Coverage for T-TODO-4: Pydantic-backed config validation."""
+
+    def test_schema_models_importable(self):
+        from openmedallion.config.schema import ProjectConfig, SourceBlock, SourceTable
+        assert ProjectConfig is not None
+        assert SourceBlock is not None
+        assert SourceTable is not None
+
+    def test_valid_config_builds_project_config_model(self):
+        from openmedallion.config.schema import ProjectConfig
+        model = ProjectConfig(**_valid_cfg())
+        assert model.pipeline.name == "test"
+
+    def test_unknown_top_level_key_raises(self):
+        cfg = _valid_cfg()
+        cfg["pipline"] = cfg.pop("pipeline")
+        with pytest.raises(ValueError, match="pipline"):
+            _validate_config(cfg)
+
+    def test_unknown_table_key_raises(self):
+        # Guards against the exact typo called out in TODOS.md T-TODO-4.
+        cfg = _valid_cfg(**{"source.type": "sql_database"})
+        cfg["source"]["tables"] = [{
+            "name": "folderprocess",
+            "filter_propogate": "folder",   # misspelled — should be filter_propagate
+        }]
+        with pytest.raises(ValueError, match="filter_propogate"):
+            _validate_config(cfg)
+
+    def test_unknown_transform_key_raises(self):
+        cfg = _valid_cfg()
+        cfg["bronze_to_silver"]["tables"] = [{
+            "source_file": "a.parquet", "output_file": "b.parquet",
+            "transforms": [{"type": "fillna", "columsn": {"a": 0}}],
+        }]
+        with pytest.raises(ValueError, match="columsn"):
+            _validate_config(cfg)
+
+    def test_filter_propagate_valid_reference_passes(self):
+        cfg = _valid_cfg(**{"source.type": "sql_database"})
+        cfg["source"]["tables"] = [
+            {"name": "employees", "filter": "department_id = 10"},
+            {"name": "departments", "filter_propagate": "employees",
+             "incremental": {"mode": "merge", "primary_key": "department_id"}},
+        ]
+        _validate_config(cfg)
+
+    def test_filter_propagate_unknown_reference_raises(self):
+        cfg = _valid_cfg(**{"source.type": "sql_database"})
+        cfg["source"]["tables"] = [
+            {"name": "departments", "filter_propagate": "nonexistent",
+             "incremental": {"mode": "merge", "primary_key": "department_id"}},
+        ]
+        with pytest.raises(ValueError, match="filter_propagate"):
+            _validate_config(cfg)
+
+    def test_filter_propagate_reference_without_filter_raises(self):
+        cfg = _valid_cfg(**{"source.type": "sql_database"})
+        cfg["source"]["tables"] = [
+            {"name": "employees"},   # no 'filter' set
+            {"name": "departments", "filter_propagate": "employees",
+             "incremental": {"mode": "merge", "primary_key": "department_id"}},
+        ]
+        with pytest.raises(ValueError, match="filter_propagate"):
+            _validate_config(cfg)
+
+    def test_credentials_file_requires_dialect(self):
+        cfg = _valid_cfg(**{"source.type": "sql_database"})
+        cfg["source"]["credentials_file"] = "../secrets.yaml"
+        with pytest.raises(ValueError, match="dialect"):
+            _validate_config(cfg)
+
+    def test_invalid_dialect_raises(self):
+        cfg = _valid_cfg(**{"source.type": "sql_database"})
+        cfg["source"]["dialect"] = "db2"
+        with pytest.raises(ValueError, match="dialect"):
+            _validate_config(cfg)
+
+    def test_duckdb_enabled_requires_path(self):
+        cfg = _valid_cfg()
+        cfg["bronze_to_silver"]["duckdb"] = {"enabled": True}
+        with pytest.raises(ValueError, match="path"):
+            _validate_config(cfg)
+
+    def test_sort_columns_empty_raises(self):
+        cfg = _valid_cfg()
+        cfg["silver_to_gold"]["projects"] = [{
+            "name": "p",
+            "aggregations": [{"sort": {"columns": []}}],
+        }]
+        with pytest.raises(ValueError, match="sort"):
+            _validate_config(cfg)
+
+    def test_limit_non_positive_raises(self):
+        cfg = _valid_cfg()
+        cfg["silver_to_gold"]["projects"] = [{
+            "name": "p",
+            "aggregations": [{"limit": 0}],
+        }]
+        with pytest.raises(ValueError, match="limit"):
+            _validate_config(cfg)

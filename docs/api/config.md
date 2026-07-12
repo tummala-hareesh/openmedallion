@@ -147,6 +147,8 @@ def _validate_config(cfg: dict) -> None
 
 Validate a fully-merged project config dict. Called automatically by `load_project()` — you rarely need to call this directly.
 
+Internally builds a [`ProjectConfig`](#projectconfig-pydantic-schema) Pydantic model from `cfg` and translates any `pydantic.ValidationError` into a plain `ValueError` whose message identifies the failing key path — same contract as before, just backed by typed models instead of hand-written `if` checks.
+
 **Parameters:**
 
 | Name | Type | Description |
@@ -159,15 +161,38 @@ Validate a fully-merged project config dict. Called automatically by `load_proje
 
 - `pipeline.name` — non-empty string
 - All four `paths.*` keys present
-- `source.type` (if present) — one of `sql_database`, `rest_api`, `filesystem`
+- `source.type` / each `sources[i].type` — one of `sql_database`, `rest_api`, `filesystem`, `local_files`
 - Each `bronze_to_silver.tables[i]` — has `source_file` and `output_file`
-- Each `transforms[j].type` — one of `rename`, `cast`, `drop`, `udf`
-- UDF transform blocks — have `file` and `function`
+- Each `transforms[j].type` — one of the declarative transform types, with type-specific required keys (e.g. `udf` needs `file` + `function`, `map_values` needs `column` + `mapping`)
 - Each `silver_to_gold.projects[i]` — has `name`
 - Each `pre_agg_udf` block — has `file` and `function`
+- **Unknown keys anywhere in the schema** — every block uses `extra="forbid"`, so a typo like `filter_propogate` or `pipline` is rejected at load time instead of being silently ignored
+- **`filter_propagate` cross-reference** — the referenced table must exist in the same source (matched by alias, then name) and must itself have a `filter` set
 
 **Example error message:**
 
 ```
 ValueError: [config] bronze_to_silver.tables[0].source_file is required
+```
+
+---
+
+## `ProjectConfig` (Pydantic schema)
+
+```python
+from openmedallion.config.schema import ProjectConfig
+```
+
+`openmedallion/config/schema.py` defines the full set of Pydantic models backing `_validate_config` — `ProjectConfig`, `PipelineBlock`, `PathsBlock`, `SourceBlock`, `SourceTable`, `IncrementalBlock`, `TransformSpec`, `SilverTable`, `DerivedTable`, `DuckdbBlock`, `BronzeToSilver`, `MetricSpec`, `SortSpec`, `Aggregation`, `GoldProject`, `SilverToGold`, `BiExport`, `ExploreSpec`.
+
+Every model sets `model_config = ConfigDict(extra="forbid")` (the one exception is `DestinationBlock`, which stays permissive since dlt destinations like `bigquery`/`snowflake` take backend-specific kwargs not worth enumerating). Cross-field rules (credentials_file → dialect, filter_propagate → valid + filtered reference, duckdb enabled → path required) are expressed as `@model_validator(mode="after")` methods rather than imperative checks.
+
+You can build a `ProjectConfig` directly for type-checked access to a merged config:
+
+```python
+from openmedallion.config.schema import ProjectConfig
+
+model = ProjectConfig(**cfg)
+model.pipeline.name       # str
+model.source.type         # Literal["sql_database", "rest_api", "filesystem", "local_files"]
 ```

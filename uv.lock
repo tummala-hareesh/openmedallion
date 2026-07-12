@@ -2213,12 +2213,13 @@ wheels = [
 
 [[package]]
 name = "openmedallion"
-version = "2026.6.10"
+version = "2026.6.11"
 source = { editable = "." }
 dependencies = [
     { name = "dlt", extra = ["filesystem", "parquet", "sql-database"] },
     { name = "duckdb" },
     { name = "polars" },
+    { name = "pydantic" },
     { name = "pyyaml" },
     { name = "setuptools" },
     { name = "sf-hamilton" },
@@ -2286,6 +2287,7 @@ requires-dist = [
     { name = "pandas", marker = "extra == 'cortex'", specifier = ">=2.0" },
     { name = "plotly", marker = "extra == 'cortex'", specifier = ">=5.22" },
     { name = "polars", specifier = ">=1.0" },
+    { name = "pydantic", specifier = ">=2.0" },
     { name = "pygwalker", marker = "extra == 'explore'", specifier = ">=0.4" },
     { name = "pymdown-extensions", marker = "extra == 'docs'", specifier = ">=10.0" },
     { name = "pyyaml", specifier = ">=6.0" },

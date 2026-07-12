@@ -80,7 +80,7 @@ tables:
 
 ---
 
-## T-TODO-4: Pydantic schemas for `config/` layer
+## DONE: T-TODO-4: Pydantic schemas for `config/` layer
 
 **What:** Replace the manual dict-based config handling and `config/validator.py` structural checks with Pydantic models covering all YAML config structures (bronze, silver, gold, settings, secrets).
 
@@ -93,6 +93,8 @@ tables:
 - Preserve backward compatibility — existing YAML files must load without changes.
 
 **Depends on / blocked by:** Independent.
+
+**Implemented as:** `config/schema.py` (new — `ProjectConfig` and all nested models, `extra="forbid"` everywhere except `DestinationBlock`) + `config/validator.py` (`_validate_config` now builds `ProjectConfig(**cfg)` and translates `pydantic.ValidationError` into the same `ValueError` message format callers already depended on). Settings/secrets schemas were left out of scope — `config/settings.py` and credential YAML are simple enough that Pydantic didn't add value there. Tests in `tests/test_config.py:TestPydanticSchema`. All 5 example projects verified to still load under the stricter schema.
 
 ---
 
