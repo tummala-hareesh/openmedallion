@@ -434,9 +434,9 @@ A great fit if you:
 | Multi-provider LLM (Ollama, OpenRouter, OpenAI, custom) | ✅ 2026.6.3 |
 | Declarative silver transforms (fillna, clip, normalize, deduplicate, filter_rows, map_values, allowed_values, coerce_bool) | ✅ 2026.6.9 |
 | Declarative gold utilities (having, sort, limit) + extended aggregations (median, std, var, first, last, count_distinct) | ✅ 2026.6.9 |
-| Schema contract enforcement (Pydantic config schemas) | 🔜 roadmap |
+| Schema contract enforcement (Pydantic config schemas) | ✅ 2026.7.1 |
+| Named filter fragments (`filter_defs`) | ✅ 2026.7.1 |
 | REST API multi-resource support | 🔜 roadmap |
-| Named filter fragments (`filter_defs`) | 🔜 roadmap |
 | Lineage + metadata helpers | 🔜 roadmap |
 | Additional cloud destinations | 🔜 roadmap |
 

@@ -177,3 +177,13 @@
 {"ts": "2026-07-12T17:43:51Z", "method": "POST", "path": "/query", "client": "testclient", "status": 200, "latency_ms": 1.75}
 {"ts": "2026-07-12T17:43:51Z", "method": "POST", "path": "/query", "client": "testclient", "status": 200, "latency_ms": 1.68}
 {"ts": "2026-07-12T17:43:51Z", "method": "POST", "path": "/query", "client": "testclient", "status": 401, "latency_ms": 1.39}
+{"ts": "2026-07-12T17:49:30Z", "method": "GET", "path": "/health", "client": "testclient", "status": 200, "latency_ms": 1.6}
+{"ts": "2026-07-12T17:49:30Z", "method": "POST", "path": "/query", "client": "testclient", "status": 200, "latency_ms": 3.85}
+{"ts": "2026-07-12T17:49:30Z", "method": "POST", "path": "/query", "client": "testclient", "status": 404, "latency_ms": 1.91}
+{"ts": "2026-07-12T17:49:30Z", "method": "POST", "path": "/query", "client": "testclient", "status": 422, "latency_ms": 1.9}
+{"ts": "2026-07-12T17:49:30Z", "method": "POST", "path": "/query", "client": "testclient", "status": 500, "latency_ms": 4.92}
+{"ts": "2026-07-12T17:49:30Z", "method": "POST", "path": "/query", "client": "testclient", "status": 200, "latency_ms": 2.3}
+{"ts": "2026-07-12T17:49:30Z", "method": "POST", "path": "/query", "client": "testclient", "status": 200, "latency_ms": 1.72}
+{"ts": "2026-07-12T17:49:30Z", "method": "POST", "path": "/query", "client": "testclient", "status": 200, "latency_ms": 1.83}
+{"ts": "2026-07-12T17:49:30Z", "method": "POST", "path": "/query", "client": "testclient", "status": 200, "latency_ms": 1.57}
+{"ts": "2026-07-12T17:49:30Z", "method": "POST", "path": "/query", "client": "testclient", "status": 401, "latency_ms": 1.28}

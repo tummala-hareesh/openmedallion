@@ -113,21 +113,66 @@ destination:
   bucket_url: ./data/bronze  # local path or s3:// URI
 ```
 
-### `source`
+### `source` / `sources`
+
+Use either `source:` (single source, dict) or `sources:` (multiple sources, list) — not both. Both forms normalise internally to the same list.
+
+```yaml
+sources:
+  - type: local_files
+    tables:
+      - name: raw_orders_2024
+        alias: orders             # bronze output filename decoupled from name:
+        path: "data/source/raw_orders_2024.csv"
+
+  - type: sql_database
+    dialect: sqlite
+    connection_string: "sqlite:///data/mydb.db"
+    tables:
+      - name: orders
+    destination:
+      type: filesystem
+      bucket_url: "data"
+```
 
 | Key | Type | Required | Description |
 | --- | --- | --- | --- |
-| `type` | enum | ✅ | `sql_database`, `rest_api`, or `filesystem`. |
+| `type` | enum | ✅ | `sql_database`, `rest_api`, `filesystem`, or `local_files`. |
 | `dialect` | enum | creds file | Required when `credentials_file` is used. One of `oracle`, `postgres`, `mysql`, `mssql`, `sqlite`. |
 | `credentials_file` | string | — | Path to a credentials YAML (see `secrets.yaml.example`). Preferred over `connection_string`. Supports `${VAR}` expansion. |
 | `connection_string` | string | — | Raw SQLAlchemy URL. Supports `${VAR}` expansion. Used only when `credentials_file` is absent. |
 | `schema` | string | — | Database schema to scope table discovery and `SELECT` statements. |
-| `tables` | list | sql/filesystem | Tables to ingest. |
+| `filter_defs` | dict[string, string] | — | `sql_database` only. Named SQL fragments referenced from any table's `filter:` via `{ref:name}`. See [filter_defs](#filter_defs). |
+| `tables` | list | sql/local_files | Tables to ingest. |
 | `base_url` | string | rest only | REST API base URL. |
 | `resource` | string | rest only | Resource/endpoint name. |
 | `bucket_url` | string | filesystem | Source bucket or directory. |
 | `file_glob` | string | filesystem | Glob pattern, e.g. `**/*.parquet`. |
 | `format` | string | filesystem | `parquet` (default) or `csv`. |
+| `alias` | string | rest/filesystem | Bronze output filename when the source has no `tables:` list. |
+| `select` | list[string] | rest/filesystem | Column projection when the source has no `tables:` list. |
+
+#### `filter_defs`
+
+A source-level dict of named, reusable SQL filter fragments. Reference one from any table's `filter:` with `{ref:name}` — expanded to the fragment's text before the clause is sent to the database. Avoids repeating the same subquery across multiple tables.
+
+```yaml
+sources:
+  - type: sql_database
+    filter_defs:
+      review_processcodes: >-
+        processcode IN (
+          SELECT vp.processcode FROM IBMS.validprocess vp
+          WHERE vp.processdesc LIKE '%Review%'
+        )
+    tables:
+      - name: folderprocess
+        filter_propagate: folder
+        filter: "{ref:review_processcodes}"
+```
+
+- Referencing a name not present in `filter_defs` raises `ValueError` at config-load time (before any DB connection is attempted).
+- Expansion is a single pass over the fully combined filter string (own `filter:` plus any propagated subquery text) — a `filter_defs` entry whose value itself contains another `{ref:name}` is not recursively expanded.
 
 #### Credential file format (`credentials_file`)
 
@@ -171,8 +216,12 @@ source:
 
 | Key | Type | Required | Description |
 | --- | --- | --- | --- |
-| `name` | string | ✅ | Table name in the source database. |
+| `name` | string | ✅ | Table name in the source database (must match the real source table/file). |
+| `alias` | string | — | Bronze Parquet output filename, decoupled from `name:`. Silver's `source_file:` references the alias, not `name:`. Not enforced unique — duplicate aliases silently overwrite each other's Parquet. |
+| `path` | string | local_files | File path to read, relative to CWD. |
 | `select` | list[string] | — | Column names to ingest. Omit to ingest all columns. For SQL sources the projection is pushed to the database; for local_files it is applied after reading. Always include the `cursor_column` when using `append` mode. |
+| `filter` | string | sql_database only | SQL `WHERE` clause pushed to the source at ingestion via `query_adapter_callback`. May embed `{ref:name}` tokens resolved against the source's `filter_defs`. |
+| `filter_propagate` | string | sql_database only | Name (matched by `alias` first, then `name`) of another table in the same source whose `filter:` should be copied into this table's filter as a subquery join. The referenced table must have a `filter:` set. Requires `incremental.primary_key` or `incremental.merge_key` (provides the join column). May be combined with this table's own `filter:` — the two compose via `AND`. |
 | `incremental` | object | — | Omit for full-replace each run. |
 | `incremental.mode` | enum | — | `replace` (default), `append`, or `merge`. |
 | `incremental.cursor_column` | string | append | Column used to track the high-watermark. Always include this column in `select`. |
