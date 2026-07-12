@@ -1,0 +1,16 @@
+# metadata_enhancements.yaml — user-maintained overlay, deep-merged on top of
+# metadata.yaml at load time (openmedallion.metadata.load_metadata). Survives
+# `medallion metadata generate`/`refresh` regenerating metadata.yaml, since
+# only this file is hand-edited going forward.
+
+tables:
+  employees_enriched:
+    columns:
+      salary:
+        # A human reviewer adds a synonym the LLM draft didn't think of,
+        # without needing to touch (or re-approve) the rest of the table.
+        synonyms: [pay, compensation, take-home]
+
+glossary:
+  # Enhancements can also add glossary entries the LLM draft never generates.
+  fiscal_year: "Oracle HR demo uses calendar year; no fiscal offset."

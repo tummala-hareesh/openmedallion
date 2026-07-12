@@ -30,6 +30,25 @@ medallion query <project> "<question>" [--projects PATH] [--model MODEL] [--prov
     --provider  LLM backend: ollama | openrouter | openai | custom
                 (default: from settings / ollama).
 
+medallion metadata generate <project> [--projects PATH] [--model MODEL] [--provider PROVIDER]
+    LLM-draft metadata.yaml for silver/gold tables not yet status: approved.
+    Approved tables are left completely untouched. Part of the RAG accuracy
+    roadmap (see CLAUDE.md) — `metadata refresh` is not yet built.
+    Requires: openmedallion[cerebrum]
+
+    --projects  Project root directory (default: . — current directory).
+    --model     Model identifier (default: from settings / llama3.2).
+    --provider  LLM backend: ollama | openrouter | openai | custom
+                (default: from settings / ollama).
+
+medallion metadata approve <project> [--projects PATH]
+    Interactively review draft/stale tables in metadata.yaml one at a time —
+    [a]pprove, [s]kip (leave as-is, reviewable later), or [q]uit early.
+    Each approval is written to disk immediately, so quitting mid-review
+    never loses already-approved tables.
+
+    --projects  Project root directory (default: . — current directory).
+
 medallion ask <project> [--projects PATH] [--port PORT] [--model MODEL] [--provider PROVIDER]
     Start the cerebrum LLM engine + neuron FastAPI server on :8000.
     Requires: openmedallion[cerebrum]
@@ -58,6 +77,8 @@ Examples
     medallion query     sales_project "What are the top 5 products by revenue?"
     medallion query     sales_project "Show monthly trends" --model mistral
     medallion query     sales_project "Top revenue" --provider openrouter --model openai/gpt-4o
+    medallion metadata generate sales_project
+    medallion metadata approve  sales_project
     medallion ask       sales_project
     medallion ask       sales_project --model mistral --port 8001
     medallion ask       sales_project --provider openrouter --model openai/gpt-4o
@@ -228,6 +249,107 @@ def _print_table(rows: list[dict]) -> None:
         print("  " + "  ".join(str(row.get(c, "")).ljust(widths[c]) for c in cols))
 
 
+def cmd_metadata(args: argparse.Namespace) -> None:
+    if args.metadata_command == "generate":
+        cmd_metadata_generate(args)
+    elif args.metadata_command == "approve":
+        cmd_metadata_approve(args)
+
+
+def cmd_metadata_generate(args: argparse.Namespace) -> None:
+    _W = 58
+    print(f"\n{'━' * _W}")
+    print(f"  medallion  ·  metadata generate  ·  {args.project}")
+    print(f"{'━' * _W}\n")
+
+    from openmedallion.config import settings
+    from openmedallion.metadata.generator import generate_metadata
+
+    provider = args.provider or settings.LLM_PROVIDER
+    model    = args.model    or settings.LLM_MODEL
+
+    print(f"  🤖  provider →  {provider}")
+    print(f"  🤖  model    →  {model}\n")
+
+    def _on_step(msg: str) -> None:
+        print(f"  ·  {msg}", flush=True)
+
+    try:
+        import httpx
+        result = generate_metadata(
+            args.project, args.projects,
+            model=model, provider=provider,
+            api_key=settings.LLM_API_KEY, base_url=settings.LLM_BASE_URL,
+            on_step=_on_step,
+        )
+    except (httpx.ConnectError, httpx.ConnectTimeout):
+        if provider == "ollama":
+            _url = settings.LLM_BASE_URL or settings.OLLAMA_URL
+            print(f"\n  ❌  Ollama is not reachable at {_url}")
+            print("       Start it with: ollama serve")
+        else:
+            print(f"\n  ❌  LLM provider '{provider}' is not reachable.")
+            print("       Check your base_url and network connection.")
+        sys.exit(1)
+    except Exception as exc:
+        print(f"\n  ❌  {exc}")
+        sys.exit(1)
+
+    n_approved = sum(1 for t in result.tables.values() if t.status == "approved")
+    n_draft    = len(result.tables) - n_approved
+    print(f"\n  ✅  {len(result.tables)} table(s) — {n_draft} drafted, {n_approved} already approved (untouched)")
+    print(f"  📄  Written to: {Path(args.projects) / args.project / 'metadata.yaml'}")
+    print(f"       Review with: medallion metadata approve {args.project}")
+    print(f"\n{'━' * _W}\n")
+
+
+def cmd_metadata_approve(args: argparse.Namespace) -> None:
+    from openmedallion.metadata.approve import approve_metadata, list_reviewable_tables
+
+    _W = 58
+    print(f"\n{'━' * _W}")
+    print(f"  medallion  ·  metadata approve  ·  {args.project}")
+    print(f"{'━' * _W}\n")
+
+    try:
+        reviewable = list_reviewable_tables(args.project, args.projects)
+    except (FileNotFoundError, ValueError) as exc:
+        print(f"  ❌  {exc}")
+        sys.exit(1)
+
+    if not reviewable:
+        print("  ✅  Nothing to review — no draft/stale tables in metadata.yaml.")
+        print(f"\n{'━' * _W}\n")
+        return
+
+    print(f"  {len(reviewable)} table(s) to review — [a]pprove / [s]kip (default) / [q]uit\n")
+    n_approved = 0
+    for name, table in reviewable:
+        print(f"  {'─' * (_W - 2)}")
+        print(f"  {name}  ({table.layer}, status: {table.status})")
+        if table.description:
+            print(f"    description : {table.description}")
+        if table.synonyms:
+            print(f"    synonyms    : {', '.join(table.synonyms)}")
+        for col_name, col in table.columns.items():
+            print(f"    · {col_name}: {col.description or '(no description)'}")
+
+        choice = input("\n  approve this table? [a/s/q] ").strip().lower()
+        if choice in ("q", "quit"):
+            print("\n  Stopping review — remaining tables left as-is.")
+            break
+        if choice in ("a", "approve"):
+            approve_metadata(args.project, args.projects, {name: {"status": "approved"}})
+            n_approved += 1
+            print("  ✅  approved\n")
+        else:
+            print("  ⏭️   skipped (left as-is, reviewable again later)\n")
+
+    print(f"  {'─' * (_W - 2)}")
+    print(f"  {n_approved} table(s) approved this session.")
+    print(f"\n{'━' * _W}\n")
+
+
 def cmd_ask(args: argparse.Namespace) -> None:
     _W = 58
     print(f"\n{'━' * _W}")
@@ -364,6 +486,42 @@ def _build_parser() -> argparse.ArgumentParser:
         help="LLM backend: ollama | openrouter | openai | custom (default: from settings / ollama)",
     )
 
+    # metadata
+    p_metadata = sub.add_parser(
+        "metadata",
+        help="Manage a project's metadata.yaml (RAG accuracy roadmap, requires [cerebrum] extra)",
+    )
+    meta_sub = p_metadata.add_subparsers(dest="metadata_command", metavar="ACTION")
+    meta_sub.required = True
+
+    p_meta_generate = meta_sub.add_parser(
+        "generate",
+        help="LLM-draft metadata.yaml for silver/gold tables not yet approved",
+    )
+    p_meta_generate.add_argument("project", help="Project name")
+    p_meta_generate.add_argument(
+        "--projects", default=".", metavar="PATH",
+        help="Parent directory containing the project folder (default: .)",
+    )
+    p_meta_generate.add_argument(
+        "--model", default=None, metavar="MODEL",
+        help="Model identifier (default: from settings.yaml / MEDALLION_LLM_MODEL / llama3.2)",
+    )
+    p_meta_generate.add_argument(
+        "--provider", default=None, metavar="PROVIDER",
+        help="LLM backend: ollama | openrouter | openai | custom (default: from settings / ollama)",
+    )
+
+    p_meta_approve = meta_sub.add_parser(
+        "approve",
+        help="Interactively review draft/stale tables in metadata.yaml",
+    )
+    p_meta_approve.add_argument("project", help="Project name")
+    p_meta_approve.add_argument(
+        "--projects", default=".", metavar="PATH",
+        help="Parent directory containing the project folder (default: .)",
+    )
+
     # ask
     p_ask = sub.add_parser(
         "ask",
@@ -410,11 +568,12 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 _HANDLERS = {
-    "init":   cmd_init,
-    "run":    cmd_run,
-    "query":  cmd_query,
-    "ask":    cmd_ask,
-    "cortex": cmd_cortex,
+    "init":     cmd_init,
+    "run":      cmd_run,
+    "query":    cmd_query,
+    "metadata": cmd_metadata,
+    "ask":      cmd_ask,
+    "cortex":   cmd_cortex,
 }
 
 

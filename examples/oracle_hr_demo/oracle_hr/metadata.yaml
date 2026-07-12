@@ -1,0 +1,49 @@
+# metadata.yaml — RAG Accuracy Improvement, Phase 1 (see CLAUDE.md roadmap).
+#
+# Hand-written here to demonstrate the schema shape; `medallion metadata
+# generate` drafts entries like these from the silver/gold schema. status:
+# draft until a human reviews it via `medallion metadata approve` — only
+# status: approved tables get injected into cerebrum's LLM prompt context
+# in Phase 2 (not yet built).
+
+tables:
+  employees_enriched:
+    layer: silver
+    description: "One row per active employee, enriched with department name and job title."
+    status: draft
+    synonyms: [staff, personnel, headcount]
+    columns:
+      employee_id:
+        description: "Unique identifier for an employee."
+        value_examples: [100, 101, 102]
+        synonyms: [emp_id]
+      salary:
+        description: "Employee's annual base salary in USD."
+        value_examples: [17000, 9000, 6000]
+        synonyms: [pay, compensation]
+      department_name:
+        description: "Name of the department the employee is assigned to."
+        value_examples: [Administration, Marketing, IT, Sales, Executive]
+      job_title:
+        description: "Human-readable job title, joined in from the jobs table."
+        value_examples: [Sales Representative, Accountant, Programmer]
+
+  headcount_by_department:
+    layer: gold
+    description: "Headcount, total payroll, and average salary aggregated per department."
+    status: draft
+    synonyms: [department summary, staffing levels]
+    columns:
+      headcount:
+        description: "Number of employees in the department."
+      total_payroll:
+        description: "Sum of salary across all employees in the department."
+      avg_salary:
+        description: "Mean salary across all employees in the department."
+
+glossary:
+  target_departments: >-
+    the five departments in scope for this demo — Administration, Marketing,
+    IT, Sales, Executive (department_id 10, 20, 60, 80, 90). Purchasing (30)
+    and Shipping (50) are excluded at bronze ingestion via filter_defs in
+    bronze.yaml.

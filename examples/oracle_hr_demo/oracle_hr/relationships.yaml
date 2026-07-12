@@ -1,0 +1,23 @@
+# relationships.yaml — RAG Accuracy Improvement, Phase 1 (see CLAUDE.md roadmap).
+#
+# Hand-written here to demonstrate the schema shape; `medallion relationships
+# generate` (not yet built) will eventually draft entries like these via
+# RelationshipDetector's three rules (fk_naming, lineage, grain). status:
+# draft until a human reviews it via `medallion relationships approve` (also
+# not yet built) — unlike metadata.yaml, there is no relationships_enhancements
+# overlay; hand-edit this file directly.
+
+relationships:
+  - from_table: employees_enriched
+    to_table: departments
+    join_on: [department_id]
+    confidence: high
+    status: approved
+    method: fk_naming
+
+  - from_table: employees_enriched
+    to_table: employees_enriched
+    join_on: [manager_id]
+    confidence: medium
+    status: draft
+    method: fk_naming
