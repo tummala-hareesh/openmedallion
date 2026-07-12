@@ -17,12 +17,14 @@ the merged dict and translates ``pydantic.ValidationError`` into the plain
 """
 from __future__ import annotations
 
+import re
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 _VALID_DIALECTS      = {"oracle", "postgres", "mysql", "mssql", "sqlite"}
 _VALID_NORMALIZE_OPS = {"upper", "lower", "strip", "strip_lower"}
+_REF_PATTERN         = re.compile(r"\{ref:(\w+)\}")
 
 
 class _Base(BaseModel):
@@ -103,6 +105,7 @@ class SourceBlock(_Base):
     incremental: IncrementalBlock | None = None
     alias: str | None = None
     select: list[str] | None = Field(default=None, min_length=1)
+    filter_defs: dict[str, str] | None = None
 
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
@@ -135,6 +138,22 @@ class SourceBlock(_Base):
                     f"filter_propagate: table '{tbl.filter_propagate}' "
                     f"referenced by '{tbl.alias or tbl.name}' has no 'filter' to propagate"
                 )
+        return self
+
+    @model_validator(mode="after")
+    def _check_filter_defs_refs(self) -> "SourceBlock":
+        if not self.tables:
+            return self
+        defs = self.filter_defs or {}
+        for tbl in self.tables:
+            if not tbl.filter:
+                continue
+            for name in _REF_PATTERN.findall(tbl.filter):
+                if name not in defs:
+                    raise ValueError(
+                        f"filter_defs: '{name}' referenced via '{{ref:{name}}}' in table "
+                        f"'{tbl.alias or tbl.name}' not found in filter_defs"
+                    )
         return self
 
 

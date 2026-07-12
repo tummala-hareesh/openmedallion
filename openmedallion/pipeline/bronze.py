@@ -35,6 +35,14 @@ Either ``connection_string`` (raw SQLAlchemy URL, env-var expanded) or the
 ``credentials_file`` + ``dialect`` pair.  When ``credentials_file`` is given,
 openmedallion reads the named YAML file, looks up the ``dialect`` block, and
 assembles the connection string internally.
+
+Named filter fragments (``source.filter_defs``)
+--------------------------------------------------------
+A top-level ``filter_defs:`` dict on a ``sql_database`` source defines
+reusable SQL filter snippets by name.  Any table's ``filter:`` (or a
+referenced table's ``filter:`` picked up via ``filter_propagate``) may embed
+one with ``{ref:name}`` — expanded before the clause is sent to the DB.  This
+avoids repeating the same subquery across multiple tables.
 """
 import dlt
 import dlt.sources
@@ -42,12 +50,44 @@ from dlt.sources.rest_api import rest_api_source
 import glob as _glob
 import gzip
 import io
+import re
 import polars as pl
 from pathlib import Path
 from urllib.parse import urlparse
 
 from openmedallion import storage
 from openmedallion.config.loader import expand_env_str
+
+
+# ---------------------------------------------------------------------------
+# filter_defs — named SQL filter fragments referenced via {ref:name}
+# ---------------------------------------------------------------------------
+
+_REF_PATTERN = re.compile(r"\{ref:(\w+)\}")
+
+
+def _expand_filter_refs(clause: str, defs: dict) -> str:
+    """Replace all ``{ref:name}`` tokens in *clause* with entries from *defs*.
+
+    Args:
+        clause: A SQL filter string, possibly containing ``{ref:name}`` tokens.
+        defs: The ``filter_defs`` dict (name -> SQL fragment) for the source.
+
+    Returns:
+        str: *clause* with every ``{ref:name}`` token substituted.
+
+    Raises:
+        ValueError: If a referenced name is not present in *defs*.
+    """
+    def _replace(m: re.Match) -> str:
+        name = m.group(1)
+        if name not in defs:
+            raise ValueError(
+                f"[bronze] filter_defs: '{name}' referenced via '{{ref:{name}}}' "
+                f"not found in filter_defs."
+            )
+        return defs[name]
+    return _REF_PATTERN.sub(_replace, clause)
 
 
 # ---------------------------------------------------------------------------
@@ -419,6 +459,69 @@ class BronzeLoader:
                 f"Available: {available}"
             )
 
+    def _resolve_filter_clause(self, tbl: dict, tables_cfg: list, inc: dict, schema: str | None) -> str | None:
+        """Resolve the final SQL WHERE clause for one table.
+
+        Combines ``filter_propagate`` (subquery against another table) with the
+        table's own ``filter:``, then expands any ``{ref:name}`` tokens against
+        ``filter_defs``. Pure — no DB access, safe to call outside ``load()``.
+
+        Args:
+            tbl: The table config dict.
+            tables_cfg: All tables in the current source (for filter_propagate lookup).
+            inc: The table's resolved ``incremental`` block.
+            schema: The DB schema name, or ``None``.
+
+        Returns:
+            str | None: The resolved filter clause, or ``None`` if the table has
+            neither ``filter`` nor ``filter_propagate``.
+        """
+        filter_clause    = tbl.get("filter")
+        filter_propagate = tbl.get("filter_propagate", None)
+
+        if filter_propagate:
+            if self.debug_enabled:
+                print(f"[DEBUG] _sql_source: filter_propagate={filter_propagate!r} for table={tbl['name']!r}")
+            ref = next(
+                (t for t in tables_cfg if (t.get("alias") or t["name"]) == filter_propagate),
+                None,
+            )
+            if ref is None:
+                raise ValueError(
+                    f"[bronze] filter_propagate: table '{filter_propagate}' not found in source config "
+                    f"(match by alias, then name)."
+                )
+            ref_filter = ref.get("filter")
+            if not ref_filter:
+                raise ValueError(
+                    f"[bronze] filter_propagate: table '{filter_propagate}' has no 'filter' to propagate."
+                )
+            join_key = inc.get("merge_key") or inc.get("primary_key")
+            if not join_key:
+                raise ValueError(
+                    f"[bronze] filter_propagate on '{tbl['name']}': set 'primary_key' or 'merge_key' "
+                    f"under 'incremental' so the join column can be determined."
+                )
+            if isinstance(join_key, list):
+                join_key = join_key[0]
+
+            ref_table = f"{schema}.{ref['name']}" if schema else ref["name"]
+            propagate_clause = (
+                f"{join_key} IN ("
+                f"SELECT {join_key} FROM {ref_table} WHERE {ref_filter})"
+            )
+            filter_clause = (
+                f"{propagate_clause} AND {filter_clause}"
+                if filter_clause
+                else propagate_clause
+            )
+
+        if filter_clause:
+            filter_defs = self.src.get("filter_defs") or {}
+            filter_clause = _expand_filter_refs(filter_clause, filter_defs)
+
+        return filter_clause
+
     def _sql_source(self):
         from dlt.sources.sql_database import sql_table
         from sqlalchemy import text as _sa_text
@@ -455,50 +558,11 @@ class BronzeLoader:
             # select: NOT applied here — sel.with_only_columns() inside the
             # adapter corrupts dlt's incremental cursor tracking. Column pruning
             # for SQL sources is applied in _collect_parquets() instead.
-            filter_clause     = tbl.get("filter")
-            filter_propagate  = tbl.get("filter_propagate", None)
-
-            if filter_propagate:
-                if self.debug_enabled:
-                    print(f"[DEBUG] _sql_source: filter_propagate={filter_propagate!r} for table={tbl['name']!r}")
-                ref = next(
-                    (t for t in tables_cfg if (t.get("alias") or t["name"]) == filter_propagate),
-                    None,
-                )
-                if ref is None:
-                    raise ValueError(
-                        f"[bronze] filter_propagate: table '{filter_propagate}' not found in source config "
-                        f"(match by alias, then name)."
-                    )
-                ref_filter = ref.get("filter")
-                if not ref_filter:
-                    raise ValueError(
-                        f"[bronze] filter_propagate: table '{filter_propagate}' has no 'filter' to propagate."
-                    )
-                join_key = inc.get("merge_key") or inc.get("primary_key")
-                if not join_key:
-                    raise ValueError(
-                        f"[bronze] filter_propagate on '{tbl['name']}': set 'primary_key' or 'merge_key' "
-                        f"under 'incremental' so the join column can be determined."
-                    )
-                if isinstance(join_key, list):
-                    join_key = join_key[0]
-
-                ref_table = f"{schema}.{ref['name']}" if schema else ref["name"]
-                propagate_clause = (
-                    f"{join_key} IN ("
-                    f"SELECT {join_key} FROM {ref_table} WHERE {ref_filter})"
-                )
-                filter_clause = (
-                    f"{propagate_clause} AND {filter_clause}"
-                    if filter_clause
-                    else propagate_clause
-                )
+            filter_clause = self._resolve_filter_clause(tbl, tables_cfg, inc, schema)
 
             if filter_clause:
                 if self.debug_enabled:
                     print(f"[DEBUG] _sql_source: applying filter to {tbl['name']!r}: {filter_clause!r}")
-                from sqlalchemy import text as _sa_text
                 kwargs["query_adapter_callback"] = (
                     lambda sel, _t, _sql=filter_clause: sel.where(_sa_text(_sql))
                 )

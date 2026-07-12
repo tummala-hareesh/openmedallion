@@ -11,6 +11,12 @@ sources:
     # dialect:          oracle       # or postgres, mysql, mssql
     # credentials_file: ../secrets.yaml
 
+    # filter_defs: named SQL fragments referenced via {ref:name} in any table's
+    # filter: below. Keeps the "five target departments" condition in one place
+    # instead of repeating it if more tables needed to filter on it.
+    filter_defs:
+      target_departments: "department_id IN (10, 20, 60, 80, 90)"
+
     tables:
       # ── employees ───────────────────────────────────────────────────────────
       # filter: push a SQL WHERE clause so that only employees in the five target
@@ -20,7 +26,7 @@ sources:
       #   hire_date must be included — it is the incremental cursor column.
       - name: employees
         select: [employee_id, first_name, last_name, hire_date, job_id, salary, manager_id, department_id]
-        filter: "department_id IN (10, 20, 60, 80, 90)"
+        filter: "{ref:target_departments}"
         incremental:
           mode: append
           cursor_column: hire_date

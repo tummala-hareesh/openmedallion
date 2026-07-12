@@ -391,3 +391,40 @@ class TestPydanticSchema:
         }]
         with pytest.raises(ValueError, match="limit"):
             _validate_config(cfg)
+
+
+class TestFilterDefsSchema:
+    """Coverage for T-TODO-3: named filter fragments (filter_defs + {ref:name})."""
+
+    def test_filter_defs_accepted(self):
+        cfg = _valid_cfg(**{"source.type": "sql_database"})
+        cfg["source"]["filter_defs"] = {"active_only": "status = 'ACTIVE'"}
+        cfg["source"]["tables"] = [{"name": "orders", "filter": "{ref:active_only}"}]
+        _validate_config(cfg)
+
+    def test_filter_defs_not_a_dict_raises(self):
+        cfg = _valid_cfg(**{"source.type": "sql_database"})
+        cfg["source"]["filter_defs"] = ["active_only"]
+        with pytest.raises(ValueError, match="filter_defs"):
+            _validate_config(cfg)
+
+    def test_unresolvable_ref_raises_at_config_load(self):
+        cfg = _valid_cfg(**{"source.type": "sql_database"})
+        cfg["source"]["tables"] = [{"name": "orders", "filter": "{ref:nonexistent}"}]
+        with pytest.raises(ValueError, match="nonexistent"):
+            _validate_config(cfg)
+
+    def test_ref_resolvable_across_two_tables(self):
+        cfg = _valid_cfg(**{"source.type": "sql_database"})
+        cfg["source"]["filter_defs"] = {"review": "processcode IN (1,2,3)"}
+        cfg["source"]["tables"] = [
+            {"name": "folderprocess", "filter": "{ref:review}"},
+            {"name": "folderprocessattempt", "filter": "{ref:review} AND resultcode = 31"},
+        ]
+        _validate_config(cfg)
+
+    def test_unknown_top_level_filter_defs_typo_raises(self):
+        cfg = _valid_cfg(**{"source.type": "sql_database"})
+        cfg["source"]["filter_defz"] = {"active_only": "status = 'ACTIVE'"}
+        with pytest.raises(ValueError, match="filter_defz"):
+            _validate_config(cfg)

@@ -185,7 +185,7 @@ from openmedallion.config.schema import ProjectConfig
 
 `openmedallion/config/schema.py` defines the full set of Pydantic models backing `_validate_config` — `ProjectConfig`, `PipelineBlock`, `PathsBlock`, `SourceBlock`, `SourceTable`, `IncrementalBlock`, `TransformSpec`, `SilverTable`, `DerivedTable`, `DuckdbBlock`, `BronzeToSilver`, `MetricSpec`, `SortSpec`, `Aggregation`, `GoldProject`, `SilverToGold`, `BiExport`, `ExploreSpec`.
 
-Every model sets `model_config = ConfigDict(extra="forbid")` (the one exception is `DestinationBlock`, which stays permissive since dlt destinations like `bigquery`/`snowflake` take backend-specific kwargs not worth enumerating). Cross-field rules (credentials_file → dialect, filter_propagate → valid + filtered reference, duckdb enabled → path required) are expressed as `@model_validator(mode="after")` methods rather than imperative checks.
+Every model sets `model_config = ConfigDict(extra="forbid")` (the one exception is `DestinationBlock`, which stays permissive since dlt destinations like `bigquery`/`snowflake` take backend-specific kwargs not worth enumerating). Cross-field rules (credentials_file → dialect, filter_propagate → valid + filtered reference, duckdb enabled → path required, filter_defs → every `{ref:name}` resolvable) are expressed as `@model_validator(mode="after")` methods rather than imperative checks.
 
 You can build a `ProjectConfig` directly for type-checked access to a merged config:
 

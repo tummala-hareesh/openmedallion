@@ -35,7 +35,7 @@
 
 ---
 
-## T-TODO-3: Named filter fragments (`filter_defs`) in `bronze.yaml`
+## DONE: T-TODO-3: Named filter fragments (`filter_defs`) in `bronze.yaml`
 
 **What:** Allow users to define reusable SQL filter snippets once under a top-level `filter_defs:` key, then reference them by name inside any `filter:` string using a `{ref:name}` placeholder. The loader expands all `{ref:...}` tokens before passing the clause to SQLAlchemy.
 
@@ -77,6 +77,8 @@ tables:
 **Context:** `_sql_source()` at `bronze.py:430`. Filter resolution currently at lines 457–495. Expansion step slots in at line 496, before the `if filter_clause:` block.
 
 **Depends on / blocked by:** Independent.
+
+**Implemented as:** `pipeline/bronze.py:_expand_filter_refs()` (pure module-level helper) + `pipeline/bronze.py:BronzeLoader._resolve_filter_clause()` (extracted from the inline logic that used to live in `_sql_source()`, so `filter_propagate` + `filter_defs` resolution is now testable without a DB connection). `config/schema.py:SourceBlock` gained a `filter_defs: dict[str,str] | None` field and a `_check_filter_defs_refs()` cross-field validator that catches unresolvable `{ref:name}` tokens at config-load time. Tests in `tests/test_filter_defs.py` (13 tests) and `tests/test_config.py:TestFilterDefsSchema` (5 tests). `examples/oracle_hr_demo` updated to use `filter_defs` for its `employees` table filter. Note: expansion is a single pass, not recursive — a `filter_defs` value containing another `{ref:name}` is not expanded further (documented in CLAUDE.md).
 
 ---
 
