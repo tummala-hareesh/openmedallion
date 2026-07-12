@@ -880,6 +880,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#projectconfig-pydantic-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ProjectConfig (Pydantic schema)
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1078,6 +1089,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#projectconfig-pydantic-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ProjectConfig (Pydantic schema)
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1268,6 +1290,7 @@
 <div class="highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">_validate_config</span><span class="p">(</span><span class="n">cfg</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </span></code></pre></div>
 <p>Validate a fully-merged project config dict. Called automatically by <code>load_project()</code> — you rarely need to call this directly.</p>
+<p>Internally builds a <a href="#projectconfig-pydantic-schema"><code>ProjectConfig</code></a> Pydantic model from <code>cfg</code> and translates any <code>pydantic.ValidationError</code> into a plain <code>ValueError</code> whose message identifies the failing key path — same contract as before, just backed by typed models instead of hand-written <code>if</code> checks.</p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1290,15 +1313,29 @@
 <ul>
 <li><code>pipeline.name</code> — non-empty string</li>
 <li>All four <code>paths.*</code> keys present</li>
-<li><code>source.type</code> (if present) — one of <code>sql_database</code>, <code>rest_api</code>, <code>filesystem</code></li>
+<li><code>source.type</code> / each <code>sources[i].type</code> — one of <code>sql_database</code>, <code>rest_api</code>, <code>filesystem</code>, <code>local_files</code></li>
 <li>Each <code>bronze_to_silver.tables[i]</code> — has <code>source_file</code> and <code>output_file</code></li>
-<li>Each <code>transforms[j].type</code> — one of <code>rename</code>, <code>cast</code>, <code>drop</code>, <code>udf</code></li>
-<li>UDF transform blocks — have <code>file</code> and <code>function</code></li>
+<li>Each <code>transforms[j].type</code> — one of the declarative transform types, with type-specific required keys (e.g. <code>udf</code> needs <code>file</code> + <code>function</code>, <code>map_values</code> needs <code>column</code> + <code>mapping</code>)</li>
 <li>Each <code>silver_to_gold.projects[i]</code> — has <code>name</code></li>
 <li>Each <code>pre_agg_udf</code> block — has <code>file</code> and <code>function</code></li>
+<li><strong>Unknown keys anywhere in the schema</strong> — every block uses <code>extra="forbid"</code>, so a typo like <code>filter_propogate</code> or <code>pipline</code> is rejected at load time instead of being silently ignored</li>
+<li><strong><code>filter_propagate</code> cross-reference</strong> — the referenced table must exist in the same source (matched by alias, then name) and must itself have a <code>filter</code> set</li>
 </ul>
 <p><strong>Example error message:</strong></p>
 <div class="highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>ValueError: [config] bronze_to_silver.tables[0].source_file is required
+</span></code></pre></div>
+<hr />
+<h2 id="projectconfig-pydantic-schema"><code>ProjectConfig</code> (Pydantic schema)<a class="headerlink" href="#projectconfig-pydantic-schema" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">openmedallion.config.schema</span><span class="w"> </span><span class="kn">import</span> <span class="n">ProjectConfig</span>
+</span></code></pre></div>
+<p><code>openmedallion/config/schema.py</code> defines the full set of Pydantic models backing <code>_validate_config</code> — <code>ProjectConfig</code>, <code>PipelineBlock</code>, <code>PathsBlock</code>, <code>SourceBlock</code>, <code>SourceTable</code>, <code>IncrementalBlock</code>, <code>TransformSpec</code>, <code>SilverTable</code>, <code>DerivedTable</code>, <code>DuckdbBlock</code>, <code>BronzeToSilver</code>, <code>MetricSpec</code>, <code>SortSpec</code>, <code>Aggregation</code>, <code>GoldProject</code>, <code>SilverToGold</code>, <code>BiExport</code>, <code>ExploreSpec</code>.</p>
+<p>Every model sets <code>model_config = ConfigDict(extra="forbid")</code> (the one exception is <code>DestinationBlock</code>, which stays permissive since dlt destinations like <code>bigquery</code>/<code>snowflake</code> take backend-specific kwargs not worth enumerating). Cross-field rules (credentials_file → dialect, filter_propagate → valid + filtered reference, duckdb enabled → path required, filter_defs → every <code>{ref:name}</code> resolvable) are expressed as <code>@model_validator(mode="after")</code> methods rather than imperative checks.</p>
+<p>You can build a <code>ProjectConfig</code> directly for type-checked access to a merged config:</p>
+<div class="highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">openmedallion.config.schema</span><span class="w"> </span><span class="kn">import</span> <span class="n">ProjectConfig</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="n">model</span> <span class="o">=</span> <span class="n">ProjectConfig</span><span class="p">(</span><span class="o">**</span><span class="n">cfg</span><span class="p">)</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="n">model</span><span class="o">.</span><span class="n">pipeline</span><span class="o">.</span><span class="n">name</span>       <span class="c1"># str</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="n">model</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">type</span>         <span class="c1"># Literal[&quot;sql_database&quot;, &quot;rest_api&quot;, &quot;filesystem&quot;, &quot;local_files&quot;]</span>
 </span></code></pre></div>
 
 
