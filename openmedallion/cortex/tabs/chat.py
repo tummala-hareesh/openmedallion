@@ -1,7 +1,19 @@
-"""cortex/tabs/chat.py — Chat tab: message history, input, empty state, suggested follow-up."""
+"""cortex/tabs/chat.py — Chat tab: message history, input, empty state,
+suggested follow-up, thumbs up/down feedback (RAG roadmap Phase 3, build
+order step 13).
+
+Thumbs up/down never writes harvested.jsonl/failures.jsonl directly — cortex
+never imports cerebrum/pipeline internals, only talks to neuron over HTTP
+(a pre-existing convention) — so a click just calls ``client.feedback()``,
+which POSTs to neuron's ``/feedback`` endpoint. ``store-chat-metadata``
+(declared in ``cortex/app.py``) holds one ``{question, sql, columns,
+row_count}`` entry per assistant turn so the feedback callback can look up
+what to submit without re-deriving it from the rendered chat bubbles.
+"""
 from __future__ import annotations
 
-from dash import Input, Output, State, callback, dcc, html
+from dash import MATCH, Input, Output, State, callback, ctx, dcc, html
+from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 
 from openmedallion.cortex.theme import (
@@ -141,22 +153,32 @@ def register_callbacks(client) -> None:
         Output("chat-empty-collapse",  "is_open"),
         Output("chat-suggested",       "children"),
         Output("chat-suggested",       "style"),
+        Output("store-chat-metadata",  "data"),
         Input("chat-ask-btn",          "n_clicks"),
         State("chat-input",            "value"),
         State("chat-history",          "children"),
         State("store-project",         "data"),
+        State("store-chat-metadata",   "data"),
         prevent_initial_call=True,
     )
-    def handle_ask(n_clicks, question, history, project):
+    def handle_ask(n_clicks, question, history, project, chat_metadata):
+        chat_metadata = list(chat_metadata or [])
         if not question or not question.strip():
-            return history, question, None, None, None, None, True, [], {"display": "none"}
+            return history, question, None, None, None, None, True, [], {"display": "none"}, chat_metadata
 
         history = list(history or [])
         history.append(_user_bubble(question.strip()))
 
         try:
             result = client.ask(question.strip(), project or "")
-            history.append(_assistant_bubble(result.answer, result.sql))
+            index = len(chat_metadata)
+            history.append(_assistant_bubble(result.answer, result.sql, index))
+            chat_metadata.append({
+                "question": question.strip(),
+                "sql":      result.sql,
+                "columns":  result.columns,
+                "row_count": result.row_count,
+            })
             suggested_children, suggested_style = _suggested_ui(result.recommended_prompt)
             return (
                 history, "",
@@ -164,10 +186,45 @@ def register_callbacks(client) -> None:
                 result.rows, result.recommended_prompt,
                 False,
                 suggested_children, suggested_style,
+                chat_metadata,
             )
         except Exception as exc:
             history.append(_error_bubble(str(exc)))
-            return history, question, None, None, None, None, False, [], {"display": "none"}
+            return history, question, None, None, None, None, False, [], {"display": "none"}, chat_metadata
+
+    @callback(
+        Output({"type": "thumb-up",     "index": MATCH}, "disabled"),
+        Output({"type": "thumb-down",   "index": MATCH}, "disabled"),
+        Output({"type": "thumb-status", "index": MATCH}, "children"),
+        Input({"type": "thumb-up",      "index": MATCH}, "n_clicks"),
+        Input({"type": "thumb-down",    "index": MATCH}, "n_clicks"),
+        State("store-chat-metadata",    "data"),
+        State("store-project",         "data"),
+        prevent_initial_call=True,
+    )
+    def handle_feedback(up_clicks, down_clicks, chat_metadata, project):
+        triggered = ctx.triggered_id
+        if not triggered or not (up_clicks or down_clicks):
+            raise PreventUpdate
+
+        index = triggered["index"]
+        chat_metadata = chat_metadata or []
+        if index >= len(chat_metadata):
+            raise PreventUpdate
+        entry = chat_metadata[index]
+        thumbs_up = triggered["type"] == "thumb-up"
+
+        try:
+            client.feedback(
+                entry["question"], entry["sql"],
+                entry.get("columns", []), entry.get("row_count", 0),
+                thumbs_up, project or "",
+            )
+            status = "Thanks for the feedback!"
+        except Exception:
+            status = "Could not record feedback."
+
+        return True, True, status
 
     @callback(
         Output("chat-input", "value", allow_duplicate=True),
@@ -205,7 +262,7 @@ def _user_bubble(text: str) -> html.Div:
     )
 
 
-def _assistant_bubble(answer: str, sql: str) -> html.Div:
+def _assistant_bubble(answer: str, sql: str, index: int) -> html.Div:
     children: list = [
         html.Div(
             answer,
@@ -261,7 +318,29 @@ def _assistant_bubble(answer: str, sql: str) -> html.Div:
             ], style={"maxWidth": "74%", "marginTop": "6px"}),
         )
 
+    children.append(_thumbs_row(index))
+
     return html.Div(children, style={"display": "flex", "flexDirection": "column", "gap": "0"})
+
+
+def _thumbs_row(index: int) -> html.Div:
+    _btn_style = {
+        "background": "transparent",
+        "border": "none",
+        "cursor": "pointer",
+        "fontSize": "14px",
+        "padding": "2px 4px",
+        "opacity": "0.55",
+        "transition": "opacity 0.15s",
+    }
+    return html.Div([
+        html.Button("👍", id={"type": "thumb-up",   "index": index}, n_clicks=0, style=_btn_style),
+        html.Button("👎", id={"type": "thumb-down", "index": index}, n_clicks=0, style=_btn_style),
+        html.Span(
+            id={"type": "thumb-status", "index": index},
+            style={"fontSize": "11px", "color": TEXT_MUTED, "marginLeft": "4px", "fontFamily": FONT_UI},
+        ),
+    ], style={"display": "flex", "alignItems": "center", "gap": "2px", "marginTop": "6px"})
 
 
 def _error_bubble(msg: str) -> html.Div:

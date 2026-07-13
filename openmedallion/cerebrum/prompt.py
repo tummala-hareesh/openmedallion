@@ -38,7 +38,12 @@ _FEW_SHOT: list[dict[str, str]] = [
 ]
 
 
-def build_prompt(schema_context: str, question: str) -> str:
+def build_prompt(
+    schema_context: str,
+    question: str,
+    *,
+    few_shot: list[dict[str, str]] | None = None,
+) -> str:
     """Return a fully-formed LLM prompt embedding the schema and question.
 
     Parameters
@@ -47,19 +52,26 @@ def build_prompt(schema_context: str, question: str) -> str:
         DDL-style schema string from :func:`~cerebrum.schema.build_schema_context`.
     question:
         Natural-language question from the user.
+    few_shot:
+        Optional dynamically-retrieved examples (see
+        :mod:`~openmedallion.cerebrum.retrieval`) — a list of
+        ``{"question": ..., "sql": ...}`` dicts, most-relevant first. When
+        omitted (or empty — e.g. no ``verified: true`` examples exist yet),
+        falls back to the static built-in few-shot list unchanged.
 
     Returns
     -------
     str
         Complete prompt ready for the LLM.
     """
-    few_shot = "\n".join(
-        f"Q: {ex['question']}\nSQL: {ex['sql']}" for ex in _FEW_SHOT
+    examples = few_shot or _FEW_SHOT
+    few_shot_block = "\n".join(
+        f"Q: {ex['question']}\nSQL: {ex['sql']}" for ex in examples
     )
     return (
         f"{_SYSTEM}\n\n"
         f"Schema:\n{schema_context}\n\n"
-        f"Examples:\n{few_shot}\n\n"
+        f"Examples:\n{few_shot_block}\n\n"
         f"Q: {question}\nSQL:"
     )
 

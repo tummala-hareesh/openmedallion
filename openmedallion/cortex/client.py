@@ -1,4 +1,4 @@
-"""cortex/client.py — HTTP client to the neuron /query endpoint.
+"""cortex/client.py — HTTP client to the neuron /query and /feedback endpoints.
 
 Two implementations share the same interface:
 
@@ -8,6 +8,11 @@ Two implementations share the same interface:
 ``MockClient``
     Deterministic offline stub — no network or Ollama required.
     Used for UI development and CI (``USE_MOCK_CLIENT=1``).
+
+cortex never writes harvested.jsonl/failures.jsonl directly (RAG roadmap
+Phase 3, build order step 13) — it never imports cerebrum/pipeline internals,
+only talks to neuron over HTTP, so ``feedback()`` here is a thin POST just
+like ``ask()``, matching this module's whole reason for existing.
 """
 from __future__ import annotations
 
@@ -52,6 +57,26 @@ class NeuronClient:
             raise RuntimeError(detail)
         return QueryResult(**r.json())
 
+    def feedback(
+        self,
+        question: str,
+        sql: str,
+        columns: list[str],
+        row_count: int,
+        thumbs_up: bool,
+        project: str,
+    ) -> None:
+        r = self._client.post("/feedback", json={
+            "project": project, "question": question, "sql": sql,
+            "columns": columns, "row_count": row_count, "thumbs_up": thumbs_up,
+        })
+        if not r.is_success:
+            try:
+                detail = r.json().get("detail") or r.text
+            except Exception:
+                detail = r.text or f"HTTP {r.status_code}"
+            raise RuntimeError(detail)
+
     def close(self) -> None:
         self._client.close()
 
@@ -81,6 +106,17 @@ class MockClient:
             row_count=len(rows),
             columns=["region", "revenue", "orders"],
         )
+
+    def feedback(
+        self,
+        question: str,
+        sql: str,
+        columns: list[str],
+        row_count: int,
+        thumbs_up: bool,
+        project: str,
+    ) -> None:
+        pass  # offline stub — nothing to record
 
     def close(self) -> None:
         pass

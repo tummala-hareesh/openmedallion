@@ -1,10 +1,17 @@
 """neuron/server.py — FastAPI app exposing the cerebrum pipeline over HTTP.
 
-Single endpoint
----------------
+Endpoints
+---------
 POST /query
     Body:    QueryRequest  { question, project }
     Returns: QueryResponse { answer, sql, rows, recommended_prompt, row_count, columns }
+
+POST /feedback
+    Body:    FeedbackRequest  { project, question, sql, columns, row_count, thumbs_up }
+    Returns: FeedbackResponse { status }
+    Records cortex thumbs up/down (RAG roadmap Phase 3, build order step 13)
+    — the single integration point that writes harvested.jsonl/failures.jsonl,
+    since cortex itself never touches project/pipeline data directly.
 
 GET /health
     Returns: { "status": "ok" }
@@ -32,7 +39,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from openmedallion.cerebrum.pipeline import CerebrumPipeline
 from openmedallion.config            import settings
 from openmedallion.neuron.middleware  import AuditMiddleware, RateLimitMiddleware, verify_api_key
-from openmedallion.neuron.models      import QueryRequest, QueryResponse
+from openmedallion.neuron.models      import (
+    FeedbackRequest,
+    FeedbackResponse,
+    QueryRequest,
+    QueryResponse,
+)
 
 app = FastAPI(
     title="openmedallion neuron",
@@ -57,6 +69,16 @@ def _silver_dir(project: str) -> Path:
     return Path(cfg["paths"]["silver"])
 
 
+def _examples_dir(project: str) -> Path | None:
+    path = Path(settings.PROJECTS_ROOT) / project / "examples"
+    return path if path.exists() else None
+
+
+def _load_metadata(project: str):
+    from openmedallion.metadata.loader import load_metadata
+    return load_metadata(project, settings.PROJECTS_ROOT)
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok"}
@@ -77,6 +99,8 @@ async def query_endpoint(
 
     pipeline = CerebrumPipeline(
         silver,
+        examples_dir=_examples_dir(body.project),
+        metadata=_load_metadata(body.project),
         model=settings.LLM_MODEL,
         provider=settings.LLM_PROVIDER,
         api_key=settings.LLM_API_KEY,
@@ -123,3 +147,19 @@ async def query_endpoint(
         row_count=len(rows),
         columns=qr.result.columns,
     )
+
+
+@app.post("/feedback", response_model=FeedbackResponse)
+async def feedback_endpoint(
+    body: FeedbackRequest,
+    _auth=Depends(verify_api_key),
+):
+    from openmedallion.examples.feedback import record_feedback
+
+    record_feedback(
+        body.project, settings.PROJECTS_ROOT,
+        question=body.question, sql=body.sql,
+        columns=body.columns, row_count=body.row_count,
+        thumbs_up=body.thumbs_up,
+    )
+    return FeedbackResponse()

@@ -5,6 +5,7 @@ silver Parquet files are required.
 """
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -149,6 +150,57 @@ class TestQueryEndpoint:
         body = r.json()
         assert body["row_count"] == 0
         assert "No results" in body["answer"]
+
+
+# ── /feedback endpoint (build order step 13) ─────────────────────────────────
+
+class TestFeedbackEndpoint:
+    """cortex never writes harvested.jsonl/failures.jsonl directly (locked
+    convention: it only talks to neuron over HTTP) — this endpoint is the
+    integration point that does the actual file write via
+    openmedallion.examples.feedback.record_feedback()."""
+
+    def test_thumbs_up_returns_200_and_records_candidate(self, tmp_path, client, monkeypatch):
+        monkeypatch.setattr("openmedallion.neuron.server.settings.PROJECTS_ROOT", str(tmp_path))
+        r = client.post("/feedback", json={
+            "project": "demo", "question": "How many orders?",
+            "sql": "SELECT COUNT(*) AS n FROM orders",
+            "columns": ["n"], "row_count": 1, "thumbs_up": True,
+        })
+        assert r.status_code == 200
+
+        path = tmp_path / "demo" / "examples" / "harvested.jsonl"
+        assert path.exists()
+        entry = json.loads(path.read_text().splitlines()[0])
+        assert entry["question"] == "How many orders?"
+        assert entry["status"]   == "candidate"
+
+    def test_thumbs_down_records_failure(self, tmp_path, client, monkeypatch):
+        monkeypatch.setattr("openmedallion.neuron.server.settings.PROJECTS_ROOT", str(tmp_path))
+        r = client.post("/feedback", json={
+            "project": "demo", "question": "How many orders?",
+            "sql": "SELECT COUNT(*) AS n FROM orders",
+            "columns": ["n"], "row_count": 1, "thumbs_up": False,
+        })
+        assert r.status_code == 200
+
+        path = tmp_path / "demo" / "examples" / "failures.jsonl"
+        assert path.exists()
+        entry = json.loads(path.read_text().splitlines()[0])
+        assert entry["status"] == "failed"
+
+    def test_missing_required_field_returns_422(self, client):
+        r = client.post("/feedback", json={"project": "demo", "question": "q"})
+        assert r.status_code == 422
+
+    def test_defaults_columns_and_row_count(self, tmp_path, client, monkeypatch):
+        monkeypatch.setattr("openmedallion.neuron.server.settings.PROJECTS_ROOT", str(tmp_path))
+        r = client.post("/feedback", json={
+            "project": "demo", "question": "q", "sql": "SELECT 1", "thumbs_up": True,
+        })
+        assert r.status_code == 200
+        entry = json.loads((tmp_path / "demo" / "examples" / "harvested.jsonl").read_text().splitlines()[0])
+        assert entry["result_shape"] == {"rows": 0, "columns": []}
 
 
 # ── auth middleware ───────────────────────────────────────────────────────────

@@ -156,17 +156,25 @@ def detect_relationships(table_typed_columns: dict[str, list[tuple[str, str]]]) 
         list[RelationshipEntry]: Deduplicated draft relationships, sorted for
         deterministic output. When two rules land on the identical identity,
         the more specific/reliable one wins: ``fk_naming`` > ``lineage`` > ``grain``.
+        A ``grain`` entry is dropped entirely (not just deduped) when its table
+        pair is already linked by an ``fk_naming``/``lineage`` entry under a
+        *different* ``join_on`` — such a column is virtually always just an
+        attribute carried along by that same join, not independent evidence of
+        a relationship (e.g. ``department_name`` riding along with
+        ``department_id``, or ``first_name``/``last_name`` riding along with
+        the ``employee_id`` that links a table to its enriched derivative).
     """
     table_columns = {t: [c for c, _ in cols] for t, cols in table_typed_columns.items()}
 
-    all_entries = (
-        _detect_fk_naming(table_columns)
-        + _detect_lineage(table_columns)
-        + _detect_grain(table_typed_columns)
-    )
+    fk_entries      = _detect_fk_naming(table_columns)
+    lineage_entries = _detect_lineage(table_columns)
+    grain_entries   = _detect_grain(table_typed_columns)
+
+    related_pairs = {frozenset((e.from_table, e.to_table)) for e in fk_entries + lineage_entries}
+    grain_entries = [e for e in grain_entries if frozenset((e.from_table, e.to_table)) not in related_pairs]
 
     best: dict[tuple, RelationshipEntry] = {}
-    for entry in all_entries:
+    for entry in fk_entries + lineage_entries + grain_entries:
         key = _identity(entry)
         current = best.get(key)
         if current is None or _METHOD_PREFERENCE[entry.method] < _METHOD_PREFERENCE[current.method]:

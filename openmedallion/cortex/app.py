@@ -13,6 +13,11 @@ store-query-results   List[dict] rows from the last query
 store-recommended     Canonical recommended prompt string
 store-project         Project name (set at startup, read-only)
 store-active-tab      Currently visible tab: "chat" | "table" | "dashboard"
+store-chat-metadata   List[dict] — one {question, sql, columns, row_count}
+                      entry per assistant turn, appended in chat.py's
+                      handle_ask(); read by the thumbs up/down callback to
+                      know what to submit via client.feedback() without
+                      re-deriving it from the rendered chat bubbles.
 """
 from __future__ import annotations
 
@@ -81,6 +86,7 @@ def create_app(
         dcc.Store(id="store-recommended"),
         dcc.Store(id="store-project",    data=project),
         dcc.Store(id="store-active-tab", data="chat"),
+        dcc.Store(id="store-chat-metadata", data=[]),
 
         # ── App shell: sidebar + main ─────────────────────────────────────
         html.Div([

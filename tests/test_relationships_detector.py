@@ -202,7 +202,10 @@ class TestDetectRelationshipsOrchestration:
         assert len(matching) == 1
         assert matching[0].method == "fk_naming"
 
-    def test_distinct_join_on_between_same_pair_both_kept(self):
+    def test_grain_suppressed_for_pair_already_related_by_fk_naming(self):
+        # department_name is carried into employees_enriched by the SAME join
+        # as department_id (fk_naming already covers this pair) — it is not
+        # independent evidence of a relationship, so grain must not also fire.
         typed = {
             "departments":        [("department_id", "BIGINT"), ("department_name", "VARCHAR")],
             "employees_enriched": [
@@ -210,7 +213,36 @@ class TestDetectRelationshipsOrchestration:
             ],
         }
         rels = detect_relationships(typed)
-        join_ons = {tuple(r.join_on) for r in rels
-                    if r.from_table == "employees_enriched" and r.to_table == "departments"}
-        assert ("department_id",) in join_ons
-        assert ("department_name",) in join_ons
+        pair = [r for r in rels if {r.from_table, r.to_table} == {"employees_enriched", "departments"}]
+        assert len(pair) == 1
+        assert pair[0].method == "fk_naming"
+        assert pair[0].join_on == ["department_id"]
+
+    def test_grain_suppressed_for_pair_already_related_by_lineage(self):
+        # first_name/last_name are carried into employees_enriched by the same
+        # lineage relationship as employee_id — not independent grain evidence.
+        typed = {
+            "employees": [
+                ("employee_id", "BIGINT"), ("first_name", "VARCHAR"), ("last_name", "VARCHAR"),
+            ],
+            "employees_enriched": [
+                ("employee_id", "BIGINT"), ("first_name", "VARCHAR"), ("last_name", "VARCHAR"), ("extra", "DOUBLE"),
+            ],
+        }
+        rels = detect_relationships(typed)
+        pair = [r for r in rels if {r.from_table, r.to_table} == {"employees_enriched", "employees"}]
+        assert len(pair) == 1
+        assert pair[0].method == "fk_naming"  # employee_id resolves via pluralization too
+
+    def test_grain_kept_for_pair_with_no_other_relationship(self):
+        # No fk_naming/lineage link between these two — department_name is the
+        # only signal, and it's genuinely useful (e.g. silver table vs. an
+        # unrelated gold rollup that only carries the name, not the id).
+        typed = {
+            "departments":             [("department_id", "BIGINT"), ("department_name", "VARCHAR")],
+            "headcount_by_department": [("department_name", "VARCHAR"), ("headcount", "UINTEGER")],
+        }
+        rels = detect_relationships(typed)
+        pair = [r for r in rels if {r.from_table, r.to_table} == {"departments", "headcount_by_department"}]
+        assert len(pair) == 1
+        assert pair[0].method == "grain"
