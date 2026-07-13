@@ -589,6 +589,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/rag-accuracy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RAG Accuracy (metadata, relationships, examples)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -774,6 +802,72 @@
     <span class="md-ellipsis">
       
         run
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#query" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        query
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ask" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ask
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cortex" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cortex
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metadata" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        metadata
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#relationships" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        relationships
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        examples
       
     </span>
   </a>
@@ -1068,6 +1162,72 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#query" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        query
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ask" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ask
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cortex" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cortex
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metadata" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        metadata
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#relationships" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        relationships
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        examples
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#global-behaviour" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1119,6 +1279,30 @@
 <tr>
 <td><a href="#run"><code>run</code></a></td>
 <td>Execute the pipeline for a project</td>
+</tr>
+<tr>
+<td><a href="#query"><code>query</code></a></td>
+<td>Ask a natural-language question directly in the terminal</td>
+</tr>
+<tr>
+<td><a href="#ask"><code>ask</code></a></td>
+<td>Start the neuron FastAPI server (<code>/query</code>, <code>/feedback</code>, <code>/health</code>, <code>/docs</code>)</td>
+</tr>
+<tr>
+<td><a href="#cortex"><code>cortex</code></a></td>
+<td>Start the cortex Dash chat UI</td>
+</tr>
+<tr>
+<td><a href="#metadata"><code>metadata</code></a></td>
+<td>Generate / approve <code>metadata.yaml</code> (RAG accuracy)</td>
+</tr>
+<tr>
+<td><a href="#relationships"><code>relationships</code></a></td>
+<td>Generate / approve <code>relationships.yaml</code> (RAG accuracy)</td>
+</tr>
+<tr>
+<td><a href="#examples"><code>examples</code></a></td>
+<td>Generate / approve / harvest / review synthetic Q→SQL examples (RAG accuracy)</td>
 </tr>
 </tbody>
 </table>
@@ -1263,6 +1447,148 @@
 </span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="c1"># Projects in a non-default directory</span>
 </span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>medallion<span class="w"> </span>run<span class="w"> </span>sales_project<span class="w"> </span>--projects<span class="w"> </span>/var/pipelines/projects
 </span></code></pre></div></p>
+<hr />
+<h2 id="query">query<a class="headerlink" href="#query" title="Permanent link">&para;</a></h2>
+<p>Ask a natural-language question about a project's silver/gold data, directly in the
+terminal — runs the full <code>cerebrum</code> pipeline locally, no server needed. Requires
+<code>pip install "openmedallion[cerebrum]"</code>.</p>
+<div class="highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>medallion<span class="w"> </span>query<span class="w"> </span>&lt;project&gt;<span class="w"> </span><span class="s2">&quot;&lt;question&gt;&quot;</span><span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span><span class="w"> </span><span class="o">[</span>--model<span class="w"> </span>MODEL<span class="o">]</span><span class="w"> </span><span class="o">[</span>--provider<span class="w"> </span>PROVIDER<span class="o">]</span><span class="w"> </span><span class="o">[</span>--detect-ambiguity<span class="o">]</span><span class="w"> </span><span class="o">[</span>--decompose<span class="o">]</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--projects</code></td>
+<td><code>.</code></td>
+<td>Projects root directory</td>
+</tr>
+<tr>
+<td><code>--model</code></td>
+<td>from settings / <code>llama3.2</code></td>
+<td>Model identifier</td>
+</tr>
+<tr>
+<td><code>--provider</code></td>
+<td>from settings / <code>ollama</code></td>
+<td>LLM backend: <code>ollama</code> | <code>openrouter</code> | <code>openai</code> | custom</td>
+</tr>
+<tr>
+<td><code>--detect-ambiguity</code></td>
+<td>off</td>
+<td>One extra LLM call checks whether the question is ambiguous before generating SQL; raises with a clarification message instead of guessing</td>
+</tr>
+<tr>
+<td><code>--decompose</code></td>
+<td>off</td>
+<td>One extra LLM call checks whether the question contains independent sub-questions; each runs through the pipeline separately if so</td>
+</tr>
+</tbody>
+</table>
+<p>If a project has <code>status: approved</code> tables in <code>metadata.yaml</code> and/or
+<code>verified: true</code> examples in <code>examples/synthetic.jsonl</code>, they're picked up
+automatically — see <a href="../../guides/rag-accuracy/">RAG Accuracy</a> for the full design
+(dynamic few-shot retrieval, confidence-gated schema pruning).</p>
+<div class="highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>medallion<span class="w"> </span>query<span class="w"> </span>sales_project<span class="w"> </span><span class="s2">&quot;What are the top 5 products by revenue?&quot;</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>medallion<span class="w"> </span>query<span class="w"> </span>sales_project<span class="w"> </span><span class="s2">&quot;Show monthly trends&quot;</span><span class="w"> </span>--model<span class="w"> </span>mistral
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>medallion<span class="w"> </span>query<span class="w"> </span>sales_project<span class="w"> </span><span class="s2">&quot;Headcount by dept and revenue by region&quot;</span><span class="w"> </span>--decompose
+</span></code></pre></div>
+<hr />
+<h2 id="ask">ask<a class="headerlink" href="#ask" title="Permanent link">&para;</a></h2>
+<p>Start the <code>neuron</code> FastAPI server, exposing <code>cerebrum</code> over HTTP for <code>cortex</code> (or any
+HTTP client) to call. Requires <code>pip install "openmedallion[cerebrum]"</code>.</p>
+<div class="highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>medallion<span class="w"> </span>ask<span class="w"> </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span><span class="w"> </span><span class="o">[</span>--port<span class="w"> </span>PORT<span class="o">]</span><span class="w"> </span><span class="o">[</span>--model<span class="w"> </span>MODEL<span class="o">]</span><span class="w"> </span><span class="o">[</span>--provider<span class="w"> </span>PROVIDER<span class="o">]</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>POST /query</code></td>
+<td>Ask a question — same pipeline as <code>medallion query</code></td>
+</tr>
+<tr>
+<td><code>POST /feedback</code></td>
+<td>Record cortex 👍/👎 into <code>examples/harvested.jsonl</code> / <code>examples/failures.jsonl</code></td>
+</tr>
+<tr>
+<td><code>GET /health</code></td>
+<td>Liveness check</td>
+</tr>
+<tr>
+<td><code>GET /docs</code></td>
+<td>Swagger UI</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="cortex">cortex<a class="headerlink" href="#cortex" title="Permanent link">&para;</a></h2>
+<p>Start the <code>cortex</code> Dash chat UI, which talks to a running <code>neuron</code> server over HTTP.</p>
+<div class="highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>medallion<span class="w"> </span>cortex<span class="w"> </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span><span class="w"> </span><span class="o">[</span>--port<span class="w"> </span>PORT<span class="o">]</span><span class="w"> </span><span class="o">[</span>--neuron-url<span class="w"> </span>URL<span class="o">]</span><span class="w"> </span><span class="o">[</span>--debug<span class="o">]</span>
+</span></code></pre></div>
+<p>Three tabs: chat (with 👍/👎 feedback on every reply), table, and dashboard, with
+CSV/Excel download.</p>
+<hr />
+<h2 id="metadata">metadata<a class="headerlink" href="#metadata" title="Permanent link">&para;</a></h2>
+<p>Manage a project's <code>metadata.yaml</code> — curated table/column descriptions used for
+schema pruning (see <a href="../../guides/rag-accuracy/">RAG Accuracy</a>).</p>
+<div class="highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>medallion<span class="w"> </span>metadata<span class="w"> </span>generate<span class="w"> </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span><span class="w"> </span><span class="o">[</span>--model<span class="w"> </span>MODEL<span class="o">]</span><span class="w"> </span><span class="o">[</span>--provider<span class="w"> </span>PROVIDER<span class="o">]</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>medallion<span class="w"> </span>metadata<span class="w"> </span>approve<span class="w">  </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span>
+</span></code></pre></div>
+<p><code>generate</code> requires <code>pip install "openmedallion[cerebrum]"</code>; <code>approve</code> does not (it's a
+plain interactive <code>[a]pprove / [s]kip / [q]uit</code> review loop, no LLM call). Tables
+already <code>status: approved</code> are always skipped and preserved untouched by <code>generate</code>.</p>
+<hr />
+<h2 id="relationships">relationships<a class="headerlink" href="#relationships" title="Permanent link">&para;</a></h2>
+<p>Manage a project's <code>relationships.yaml</code> — explicit join paths between silver/gold
+tables, detected via deterministic pattern matching (no LLM call, either command).</p>
+<div class="highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>medallion<span class="w"> </span>relationships<span class="w"> </span>generate<span class="w"> </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>medallion<span class="w"> </span>relationships<span class="w"> </span>approve<span class="w">  </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span>
+</span></code></pre></div>
+<hr />
+<h2 id="examples">examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
+<p>Manage a project's synthetic <code>(question, sql)</code> examples used for dynamic few-shot
+retrieval (see <a href="../../guides/rag-accuracy/">RAG Accuracy</a>).</p>
+<div class="highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>medallion<span class="w"> </span>examples<span class="w"> </span>generate<span class="w"> </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span><span class="w"> </span><span class="o">[</span>--count<span class="w"> </span>N<span class="o">]</span><span class="w"> </span><span class="o">[</span>--model<span class="w"> </span>MODEL<span class="o">]</span><span class="w"> </span><span class="o">[</span>--provider<span class="w"> </span>PROVIDER<span class="o">]</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>medallion<span class="w"> </span>examples<span class="w"> </span>approve<span class="w">  </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>medallion<span class="w"> </span>examples<span class="w"> </span>harvest<span class="w">  </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>medallion<span class="w"> </span>examples<span class="w"> </span>review<span class="w">   </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Subcommand</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>generate</code></td>
+<td>LLM drafts <code>(question, sql)</code> pairs from approved metadata + relationships; each is validated (allowlist + DuckDB <code>EXPLAIN</code>) before being written. Requires <code>[cerebrum]</code>.</td>
+</tr>
+<tr>
+<td><code>approve</code></td>
+<td>Interactive review of unverified examples — no LLM call.</td>
+</tr>
+<tr>
+<td><code>harvest</code></td>
+<td>Promotes <code>examples/harvested.jsonl</code> (cortex 👍) candidates into <code>synthetic.jsonl</code> as unverified — still needs <code>approve</code>.</td>
+</tr>
+<tr>
+<td><code>review</code></td>
+<td>Lists <code>examples/failures.jsonl</code> (cortex 👎) entries — a plain listing, no LLM call.</td>
+</tr>
+</tbody>
+</table>
 <hr />
 <h2 id="global-behaviour">Global Behaviour<a class="headerlink" href="#global-behaviour" title="Permanent link">&para;</a></h2>
 <ul>

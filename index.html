@@ -560,6 +560,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#improving-accuracy-metadata-relationships-and-examples-rag" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Improving accuracy — metadata, relationships, and examples (RAG)
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -897,6 +908,34 @@
     
   
     Scheduling with Kestra
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="guides/rag-accuracy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RAG Accuracy (metadata, relationships, examples)
   
 
     
@@ -1394,6 +1433,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#improving-accuracy-metadata-relationships-and-examples-rag" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Improving accuracy — metadata, relationships, and examples (RAG)
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1871,30 +1921,55 @@
 </span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>medallion<span class="w"> </span>cortex<span class="w"> </span>my_project<span class="w">             </span><span class="c1"># start Dash chat UI on :8050</span>
 </span></code></pre></div>
 <p><code>neuron</code> exposes a <code>/query</code> endpoint (Swagger UI at <code>/docs</code>). <code>cortex</code> connects to it and provides a three-tab UI: chat, table, and dashboard with CSV/Excel download.</p>
+<h3 id="improving-accuracy-metadata-relationships-and-examples-rag">Improving accuracy — metadata, relationships, and examples (RAG)<a class="headerlink" href="#improving-accuracy-metadata-relationships-and-examples-rag" title="Permanent link">&para;</a></h3>
+<p>For larger schemas, curate what the LLM sees instead of dumping every table:</p>
+<div class="highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>medallion<span class="w"> </span>metadata<span class="w"> </span>generate<span class="w">      </span>my_project<span class="w">   </span><span class="c1"># LLM-draft table/column descriptions</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>medallion<span class="w"> </span>metadata<span class="w"> </span>approve<span class="w">       </span>my_project<span class="w">   </span><span class="c1"># human review, one table at a time</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>medallion<span class="w"> </span>relationships<span class="w"> </span>generate<span class="w"> </span>my_project<span class="w">   </span><span class="c1"># detect joins — no LLM call</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>medallion<span class="w"> </span>relationships<span class="w"> </span>approve<span class="w">  </span>my_project
+</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>
+</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>medallion<span class="w"> </span>examples<span class="w"> </span>generate<span class="w">      </span>my_project<span class="w"> </span>--count<span class="w"> </span><span class="m">15</span><span class="w">   </span><span class="c1"># LLM-draft Q→SQL pairs</span>
+</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>medallion<span class="w"> </span>examples<span class="w"> </span>approve<span class="w">       </span>my_project
+</span></code></pre></div>
+<p>Once <code>metadata.yaml</code> has <code>status: approved</code> tables and <code>examples/synthetic.jsonl</code> has
+<code>verified: true</code> examples, <code>medallion query</code>/<code>ask</code> pick them up automatically — no
+extra flag needed. Two things happen behind the scenes:</p>
+<ul>
+<li><strong>Dynamic few-shot retrieval</strong> — the most relevant verified examples are ranked in as
+  prompt context, instead of a fixed static list.</li>
+<li><strong>Confidence-gated schema pruning</strong> — only the top-k most relevant <em>approved</em> tables
+  are shown to the LLM. If similarity to the best match falls below a confidence
+  threshold, it falls back to a raw-schema search over <em>every</em> silver table (any
+  status, no <code>metadata.yaml</code> required) rather than trusting a weak match.</li>
+</ul>
+<p>See <a href="docs/guides/rag-accuracy.md"><code>docs/guides/rag-accuracy.md</code></a> for the full design, and
+<a href="examples/sales_intelligence_demo/"><code>examples/sales_intelligence_demo/</code></a> for a runnable,
+offline (<code>show_rag_workflow.py</code>) walkthrough.</p>
 <hr />
 <h2 id="scheduling-with-kestra">Scheduling with Kestra<a class="headerlink" href="#scheduling-with-kestra" title="Permanent link">&para;</a></h2>
 <p><code>medallion init</code> generates a <code>kestra_flow.yml</code> inside every new project — a ready-to-use <a href="https://kestra.io">Kestra</a> flow that orchestrates bronze → silver → gold with per-task observability and retry support.</p>
 <h3 id="1-start-a-local-kestra-server">1. Start a local Kestra server<a class="headerlink" href="#1-start-a-local-kestra-server" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># from the repo root — requires Docker</span>
-</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>make<span class="w"> </span>kestra-up
-</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="c1"># UI available at http://localhost:8080</span>
+<div class="highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># from the repo root — requires Docker</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>make<span class="w"> </span>kestra-up
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="c1"># UI available at http://localhost:8080</span>
 </span></code></pre></div>
 <h3 id="2-register-a-project-flow">2. Register a project flow<a class="headerlink" href="#2-register-a-project-flow" title="Permanent link">&para;</a></h3>
 <p>Add one volume mount to the <code>kestra</code> service in <code>docker-compose.yml</code>:</p>
-<div class="highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./my_project/kestra_flow.yml:/app/flows/my_project.yml</span>
+<div class="highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./my_project/kestra_flow.yml:/app/flows/my_project.yml</span>
 </span></code></pre></div>
 <p>Kestra picks up the file automatically on the next <code>make kestra-up</code> — no copying needed.</p>
 <h3 id="3-trigger-a-run">3. Trigger a run<a class="headerlink" href="#3-trigger-a-run" title="Permanent link">&para;</a></h3>
 <p>From the UI at <code>http://localhost:8080</code>, or via the API:</p>
-<div class="highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span>http://localhost:8080/api/v1/executions/openmedallion.projects/my_project
+<div class="highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span>http://localhost:8080/api/v1/executions/openmedallion.projects/my_project
 </span></code></pre></div>
 <h3 id="4-enable-scheduled-refresh">4. Enable scheduled refresh<a class="headerlink" href="#4-enable-scheduled-refresh" title="Permanent link">&para;</a></h3>
 <p>Uncomment the <code>triggers:</code> block in <code>kestra_flow.yml</code>:</p>
-<div class="highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="nt">triggers</span><span class="p">:</span>
-</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">daily_refresh</span>
-</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">io.kestra.plugin.core.trigger.Schedule</span>
-</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">    </span><span class="nt">cron</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;0</span><span class="nv"> </span><span class="s">6</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">*&quot;</span><span class="w">   </span><span class="c1"># every day at 06:00 UTC</span>
+<div class="highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="nt">triggers</span><span class="p">:</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">daily_refresh</span>
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">io.kestra.plugin.core.trigger.Schedule</span>
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="w">    </span><span class="nt">cron</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;0</span><span class="nv"> </span><span class="s">6</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">*&quot;</span><span class="w">   </span><span class="c1"># every day at 06:00 UTC</span>
 </span></code></pre></div>
 <p>Restart with <code>make kestra-up</code> and Kestra picks up the change immediately.</p>
 <h3 id="kestra-vs-github-actions">Kestra vs GitHub Actions<a class="headerlink" href="#kestra-vs-github-actions" title="Permanent link">&para;</a></h3>
@@ -1932,7 +2007,7 @@
 <p><strong>Recommended split:</strong> GitHub Actions for CI + publish; Kestra for pipeline scheduling.</p>
 <hr />
 <h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
-<p>Three self-contained examples — no cloud credentials required. See <a href="examples/README.md"><code>examples/README.md</code></a> for a side-by-side comparison.</p>
+<p>Five self-contained examples — no cloud credentials required. See <a href="examples/README.md"><code>examples/README.md</code></a> for a side-by-side comparison.</p>
 <table>
 <thead>
 <tr>
@@ -1955,7 +2030,17 @@
 <tr>
 <td><a href="examples/ecommerce_analytics_demo/"><code>ecommerce_analytics_demo/</code></a></td>
 <td>3</td>
-<td>Multi-table joins, margin analysis, and monthly trends — most complete example</td>
+<td>Multi-table joins, margin analysis, and monthly trends</td>
+</tr>
+<tr>
+<td><a href="examples/oracle_hr_demo/"><code>oracle_hr_demo/</code></a></td>
+<td>3</td>
+<td>SQL <code>filter:</code>/<code>select:</code> pushdown, <code>credentials_file:</code>, real Oracle/Postgres swap</td>
+</tr>
+<tr>
+<td><a href="examples/sales_intelligence_demo/"><code>sales_intelligence_demo/</code></a></td>
+<td>3</td>
+<td>cerebrum/neuron/cortex + the full RAG accuracy add-ons (metadata, relationships, examples, confidence-gated fallback) — most complete example</td>
 </tr>
 </tbody>
 </table>
@@ -2074,11 +2159,15 @@
 <td>✅ 2026.7.1</td>
 </tr>
 <tr>
+<td>RAG accuracy — metadata, relationships, examples generate/approve, dynamic few-shot, confidence-gated schema pruning fallback</td>
+<td>✅ 2026.7.3</td>
+</tr>
+<tr>
 <td>REST API multi-resource support</td>
 <td>🔜 roadmap</td>
 </tr>
 <tr>
-<td>Lineage + metadata helpers</td>
+<td>Metadata drift detection (<code>medallion metadata refresh</code>)</td>
 <td>🔜 roadmap</td>
 </tr>
 <tr>
