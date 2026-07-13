@@ -1928,9 +1928,10 @@
 </span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
 </span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>medallion<span class="w"> </span>relationships<span class="w"> </span>generate<span class="w"> </span>my_project<span class="w">   </span><span class="c1"># detect joins — no LLM call</span>
 </span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>medallion<span class="w"> </span>relationships<span class="w"> </span>approve<span class="w">  </span>my_project
-</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>
-</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>medallion<span class="w"> </span>examples<span class="w"> </span>generate<span class="w">      </span>my_project<span class="w"> </span>--count<span class="w"> </span><span class="m">15</span><span class="w">   </span><span class="c1"># LLM-draft Q→SQL pairs</span>
-</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>medallion<span class="w"> </span>examples<span class="w"> </span>approve<span class="w">       </span>my_project
+</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>medallion<span class="w"> </span>relationships<span class="w"> </span>erd<span class="w">      </span>my_project<span class="w">   </span><span class="c1"># Mermaid ER diagram → relationships_erd.md</span>
+</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>
+</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>medallion<span class="w"> </span>examples<span class="w"> </span>generate<span class="w">      </span>my_project<span class="w"> </span>--count<span class="w"> </span><span class="m">15</span><span class="w">   </span><span class="c1"># LLM-draft Q→SQL pairs</span>
+</span><span id="__span-14-9"><a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a>medallion<span class="w"> </span>examples<span class="w"> </span>approve<span class="w">       </span>my_project
 </span></code></pre></div>
 <p>Once <code>metadata.yaml</code> has <code>status: approved</code> tables and <code>examples/synthetic.jsonl</code> has
 <code>verified: true</code> examples, <code>medallion query</code>/<code>ask</code> pick them up automatically — no
@@ -1943,7 +1944,7 @@ extra flag needed. Two things happen behind the scenes:</p>
   threshold, it falls back to a raw-schema search over <em>every</em> silver table (any
   status, no <code>metadata.yaml</code> required) rather than trusting a weak match.</li>
 </ul>
-<p>See <a href="docs/guides/rag-accuracy.md"><code>docs/guides/rag-accuracy.md</code></a> for the full design, and
+<p>See <a href="https://github.com/tummala-hareesh/openmedallion/blob/main/docs/guides/rag-accuracy.md"><code>docs/guides/rag-accuracy.md</code></a> for the full design, and
 <a href="examples/sales_intelligence_demo/"><code>examples/sales_intelligence_demo/</code></a> for a runnable,
 offline (<code>show_rag_workflow.py</code>) walkthrough.</p>
 <hr />
@@ -2007,7 +2008,7 @@ offline (<code>show_rag_workflow.py</code>) walkthrough.</p>
 <p><strong>Recommended split:</strong> GitHub Actions for CI + publish; Kestra for pipeline scheduling.</p>
 <hr />
 <h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
-<p>Five self-contained examples — no cloud credentials required. See <a href="examples/README.md"><code>examples/README.md</code></a> for a side-by-side comparison.</p>
+<p>Five self-contained examples — no cloud credentials required. See <a href="examples/"><code>examples/</code></a> for a side-by-side comparison.</p>
 <table>
 <thead>
 <tr>

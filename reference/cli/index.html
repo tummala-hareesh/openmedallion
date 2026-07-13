@@ -1550,10 +1550,33 @@ already <code>status: approved</code> are always skipped and preserved untouched
 <hr />
 <h2 id="relationships">relationships<a class="headerlink" href="#relationships" title="Permanent link">&para;</a></h2>
 <p>Manage a project's <code>relationships.yaml</code> — explicit join paths between silver/gold
-tables, detected via deterministic pattern matching (no LLM call, either command).</p>
+tables, detected via deterministic pattern matching (no LLM call for any subcommand).</p>
 <div class="highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>medallion<span class="w"> </span>relationships<span class="w"> </span>generate<span class="w"> </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span>
 </span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>medallion<span class="w"> </span>relationships<span class="w"> </span>approve<span class="w">  </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>medallion<span class="w"> </span>relationships<span class="w"> </span>erd<span class="w">      </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span><span class="w"> </span><span class="o">[</span>--all<span class="o">]</span>
 </span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Subcommand</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>generate</code></td>
+<td>Detect relationships across silver/gold tables (FK naming, lineage, grain).</td>
+</tr>
+<tr>
+<td><code>approve</code></td>
+<td>Interactive review of draft/stale relationships.</td>
+</tr>
+<tr>
+<td><code>erd</code></td>
+<td>Render relationships as a Mermaid <code>erDiagram</code> to <code>&lt;project&gt;/relationships_erd.md</code>. Approved-only by default; <code>--all</code> includes draft/stale. Column types come from real Parquet dtypes, not <code>metadata.yaml</code>. No primary-key inference.</td>
+</tr>
+</tbody>
+</table>
 <hr />
 <h2 id="examples">examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
 <p>Manage a project's synthetic <code>(question, sql)</code> examples used for dynamic few-shot

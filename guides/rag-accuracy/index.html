@@ -689,6 +689,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="2. Relationships — explicit join paths">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#visualizing-relationships-medallion-relationships-erd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Visualizing relationships — medallion relationships erd
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1154,6 +1171,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="2. Relationships — explicit join paths">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#visualizing-relationships-medallion-relationships-erd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Visualizing relationships — medallion relationships erd
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1348,6 +1382,29 @@ regeneration untouched, the same way <code>.env</code> overrides a <code>.env.ex
 <p>Regenerating <strong>always keeps</strong> <code>status: approved</code> entries and any hand-added entry with
 no <code>method</code> set untouched; <code>draft</code>/<code>stale</code> entries with a detection method are replaced
 by a fresh detection pass.</p>
+<h3 id="visualizing-relationships-medallion-relationships-erd">Visualizing relationships — <code>medallion relationships erd</code><a class="headerlink" href="#visualizing-relationships-medallion-relationships-erd" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>medallion<span class="w"> </span>relationships<span class="w"> </span>erd<span class="w"> </span>my_project<span class="w">           </span><span class="c1"># approved relationships only (default)</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>medallion<span class="w"> </span>relationships<span class="w"> </span>erd<span class="w"> </span>my_project<span class="w"> </span>--all<span class="w">      </span><span class="c1"># include draft/stale too</span>
+</span></code></pre></div>
+<p>Renders <code>relationships.yaml</code> as a Mermaid <code>erDiagram</code>, written to
+<code>&lt;project&gt;/relationships_erd.md</code> — a Markdown file with a fenced <code>mermaid</code> code
+block, directly viewable on GitHub and embeddable in mkdocs via <code>--8&lt;--</code>. No LLM call.</p>
+<ul>
+<li><strong>Approved-only by default</strong> — matches the "approved is the trust boundary"
+  convention used everywhere else in this guide; pass <code>--all</code> to see drafts too
+  (useful while reviewing what the detector found, before approving anything).</li>
+<li><strong>Only tables referenced by an included relationship are drawn</strong> — no orphan
+  tables cluttering the diagram.</li>
+<li><strong>Column types come from real Parquet dtypes</strong> (DuckDB <code>DESCRIBE</code> against the
+  actual silver/gold files), not <code>metadata.yaml</code>'s optional <code>columns:</code> dict —
+  accurate even for a project with no curated metadata at all. A table referenced
+  by a relationship but missing from Parquet still renders (an empty entity block)
+  rather than failing.</li>
+<li><strong>No primary-key inference</strong> — nothing in <code>relationships.yaml</code>/<code>metadata.yaml</code>
+  actually asserts a primary key, so none is guessed at. Columns render as plain
+  typed fields; the relationship line itself implies the FK, with a default
+  many-to-one cardinality (<code>from_table</code> is the "many" side).</li>
+</ul>
 <hr />
 <h2 id="3-dynamic-few-shot-retrieval-confidence-gated-schema-pruning">3. Dynamic few-shot retrieval + confidence-gated schema pruning<a class="headerlink" href="#3-dynamic-few-shot-retrieval-confidence-gated-schema-pruning" title="Permanent link">&para;</a></h2>
 <p>Both features are driven by the same embedding-based ranking technique
@@ -1355,15 +1412,15 @@ by a fresh detection pass.</p>
 provider</strong> — ranking itself is plain cosine similarity, since a corpus of a few dozen
 examples/tables doesn't need a real vector database.</p>
 <h3 id="dynamic-few-shot-retrieval">Dynamic few-shot retrieval<a class="headerlink" href="#dynamic-few-shot-retrieval" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>medallion<span class="w"> </span>examples<span class="w"> </span>generate<span class="w"> </span>my_project<span class="w"> </span>--count<span class="w"> </span><span class="m">15</span><span class="w">   </span><span class="c1"># LLM drafts (question, sql) pairs</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>medallion<span class="w"> </span>examples<span class="w"> </span>approve<span class="w">  </span>my_project
+<div class="highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>medallion<span class="w"> </span>examples<span class="w"> </span>generate<span class="w"> </span>my_project<span class="w"> </span>--count<span class="w"> </span><span class="m">15</span><span class="w">   </span><span class="c1"># LLM drafts (question, sql) pairs</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>medallion<span class="w"> </span>examples<span class="w"> </span>approve<span class="w">  </span>my_project
 </span></code></pre></div>
 <p><code>generate</code> reads <code>status: approved</code> <strong>silver-layer</strong> tables and approved relationships
 between them, asks the LLM for a batch of representative <code>(question, sql)</code> pairs, and
 validates every generated SQL through the same allowlist + DuckDB <code>EXPLAIN</code> check
 <code>cerebrum</code> uses at query time — an example whose SQL never validates is dropped, not
 written with an error flag.</p>
-<div class="highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="p">{</span><span class="nt">&quot;question&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Which rep had the highest revenue in Q2 2024?&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;sql&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;SELECT name, SUM(amount) ...&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;verified&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="p">{</span><span class="nt">&quot;question&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Which rep had the highest revenue in Q2 2024?&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;sql&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;SELECT name, SUM(amount) ...&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;verified&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">}</span>
 </span></code></pre></div>
 <p>Only <code>verified: true</code> examples are eligible as few-shot context — <code>CerebrumPipeline</code>
 ranks them against the current question and injects the top 3, falling back to the
@@ -1373,30 +1430,30 @@ examples yet.</p>
 <p>For a question, <code>rank_relevant_tables_scored()</code> ranks every <code>status: approved</code>
 silver-layer table by embedding-similarity to the question and returns <strong>both</strong> the
 top-k table names and the top-1 similarity score — the confidence signal.</p>
-<div class="highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>confidence &gt;= 0.7   →  structured ranking is trusted; only the top-k approved
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>                        tables&#39; DDL is shown to the LLM
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>confidence &lt;  0.7   →  the curated corpus doesn&#39;t confidently answer this question,
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>                        so the pipeline falls back to a raw-schema search: every
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>                        silver table&#39;s DDL (any status, no metadata.yaml required)
-</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>                        is ranked instead
+<div class="highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>confidence &gt;= 0.7   →  structured ranking is trusted; only the top-k approved
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>                        tables&#39; DDL is shown to the LLM
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>confidence &lt;  0.7   →  the curated corpus doesn&#39;t confidently answer this question,
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>                        so the pipeline falls back to a raw-schema search: every
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>                        silver table&#39;s DDL (any status, no metadata.yaml required)
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>                        is ranked instead
 </span></code></pre></div>
 <p>This is the <strong>fallback</strong> half of the locked hybrid-retrieval architecture: structured
 knowledge is the primary path, and a broader raw-schema search is the safety net —
 important for a project with only partial metadata coverage (some tables curated,
 others not yet), or none at all.</p>
-<div class="highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">openmedallion.cerebrum.schema</span><span class="w"> </span><span class="kn">import</span> <span class="n">rank_relevant_tables_scored</span><span class="p">,</span> <span class="n">describe_all_tables</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">openmedallion.cerebrum.retrieval</span><span class="w"> </span><span class="kn">import</span> <span class="n">CONFIDENCE_THRESHOLD</span>  <span class="c1"># 0.7</span>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="n">names</span><span class="p">,</span> <span class="n">confidence</span> <span class="o">=</span> <span class="n">rank_relevant_tables_scored</span><span class="p">(</span><span class="n">question</span><span class="p">,</span> <span class="n">metadata</span><span class="p">,</span> <span class="n">embed_fn</span><span class="p">,</span> <span class="n">top_k</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="k">if</span> <span class="n">confidence</span> <span class="o">&lt;</span> <span class="n">CONFIDENCE_THRESHOLD</span><span class="p">:</span>
-</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>    <span class="c1"># describe_all_tables() needs no metadata.yaml at all</span>
-</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>    <span class="n">raw_tables</span> <span class="o">=</span> <span class="n">describe_all_tables</span><span class="p">(</span><span class="n">silver_dir</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">openmedallion.cerebrum.schema</span><span class="w"> </span><span class="kn">import</span> <span class="n">rank_relevant_tables_scored</span><span class="p">,</span> <span class="n">describe_all_tables</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">openmedallion.cerebrum.retrieval</span><span class="w"> </span><span class="kn">import</span> <span class="n">CONFIDENCE_THRESHOLD</span>  <span class="c1"># 0.7</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="n">names</span><span class="p">,</span> <span class="n">confidence</span> <span class="o">=</span> <span class="n">rank_relevant_tables_scored</span><span class="p">(</span><span class="n">question</span><span class="p">,</span> <span class="n">metadata</span><span class="p">,</span> <span class="n">embed_fn</span><span class="p">,</span> <span class="n">top_k</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="k">if</span> <span class="n">confidence</span> <span class="o">&lt;</span> <span class="n">CONFIDENCE_THRESHOLD</span><span class="p">:</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>    <span class="c1"># describe_all_tables() needs no metadata.yaml at all</span>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>    <span class="n">raw_tables</span> <span class="o">=</span> <span class="n">describe_all_tables</span><span class="p">(</span><span class="n">silver_dir</span><span class="p">)</span>
 </span></code></pre></div>
 <p><code>CerebrumPipeline</code> wires this automatically — nothing to configure. When a fallback
 fires, it surfaces via the <code>on_step</code> progress callback (visible in <code>medallion query</code>'s
 CLI output):</p>
-<div class="highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>·  schema confidence 0.42 below threshold 0.7 — using raw-schema fallback search
+<div class="highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>·  schema confidence 0.42 below threshold 0.7 — using raw-schema fallback search
 </span></code></pre></div>
 <p>Both the approved-tables embedding and the raw-schema embedding are built lazily and
 cached <strong>per <code>CerebrumPipeline</code> instance</strong> — computed once on first use, never
@@ -1413,9 +1470,9 @@ is the higher-leverage failure mode; few-shot retrieval degrades more gracefully
 <p><code>cortex</code>'s chat tab shows 👍/👎 buttons on every assistant reply. A click POSTs to
 neuron's <code>/feedback</code> endpoint (cortex never touches project files directly — it only
 ever talks to neuron over HTTP):</p>
-<div class="highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>medallion<span class="w"> </span>examples<span class="w"> </span>harvest<span class="w"> </span>my_project<span class="w">   </span><span class="c1"># promote 👍 candidates into synthetic.jsonl</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">                                         </span><span class="c1"># as verified: false — still needs human review</span>
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>medallion<span class="w"> </span>examples<span class="w"> </span>review<span class="w">  </span>my_project<span class="w">   </span><span class="c1"># list 👎 failures for triage</span>
+<div class="highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>medallion<span class="w"> </span>examples<span class="w"> </span>harvest<span class="w"> </span>my_project<span class="w">   </span><span class="c1"># promote 👍 candidates into synthetic.jsonl</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">                                         </span><span class="c1"># as verified: false — still needs human review</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>medallion<span class="w"> </span>examples<span class="w"> </span>review<span class="w">  </span>my_project<span class="w">   </span><span class="c1"># list 👎 failures for triage</span>
 </span></code></pre></div>
 <p>A thumbs-up means "this looked right to a user," not "the SQL is definitely correct" —
 harvested candidates are promoted as <strong>unverified</strong>, so they go through
@@ -1425,13 +1482,13 @@ few-shot context.</p>
 <h2 id="opt-in-query-features">Opt-in query features<a class="headerlink" href="#opt-in-query-features" title="Permanent link">&para;</a></h2>
 <p>Two more <code>CerebrumPipeline</code> features are off by default (each costs one extra LLM call)
 and surfaced via <code>medallion query</code> flags:</p>
-<div class="highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>medallion<span class="w"> </span>query<span class="w"> </span>my_project<span class="w"> </span><span class="s2">&quot;Show me the good ones&quot;</span><span class="w"> </span>--detect-ambiguity
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="c1"># raises before any SQL is generated if the question is ambiguous, with a</span>
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="c1"># clarification question to show the user</span>
-</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>
-</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>medallion<span class="w"> </span>query<span class="w"> </span>my_project<span class="w"> </span><span class="s2">&quot;Headcount by department and revenue by region&quot;</span><span class="w"> </span>--decompose
-</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="c1"># splits into independent sub-questions, each run through the full pipeline</span>
-</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="c1"># separately — no attempt to merge results into one table</span>
+<div class="highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>medallion<span class="w"> </span>query<span class="w"> </span>my_project<span class="w"> </span><span class="s2">&quot;Show me the good ones&quot;</span><span class="w"> </span>--detect-ambiguity
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="c1"># raises before any SQL is generated if the question is ambiguous, with a</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="c1"># clarification question to show the user</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>medallion<span class="w"> </span>query<span class="w"> </span>my_project<span class="w"> </span><span class="s2">&quot;Headcount by department and revenue by region&quot;</span><span class="w"> </span>--decompose
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="c1"># splits into independent sub-questions, each run through the full pipeline</span>
+</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="c1"># separately — no attempt to merge results into one table</span>
 </span></code></pre></div>
 <hr />
 <h2 id="whats-not-built-yet">What's not built yet<a class="headerlink" href="#whats-not-built-yet" title="Permanent link">&para;</a></h2>
