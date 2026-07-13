@@ -58,6 +58,7 @@ nav:
     - UDF Guide: concepts/udf-guide.md
   - Guides:
     - Scheduling with Kestra: guides/kestra.md
+    - RAG Accuracy (metadata, relationships, examples): guides/rag-accuracy.md
   - Reference:
     - YAML Schema: reference/yaml-schema.md
     - CLI: reference/cli.md

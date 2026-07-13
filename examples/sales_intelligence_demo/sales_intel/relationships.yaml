@@ -1,0 +1,18 @@
+relationships:
+  - from_table: transactions
+    to_table: reps
+    join_on: [rep_id]
+    confidence: high
+    status: approved
+
+  - from_table: rep_performance
+    to_table: reps
+    join_on: [rep_id]
+    confidence: high
+    status: approved
+
+  - from_table: rep_performance
+    to_table: targets
+    join_on: [region, quarter]
+    confidence: high
+    status: approved

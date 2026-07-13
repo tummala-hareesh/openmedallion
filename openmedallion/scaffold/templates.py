@@ -370,6 +370,46 @@ con.close()
 
 ---
 
+## Natural-Language Queries (optional)
+
+Once the pipeline has silver/gold Parquet files, ask questions in plain English:
+
+```bash
+pip install "openmedallion[cerebrum]"
+medallion query {project} "What are the top 5 <metric> by <dimension>?"
+```
+
+For larger schemas, curate what the LLM sees instead of showing every table:
+
+```bash
+medallion metadata generate      {project}   # LLM-draft table/column descriptions
+medallion metadata approve       {project}   # human review, one table at a time
+
+medallion relationships generate {project}   # detect joins — no LLM call
+medallion relationships approve  {project}
+
+medallion examples generate      {project} --count 15   # LLM-draft Q→SQL pairs
+medallion examples approve       {project}
+```
+
+Once `metadata.yaml` has `status: approved` tables and `examples/synthetic.jsonl` has
+`verified: true` examples, `medallion query` picks them up automatically — dynamic
+few-shot retrieval and confidence-gated schema pruning, with a raw-schema fallback
+when the curated corpus doesn't confidently match the question. See
+[docs/guides/rag-accuracy.md](https://github.com/tummala-hareesh/openmedallion/blob/main/docs/guides/rag-accuracy.md)
+for the full design and
+[examples/sales_intelligence_demo/](https://github.com/tummala-hareesh/openmedallion/tree/main/examples/sales_intelligence_demo)
+for a runnable, offline walkthrough.
+
+Go live with a chat UI:
+
+```bash
+medallion ask    {project}   # neuron FastAPI server on :8000
+medallion cortex {project}   # cortex Dash chat UI on :8050
+```
+
+---
+
 ## How to Update the Frontend
 
 <!-- Choose whichever applies and delete the rest. -->
@@ -597,6 +637,30 @@ def _walkthrough_notebook(project: str, path_data: str = "data") -> str:
             "#\n",
             "# Then open the generated HTML files in your browser:\n",
             f"# import glob; list(glob.glob('{path_data}/**/add-ons/**/*.html', recursive=True))",
+        ]),
+        md([
+            "## Step 6 — Natural-language queries (optional)\n",
+            "\n",
+            "Ask questions in plain English once silver/gold Parquet files exist.\n",
+            "Requires: `pip install 'openmedallion[cerebrum]'` (and a running `ollama serve`,\n",
+            "or a cloud provider — see `settings.yaml`).\n",
+            "\n",
+            "For larger schemas, curate what the LLM sees instead of showing every table —\n",
+            "`metadata generate`/`approve`, `relationships generate`/`approve`, and\n",
+            "`examples generate`/`approve` add dynamic few-shot retrieval and confidence-gated\n",
+            "schema pruning. See `docs/guides/rag-accuracy.md` for the full design.\n",
+        ]),
+        code([
+            "# Uncomment after installing openmedallion[cerebrum] and starting Ollama:\n",
+            f"# !medallion query {project} \"<a question about your data>\"\n",
+            "#\n",
+            "# Curate schema knowledge for a larger project (each is optional, additive):\n",
+            f"# !medallion metadata generate {project}\n",
+            f"# !medallion metadata approve  {project}\n",
+            f"# !medallion relationships generate {project}\n",
+            f"# !medallion relationships approve  {project}\n",
+            f"# !medallion examples generate {project} --count 15\n",
+            f"# !medallion examples approve  {project}",
         ]),
     ]
 

@@ -243,7 +243,6 @@ def cmd_query(args: argparse.Namespace) -> None:
     cfg          = load_project(args.project, args.projects)
     silver_dir   = Path(cfg["paths"]["silver"])
     examples_dir = Path(args.projects) / args.project / "examples"
-    metadata     = load_metadata(args.project, args.projects)
 
     if not silver_dir.exists():
         print(f"  ❌  Silver layer not found: {silver_dir}")
@@ -260,6 +259,7 @@ def cmd_query(args: argparse.Namespace) -> None:
 
     try:
         import httpx
+        metadata = load_metadata(args.project, args.projects)
         pipeline = CerebrumPipeline(
             silver_dir,
             examples_dir=examples_dir if examples_dir.exists() else None,

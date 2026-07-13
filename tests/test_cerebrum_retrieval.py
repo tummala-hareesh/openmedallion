@@ -15,12 +15,16 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from openmedallion.cerebrum.retrieval import (
+    CONFIDENCE_THRESHOLD,
     embed_examples,
     embed_payloads,
     load_verified_examples,
     rank_examples,
     rank_payloads,
+    rank_payloads_scored,
 )
 
 
@@ -148,3 +152,45 @@ class TestGenericEmbedAndRankPayloads:
         via_generic  = embed_payloads(examples, lambda e: e["question"], embed_fn)
         via_specific = embed_examples(examples, embed_fn)
         assert via_generic == via_specific
+
+
+class TestRankPayloadsScored:
+    """rank_payloads_scored backs the confidence-gated fallback (schema.py's
+    rank_relevant_tables_scored + CerebrumPipeline._get_relevant_tables) —
+    callers need the raw top score, not just the ranked order."""
+
+    def test_returns_payload_and_score_pairs_sorted_descending(self):
+        payloads = [("orders", "revenue by region"), ("customers", "how many customers")]
+        vectors = {
+            "revenue by region":  [1.0, 0.0],
+            "how many customers": [0.0, 1.0],
+            "total revenue per region": [0.9, 0.1],
+        }
+        embed_fn = _fake_embed_fn(vectors)
+        embedded = embed_payloads(payloads, lambda p: p[1], embed_fn)
+        ranked = rank_payloads_scored("total revenue per region", embedded, embed_fn, top_k=2)
+        assert [p for p, _ in ranked] == payloads  # orders first, higher similarity
+        assert ranked[0][1] > ranked[1][1]
+        assert ranked[0][1] == pytest.approx(1.0, abs=0.01)
+
+    def test_rank_payloads_is_consistent_with_scored_version(self):
+        # rank_payloads is now a thin wrapper over rank_payloads_scored —
+        # confirm it didn't diverge.
+        payloads = [("orders", "revenue by region"), ("customers", "how many customers")]
+        vectors = {
+            "revenue by region":  [1.0, 0.0],
+            "how many customers": [0.0, 1.0],
+            "total revenue per region": [0.9, 0.1],
+        }
+        embed_fn = _fake_embed_fn(vectors)
+        embedded = embed_payloads(payloads, lambda p: p[1], embed_fn)
+        via_plain  = rank_payloads("total revenue per region", embedded, embed_fn, top_k=1)
+        via_scored = [p for p, _ in rank_payloads_scored("total revenue per region", embedded, embed_fn, top_k=1)]
+        assert via_plain == via_scored
+
+    def test_empty_embedded_payloads_returns_empty(self):
+        embed_fn = _fake_embed_fn({})
+        assert rank_payloads_scored("q", [], embed_fn) == []
+
+    def test_confidence_threshold_is_the_locked_value(self):
+        assert CONFIDENCE_THRESHOLD == 0.7

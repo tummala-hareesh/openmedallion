@@ -27,6 +27,15 @@ Locked design decisions (see CLAUDE.md "Roadmap: RAG Accuracy Improvement"):
   unreviewed drafts have no accuracy guarantee. Similarly, only
   ``status: approved`` silver-layer tables are eligible for schema pruning
   (see ``cerebrum/schema.py:rank_relevant_tables()``).
+- **Confidence-gated fallback (build order step "confidence signal"):** a
+  single score — the top-1 cosine similarity from schema-table ranking only
+  (not blended with few-shot example ranking, matching the locked "no
+  multi-dimensional confidence scoring" decision) — gates whether schema
+  pruning trusts the curated ``metadata.yaml`` corpus or falls back to a
+  ChromaDB-embedded search over every silver table's raw DDL, regardless of
+  metadata/approval status (see ``cerebrum/schema.py:rank_relevant_tables_scored``/
+  ``describe_all_tables``, and ``CerebrumPipeline._get_relevant_tables``).
+  ``CONFIDENCE_THRESHOLD`` below is that gate.
 """
 from __future__ import annotations
 
@@ -38,6 +47,11 @@ from typing import TypeVar
 EmbedFn = Callable[[list[str]], list[list[float]]]
 
 T = TypeVar("T")
+
+#: Below this top-1 cosine similarity, structured (metadata.yaml-backed)
+#: schema retrieval is considered unreliable and callers should fall back to
+#: a broader raw-schema search. Locked value from CLAUDE.md's RAG roadmap.
+CONFIDENCE_THRESHOLD = 0.7
 
 
 def get_embed_fn() -> EmbedFn:
@@ -100,6 +114,34 @@ def embed_payloads(
     return list(zip(payloads, vectors))
 
 
+def rank_payloads_scored(
+    query: str,
+    embedded_payloads: list[tuple[T, list[float]]],
+    embed_fn: EmbedFn,
+    top_k: int = 3,
+) -> list[tuple[T, float]]:
+    """Return up to *top_k* ``(payload, similarity)`` pairs, most similar first.
+
+    Same ranking as :func:`rank_payloads` but keeps the cosine similarity
+    score alongside each payload — needed by callers that gate behavior on
+    the top score (see ``CONFIDENCE_THRESHOLD``), not just the ranked order.
+
+    Returns ``[]`` if ``embedded_payloads`` is empty.
+    """
+    if not embedded_payloads:
+        return []
+    query_vector = embed_fn([query])[0]
+    ranked = sorted(
+        (
+            (payload, _cosine_similarity(vector, query_vector))
+            for payload, vector in embedded_payloads
+        ),
+        key=lambda pair: pair[1],
+        reverse=True,
+    )
+    return ranked[:top_k]
+
+
 def rank_payloads(
     query: str,
     embedded_payloads: list[tuple[T, list[float]]],
@@ -120,15 +162,7 @@ def rank_payloads(
         list[T]: The original payloads, ranked by cosine similarity, most
         similar first. Empty if ``embedded_payloads`` is empty.
     """
-    if not embedded_payloads:
-        return []
-    query_vector = embed_fn([query])[0]
-    ranked = sorted(
-        embedded_payloads,
-        key=lambda pair: _cosine_similarity(pair[1], query_vector),
-        reverse=True,
-    )
-    return [payload for payload, _ in ranked[:top_k]]
+    return [payload for payload, _score in rank_payloads_scored(query, embedded_payloads, embed_fn, top_k)]
 
 
 def embed_examples(

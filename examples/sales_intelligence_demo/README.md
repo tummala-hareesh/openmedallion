@@ -11,6 +11,7 @@ This demo is the reference for all features added after 2026.5.4:
 | Silver derived UDF (three-table join + attainment %) | `udf/silver/enrich.py` |
 | Gold pre-agg UDF (pass-through / hook) | `udf/gold/metrics.py` |
 | `explore: profile` on bronze, silver, gold | `bronze.yaml`, `silver.yaml`, `gold.yaml` |
+| RAG accuracy add-ons — metadata, relationships, examples, confidence-gated fallback | `sales_intel/metadata.yaml`, `sales_intel/relationships.yaml`, `sales_intel/examples/`, `show_rag_workflow.py` |
 
 ---
 
@@ -159,6 +160,63 @@ Compare attainment across regions in Q1 vs Q2
 
 ---
 
+## RAG Accuracy Add-ons — metadata, relationships, examples, confidence-gated fallback
+
+This project ships with curated `sales_intel/metadata.yaml`, `sales_intel/relationships.yaml`,
+and `sales_intel/examples/synthetic.jsonl` — the reference artifacts for openmedallion's
+full RAG accuracy pipeline (see [`docs/guides/rag-accuracy.md`](../../docs/guides/rag-accuracy.md)
+for the complete design).
+
+`show_rag_workflow.py` demonstrates all of it **without Ollama or ChromaDB installed**, by
+injecting a small deterministic word-overlap embedding function in place of a real one —
+the same `_embed_fn=` injection point used throughout the cerebrum test suite:
+
+```bash
+python show_rag_workflow.py
+```
+
+It shows:
+1. **Curated knowledge** — the 4 approved tables in `metadata.yaml` and 3 approved
+   relationships in `relationships.yaml`
+2. **Dynamic few-shot retrieval** — which verified `synthetic.jsonl` examples get
+   selected as few-shot context for a sample question
+3. **Confidence-gated schema pruning** — one question that clears the 0.7 confidence
+   threshold (structured, approved-only ranking is trusted) and one clearly off-topic
+   question that doesn't (the pipeline falls back to a raw-schema search over *every*
+   silver table, regardless of metadata/approval status)
+4. **The commands to go live** — regenerating/reviewing metadata, relationships, and
+   examples with a real LLM, plus querying with the accuracy features engaged
+
+### Go live with the LLM-backed commands
+
+```bash
+# Regenerate/refresh curated knowledge (Ollama by default)
+medallion metadata generate      sales_intel     # draft descriptions for any new tables
+medallion metadata approve       sales_intel     # human review, one table at a time
+
+medallion relationships generate sales_intel     # no LLM call — pure pattern matching
+medallion relationships approve  sales_intel
+
+medallion examples generate      sales_intel --count 15
+medallion examples approve       sales_intel
+
+# After a cortex 👍/👎 session
+medallion examples harvest sales_intel           # promote thumbs-up into synthetic.jsonl
+medallion examples review  sales_intel           # list thumbs-down failures
+
+# Query — metadata.yaml/examples/ are picked up automatically, no extra flag needed
+medallion query sales_intel "Which rep is leading in revenue this quarter?"
+
+# Opt-in: ambiguity detection / query decomposition (each costs one extra LLM call)
+medallion query sales_intel "Show me the good ones" --detect-ambiguity
+medallion query sales_intel "Headcount by team and revenue by region" --decompose
+```
+
+Requires: `pip install "openmedallion[cerebrum]"` (bundles `chromadb`, used only as an
+embedding-function provider — ranking itself is plain cosine similarity).
+
+---
+
 ## Run the Demo
 
 ```bash
@@ -173,7 +231,10 @@ medallion run sales_intel
 # Step 3 — show cerebrum demo (no Ollama needed)
 python show_cerebrum.py
 
-# Step 4 — go live with Ollama (optional)
+# Step 4 — show the RAG accuracy add-ons (no Ollama/ChromaDB needed)
+python show_rag_workflow.py
+
+# Step 5 — go live with Ollama (optional)
 # Terminal 1:
 medallion ask sales_intel
 

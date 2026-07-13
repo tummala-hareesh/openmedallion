@@ -1,6 +1,6 @@
 # 📚 Examples
 
-Three self-contained examples, each runnable with `pip install openmedallion` and no cloud credentials.
+Five self-contained examples, each runnable with `pip install openmedallion` and no cloud credentials.
 
 ---
 
@@ -153,6 +153,50 @@ medallion run oracle_hr --projects .
 
 ---
 
+## 5. 🧠 [sales_intelligence_demo](sales_intelligence_demo/)
+
+**Best for:** anyone building the natural-language query layer — cerebrum/neuron/cortex,
+and the RAG accuracy add-ons (curated metadata, relationships, examples, and the
+confidence-gated schema-pruning fallback).
+
+```mermaid
+flowchart LR
+    subgraph silver["⚪ Silver"]
+        RP["rep_performance\n(joined + attainment_pct)"]
+    end
+    subgraph rag["🧠 RAG accuracy add-ons"]
+        MD["metadata.yaml\n(approved tables)"]
+        REL["relationships.yaml\n(approved joins)"]
+        EX["examples/synthetic.jsonl\n(verified Q→SQL)"]
+    end
+    subgraph query["Natural-language query"]
+        Q["\"Which rep is leading\nin revenue this quarter?\""]
+    end
+
+    RP --> MD & REL
+    MD & REL & EX -->|"confidence >= 0.7"| SQL1["structured schema pruning\n+ dynamic few-shot"]
+    MD -->|"confidence < 0.7"| SQL2["raw-schema ChromaDB fallback\n(any table, any status)"]
+    Q --> SQL1 & SQL2
+```
+
+| What it shows | Details |
+| --- | --- |
+| `cerebrum` end-to-end | `show_cerebrum.py` — schema context, prompt, DuckDB execution, recommender |
+| Curated metadata + relationships | `metadata.yaml` / `relationships.yaml` — 4 approved tables, 3 approved joins |
+| Dynamic few-shot retrieval | `examples/synthetic.jsonl` — verified Q→SQL pairs ranked per question |
+| Confidence-gated fallback | `show_rag_workflow.py` — one question clears the 0.7 gate, one triggers the raw-schema fallback |
+| `neuron` + `cortex` | `medallion ask` / `medallion cortex` — HTTP server + chat UI |
+
+```bash
+cd examples/sales_intelligence_demo
+python seed.py
+medallion run sales_intel
+python show_cerebrum.py         # cerebrum, no Ollama needed
+python show_rag_workflow.py     # RAG accuracy add-ons, no Ollama/ChromaDB needed
+```
+
+---
+
 ## Progression
 
 | Example | Tables | Bronze | Silver UDF | Gold UDF | Incremental |
@@ -161,3 +205,4 @@ medallion run oracle_hr --projects .
 | incremental_sql_demo | 2 | dlt + SQLite | cast only | — | append + merge |
 | ecommerce_analytics_demo | 3 | pre-seeded | derived join | pre_agg_udf | — |
 | oracle_hr_demo | 3 | dlt + SQL filter | derived join | pre_agg_udf | append + merge |
+| sales_intelligence_demo | 3 | pre-seeded | derived join | pass-through | — (cerebrum + RAG add-ons) |

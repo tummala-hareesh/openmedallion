@@ -26,7 +26,12 @@ from openmedallion.cerebrum.pipeline    import (
 )
 from openmedallion.cerebrum.prompt      import build_prompt, system_prompt
 from openmedallion.cerebrum.recommender import recommend
-from openmedallion.cerebrum.schema      import build_schema_context, rank_relevant_tables
+from openmedallion.cerebrum.schema      import (
+    build_schema_context,
+    describe_all_tables,
+    rank_relevant_tables,
+    rank_relevant_tables_scored,
+)
 from openmedallion.metadata.schema      import MetadataConfig
 from openmedallion.cerebrum.validator   import check_result_sanity, validate, validate_and_fix
 
@@ -92,6 +97,25 @@ class TestBuildSchemaContext:
         ctx = build_schema_context(silver_dir, tables=["orders", "nonexistent"])
         assert "TABLE orders" in ctx
         assert "nonexistent" not in ctx
+
+
+class TestDescribeAllTables:
+    """describe_all_tables backs the confidence-gated fallback — unlike
+    rank_relevant_tables, it needs no metadata.yaml or approval status."""
+
+    def test_returns_every_table_unfiltered(self, silver_dir):
+        result = describe_all_tables(silver_dir)
+        names = {name for name, _cols in result}
+        assert names == {"orders", "products"}
+
+    def test_returns_column_name_dtype_pairs(self, silver_dir):
+        result = dict(describe_all_tables(silver_dir))
+        col_names = {col for col, _dtype in result["orders"]}
+        assert "order_id" in col_names
+        assert "customer_id" in col_names
+
+    def test_empty_dir_returns_empty_list(self, tmp_path):
+        assert describe_all_tables(tmp_path) == []
 
 
 # ── schema pruning (build order step 10) ─────────────────────────────────────
@@ -183,6 +207,52 @@ class TestRankRelevantTables:
             return [[1.0, 0.0] for _ in texts]
         rank_relevant_tables("q", metadata, _embed, top_k=5)
         assert any("total order amount" in t for t in seen_texts)
+
+
+class TestRankRelevantTablesScored:
+    """rank_relevant_tables_scored backs the confidence gate — same ranking
+    as rank_relevant_tables, plus the top-1 similarity score."""
+
+    def _metadata(self, tables: dict) -> MetadataConfig:
+        return MetadataConfig(tables=tables)
+
+    def _fake_embed_fn(self, vectors: dict[str, list[float]]):
+        def _embed(texts: list[str]) -> list[list[float]]:
+            result = []
+            for text in texts:
+                match = next((v for k, v in vectors.items() if k in text), None)
+                if match is None:
+                    raise KeyError(f"no vector fixture matches text: {text!r}")
+                result.append(match)
+            return result
+        return _embed
+
+    def test_returns_same_names_as_rank_relevant_tables(self):
+        metadata = self._metadata({
+            "orders": {"layer": "silver", "status": "approved", "description": "revenue by region", "columns": {}},
+        })
+        embed_fn = self._fake_embed_fn({"revenue by region": [1.0, 0.0], "q": [1.0, 0.0]})
+        names, _confidence = rank_relevant_tables_scored("q", metadata, embed_fn, top_k=5)
+        assert names == rank_relevant_tables("q", metadata, embed_fn, top_k=5)
+
+    def test_confidence_is_top1_cosine_similarity(self):
+        metadata = self._metadata({
+            "orders": {"layer": "silver", "status": "approved", "description": "revenue by region", "columns": {}},
+        })
+        embed_fn = self._fake_embed_fn({
+            "revenue by region": [1.0, 0.0], "total revenue per region": [0.9, 0.1],
+        })
+        _names, confidence = rank_relevant_tables_scored("total revenue per region", metadata, embed_fn, top_k=5)
+        assert confidence == pytest.approx(0.994, abs=0.01)
+
+    def test_no_approved_tables_confidence_is_zero_sentinel(self):
+        metadata = self._metadata({
+            "orders": {"layer": "silver", "status": "draft", "description": "d", "columns": {}},
+        })
+        embed_fn = self._fake_embed_fn({})
+        names, confidence = rank_relevant_tables_scored("q", metadata, embed_fn, top_k=5)
+        assert names == []
+        assert confidence == 0.0
 
 
 # ── prompt ────────────────────────────────────────────────────────────────────
@@ -646,15 +716,64 @@ class TestCerebrumPipelineSchemaPruning:
             pipeline.ask("Show me one order")
         assert mock_bsc.call_args.kwargs["tables"] is None
 
-    def test_no_approved_tables_passes_none(self, silver_dir):
+    def test_no_approved_tables_falls_back_to_raw_schema_search(self, silver_dir):
+        # No approved tables -> confidence is the 0.0 sentinel, which is
+        # below CONFIDENCE_THRESHOLD, so this now triggers the raw-schema
+        # fallback (describe_all_tables) instead of showing every table
+        # unpruned — this is the "confidence-signal gap" the roadmap flagged
+        # as unwired, now closed.
         metadata = MetadataConfig(tables={
             "orders": {"layer": "silver", "status": "draft", "description": "d", "columns": {}},
         })
+        embed_fn = self._fake_embed_fn({
+            "orders": [1.0, 0.0], "products": [0.0, 1.0], "Show me one order": [1.0, 0.0],
+        })
         mock_llm = MagicMock(side_effect=["SELECT * FROM orders LIMIT 1", "q"])
-        pipeline = CerebrumPipeline(silver_dir, metadata=metadata, _client=mock_llm)
+        pipeline = CerebrumPipeline(silver_dir, metadata=metadata, _client=mock_llm, _embed_fn=embed_fn)
         with patch("openmedallion.cerebrum.pipeline._schema.build_schema_context", wraps=build_schema_context) as mock_bsc:
             pipeline.ask("Show me one order")
-        assert mock_bsc.call_args.kwargs["tables"] is None
+        pruned = mock_bsc.call_args.kwargs["tables"]
+        assert pruned is not None
+        assert set(pruned) == {"orders", "products"}
+
+    def test_low_confidence_approved_match_falls_back_to_raw_schema_search(self, silver_dir):
+        # An approved table exists, but its description is near-orthogonal to
+        # the question -> structured confidence lands below the 0.7 gate, so
+        # the raw-schema fallback corpus (all silver tables, any status) is
+        # used instead of the structured (approved-only) ranking.
+        metadata = MetadataConfig(tables={
+            "orders": {"layer": "silver", "status": "approved", "description": "irrelevant topic", "columns": {}},
+        })
+        vectors = {
+            "irrelevant topic":          [0.0, 1.0],
+            "total revenue per region":  [1.0, 0.0],
+            "orders":                    [1.0, 0.0],
+            "products":                  [0.9, 0.1],
+        }
+        embed_fn = self._fake_embed_fn(vectors)
+        mock_llm = MagicMock(side_effect=["SELECT * FROM orders LIMIT 1", "q"])
+        pipeline = CerebrumPipeline(silver_dir, metadata=metadata, _client=mock_llm, _embed_fn=embed_fn)
+
+        steps: list[str] = []
+        pipeline.ask("total revenue per region", on_step=steps.append)
+
+        assert pipeline._embedded_fallback_tables is not None
+        assert pipeline._embedded_fallback_tables != []
+        assert any("confidence" in s.lower() and "fallback" in s.lower() for s in steps)
+
+    def test_high_confidence_does_not_build_fallback_corpus(self, silver_dir):
+        # Confirms the fallback corpus is genuinely lazy -- when structured
+        # confidence clears the gate, describe_all_tables()/the fallback
+        # embedding is never triggered (no wasted work).
+        metadata = MetadataConfig(tables={
+            "orders": {"layer": "silver", "status": "approved", "description": "revenue by region", "columns": {}},
+        })
+        vectors = {"revenue by region": [1.0, 0.0], "total revenue per region": [0.9, 0.1]}
+        embed_fn = self._fake_embed_fn(vectors)
+        mock_llm = MagicMock(side_effect=["SELECT * FROM orders LIMIT 1", "q"])
+        pipeline = CerebrumPipeline(silver_dir, metadata=metadata, _client=mock_llm, _embed_fn=embed_fn)
+        pipeline.ask("total revenue per region")
+        assert pipeline._embedded_fallback_tables is None
 
     def test_approved_tables_prune_the_schema_context(self, silver_dir):
         # More approved tables than the pipeline's top_k=5 so pruning actually

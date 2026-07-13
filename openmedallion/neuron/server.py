@@ -97,17 +97,16 @@ async def query_endpoint(
             detail=f"Silver layer not found for project '{body.project}': {silver}",
         )
 
-    pipeline = CerebrumPipeline(
-        silver,
-        examples_dir=_examples_dir(body.project),
-        metadata=_load_metadata(body.project),
-        model=settings.LLM_MODEL,
-        provider=settings.LLM_PROVIDER,
-        api_key=settings.LLM_API_KEY,
-        base_url=settings.LLM_BASE_URL,
-    )
-
     try:
+        pipeline = CerebrumPipeline(
+            silver,
+            examples_dir=_examples_dir(body.project),
+            metadata=_load_metadata(body.project),
+            model=settings.LLM_MODEL,
+            provider=settings.LLM_PROVIDER,
+            api_key=settings.LLM_API_KEY,
+            base_url=settings.LLM_BASE_URL,
+        )
         qr = pipeline.ask(body.question)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))

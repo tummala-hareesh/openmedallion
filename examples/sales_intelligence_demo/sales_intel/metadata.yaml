@@ -1,0 +1,48 @@
+tables:
+  transactions:
+    layer: silver
+    status: approved
+    description: "Individual sales deals (transactions) closed by reps, one row per deal."
+    synonyms: [deals, sales, orders]
+    columns:
+      txn_id:   {description: "Unique transaction identifier."}
+      rep_id:   {description: "Sales rep who closed this deal."}
+      product:  {description: "Product sold in this transaction."}
+      amount:   {description: "Revenue amount for this deal, in dollars."}
+      units:    {description: "Number of units sold in this deal."}
+      txn_date: {description: "Date the deal closed."}
+      stage:    {description: "Deal pipeline stage, e.g. closed_won."}
+
+  reps:
+    layer: silver
+    status: approved
+    description: "Sales reps roster — name, region, and team assignment."
+    synonyms: [salespeople, "sales team", employees]
+    columns:
+      rep_id: {description: "Unique sales rep identifier."}
+      name:   {description: "Sales rep's full name."}
+      region: {description: "Geographic region the rep is assigned to."}
+      team:   {description: "Sales team, e.g. Enterprise or SMB."}
+
+  targets:
+    layer: silver
+    status: approved
+    description: "Quarterly revenue targets (quotas) set per region."
+    synonyms: [quotas, goals]
+    columns:
+      region:        {description: "Region the target applies to."}
+      quarter:       {description: "Fiscal quarter, e.g. 2024-Q1."}
+      target_amount: {description: "Revenue target/quota for that region and quarter."}
+
+  rep_performance:
+    layer: silver
+    status: approved
+    description: >-
+      Every transaction enriched with rep name, region, team, the quarterly
+      revenue target, and attainment percentage — the main table for
+      revenue, quota-attainment, and rep-leaderboard questions.
+    synonyms: [performance, attainment, "revenue by rep", leaderboard]
+    columns:
+      attainment_pct: {description: "Percent of the regional quarterly target this single deal represents."}
+      target_amount:  {description: "Quarterly revenue target/quota for this deal's region."}
+      quarter:        {description: "Fiscal quarter this transaction falls in."}

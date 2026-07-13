@@ -317,6 +317,36 @@ medallion cortex my_project             # start Dash chat UI on :8050
 
 `neuron` exposes a `/query` endpoint (Swagger UI at `/docs`). `cortex` connects to it and provides a three-tab UI: chat, table, and dashboard with CSV/Excel download.
 
+### Improving accuracy — metadata, relationships, and examples (RAG)
+
+For larger schemas, curate what the LLM sees instead of dumping every table:
+
+```bash
+medallion metadata generate      my_project   # LLM-draft table/column descriptions
+medallion metadata approve       my_project   # human review, one table at a time
+
+medallion relationships generate my_project   # detect joins — no LLM call
+medallion relationships approve  my_project
+
+medallion examples generate      my_project --count 15   # LLM-draft Q→SQL pairs
+medallion examples approve       my_project
+```
+
+Once `metadata.yaml` has `status: approved` tables and `examples/synthetic.jsonl` has
+`verified: true` examples, `medallion query`/`ask` pick them up automatically — no
+extra flag needed. Two things happen behind the scenes:
+
+- **Dynamic few-shot retrieval** — the most relevant verified examples are ranked in as
+  prompt context, instead of a fixed static list.
+- **Confidence-gated schema pruning** — only the top-k most relevant *approved* tables
+  are shown to the LLM. If similarity to the best match falls below a confidence
+  threshold, it falls back to a raw-schema search over *every* silver table (any
+  status, no `metadata.yaml` required) rather than trusting a weak match.
+
+See [`docs/guides/rag-accuracy.md`](docs/guides/rag-accuracy.md) for the full design, and
+[`examples/sales_intelligence_demo/`](examples/sales_intelligence_demo/) for a runnable,
+offline (`show_rag_workflow.py`) walkthrough.
+
 ---
 
 ## Scheduling with Kestra
@@ -378,13 +408,15 @@ Restart with `make kestra-up` and Kestra picks up the change immediately.
 
 ## Examples
 
-Three self-contained examples — no cloud credentials required. See [`examples/README.md`](examples/README.md) for a side-by-side comparison.
+Five self-contained examples — no cloud credentials required. See [`examples/README.md`](examples/README.md) for a side-by-side comparison.
 
 | Example | Tables | What it demonstrates |
 | --- | --- | --- |
 | [`local_parquet_demo/`](examples/local_parquet_demo/) | 1 | Zero-credential quickstart: full Bronze → Silver → Gold with local Parquet files |
 | [`incremental_sql_demo/`](examples/incremental_sql_demo/) | 2 | Incremental append + merge from SQLite; delta load simulation |
-| [`ecommerce_analytics_demo/`](examples/ecommerce_analytics_demo/) | 3 | Multi-table joins, margin analysis, and monthly trends — most complete example |
+| [`ecommerce_analytics_demo/`](examples/ecommerce_analytics_demo/) | 3 | Multi-table joins, margin analysis, and monthly trends |
+| [`oracle_hr_demo/`](examples/oracle_hr_demo/) | 3 | SQL `filter:`/`select:` pushdown, `credentials_file:`, real Oracle/Postgres swap |
+| [`sales_intelligence_demo/`](examples/sales_intelligence_demo/) | 3 | cerebrum/neuron/cortex + the full RAG accuracy add-ons (metadata, relationships, examples, confidence-gated fallback) — most complete example |
 
 ---
 
@@ -436,8 +468,9 @@ A great fit if you:
 | Declarative gold utilities (having, sort, limit) + extended aggregations (median, std, var, first, last, count_distinct) | ✅ 2026.6.9 |
 | Schema contract enforcement (Pydantic config schemas) | ✅ 2026.7.1 |
 | Named filter fragments (`filter_defs`) | ✅ 2026.7.1 |
+| RAG accuracy — metadata, relationships, examples generate/approve, dynamic few-shot, confidence-gated schema pruning fallback | ✅ 2026.7.3 |
 | REST API multi-resource support | 🔜 roadmap |
-| Lineage + metadata helpers | 🔜 roadmap |
+| Metadata drift detection (`medallion metadata refresh`) | 🔜 roadmap |
 | Additional cloud destinations | 🔜 roadmap |
 
 ---

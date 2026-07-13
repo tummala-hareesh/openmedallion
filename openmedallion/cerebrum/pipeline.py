@@ -152,6 +152,10 @@ class CerebrumPipeline:
         # Sentinel: None = not yet attempted; [] = attempted, nothing to embed.
         self._embedded_examples: list[tuple[dict[str, str], list[float]]] | None = None
         self._embedded_tables: list[tuple[str, list[float]]] | None = None
+        # Confidence-gated fallback corpus: every silver table's raw DDL,
+        # regardless of metadata/approval status. Only built the first time
+        # structured (approved-only) confidence falls below the threshold.
+        self._embedded_fallback_tables: list[tuple[str, list[float]]] | None = None
         self._detect_ambiguity  = detect_ambiguity
         self._decompose_queries = decompose_queries
 
@@ -179,9 +183,21 @@ class CerebrumPipeline:
 
         return _retrieval.rank_examples(question, self._embedded_examples, self._embed_fn, top_k=3)
 
-    def _get_relevant_tables(self, question: str) -> list[str] | None:
+    def _get_relevant_tables(
+        self, question: str, on_step: Callable[[str], None] | None = None
+    ) -> list[str] | None:
         """Return pruned table names for build_schema_context(), or None to
-        fall back to showing every table (no metadata, or no approved tables)."""
+        fall back to showing every table (no metadata at all — the caller
+        never opted into metadata-based features, so this stays zero-cost).
+
+        When metadata *is* provided but the curated (approved-only) corpus's
+        top-1 similarity to *question* falls below
+        ``retrieval.CONFIDENCE_THRESHOLD`` (including the "no approved tables
+        yet" case, confidence 0.0), falls back to a raw-schema search over
+        every silver table's DDL — no metadata/approval status required.
+        """
+        _notify = on_step or (lambda _: None)
+
         if self._metadata is None:
             return None
 
@@ -198,11 +214,40 @@ class CerebrumPipeline:
                     approved, lambda p: _schema._table_text(*p), self._embed_fn
                 )
 
-        if not self._embedded_tables:
+        confidence = 0.0
+        if self._embedded_tables:
+            self._embed_fn = self._embed_fn or _retrieval.get_embed_fn()
+            ranked = _retrieval.rank_payloads_scored(
+                question, self._embedded_tables, self._embed_fn, top_k=5
+            )
+            confidence = ranked[0][1] if ranked else 0.0
+            if confidence >= _retrieval.CONFIDENCE_THRESHOLD:
+                return [name for (name, _table), _score in ranked]
+
+        _notify(
+            f"schema confidence {confidence:.2f} below threshold "
+            f"{_retrieval.CONFIDENCE_THRESHOLD} — using raw-schema fallback search"
+        )
+        return self._get_fallback_tables(question)
+
+    def _get_fallback_tables(self, question: str) -> list[str] | None:
+        """Rank every silver table's raw DDL (any status, no metadata.yaml
+        required) — the confidence-gated fallback corpus."""
+        if self._embedded_fallback_tables is None:
+            raw = _schema.describe_all_tables(self._silver_dir)
+            if not raw:
+                self._embedded_fallback_tables = []
+            else:
+                self._embed_fn = self._embed_fn or _retrieval.get_embed_fn()
+                self._embedded_fallback_tables = _retrieval.embed_payloads(
+                    raw, lambda p: _schema._raw_table_text(*p), self._embed_fn
+                )
+
+        if not self._embedded_fallback_tables:
             return None
 
-        ranked = _retrieval.rank_payloads(question, self._embedded_tables, self._embed_fn, top_k=5)
-        return [name for name, _ in ranked]
+        ranked = _retrieval.rank_payloads(question, self._embedded_fallback_tables, self._embed_fn, top_k=5)
+        return [name for name, _columns in ranked]
 
     def _ask_single(
         self,
@@ -226,7 +271,7 @@ class CerebrumPipeline:
         _notify = on_step or (lambda _: None)
 
         _notify("building schema context")
-        relevant_tables = self._get_relevant_tables(question)
+        relevant_tables = self._get_relevant_tables(question, on_step=on_step)
         schema_ctx  = _schema.build_schema_context(self._silver_dir, tables=relevant_tables)
         few_shot    = self._get_few_shot(question)
         full_prompt = _prompt.build_prompt(schema_ctx, question, few_shot=few_shot)
@@ -304,7 +349,7 @@ class CerebrumPipeline:
 
         if self._detect_ambiguity:
             _notify("checking for ambiguity")
-            relevant_tables = self._get_relevant_tables(question)
+            relevant_tables = self._get_relevant_tables(question, on_step=on_step)
             schema_ctx = _schema.build_schema_context(self._silver_dir, tables=relevant_tables)
             clarification = _decomposition.detect_ambiguity(question, schema_ctx, self._llm_call)
             if clarification:

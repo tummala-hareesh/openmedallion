@@ -8,6 +8,39 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Confidence-gated ChromaDB fallback for schema pruning** — closes the "confidence-signal gap" the RAG accuracy roadmap had left unwired. `cerebrum/retrieval.py` gains `CONFIDENCE_THRESHOLD = 0.7` and `rank_payloads_scored()` (returns `(payload, similarity)` pairs; `rank_payloads()` is now a thin wrapper, unchanged behavior). `cerebrum/schema.py` gains `rank_relevant_tables_scored()` (same ranking as `rank_relevant_tables()`, plus the top-1 confidence score) and `describe_all_tables()`/`_raw_table_text()` — a raw-DDL corpus covering every silver table regardless of `metadata.yaml`/approval status. When the curated (approved-only) corpus's top-1 similarity falls below the threshold, `CerebrumPipeline._get_relevant_tables()` now falls back to ranking against the raw-schema corpus instead of showing every table unpruned, with an `on_step` message surfacing the fallback. Locked scope: confidence is table-ranking only, not blended with few-shot example ranking. (`cerebrum/retrieval.py`, `cerebrum/schema.py`, `cerebrum/pipeline.py`)
+- **`docs/guides/rag-accuracy.md`** — new guide covering the full RAG accuracy design: `metadata.yaml`/`relationships.yaml`/synthetic examples, dynamic few-shot retrieval, and the confidence-gated schema-pruning fallback. `docs/reference/cli.md` filled in the previously-undocumented `query`, `ask`, `cortex`, `metadata`, `relationships`, and `examples` commands.
+- **`sales_intelligence_demo` extended** with curated `metadata.yaml`/`relationships.yaml`/`examples/synthetic.jsonl` and a new `show_rag_workflow.py` — a fully offline walkthrough (no Ollama/ChromaDB needed) of curated knowledge, dynamic few-shot retrieval, and both sides of the confidence gate.
+- **`medallion init` scaffold** — generated `README.md` and `walkthrough.ipynb` now document the RAG workflow (`metadata`/`relationships`/`examples generate`+`approve`, `medallion query`) as an optional next step. First tests added for the scaffold module (`tests/test_scaffold.py`).
+
+### Fixed
+
+- **Malformed `metadata.yaml` crashed instead of erroring gracefully** — `load_metadata()` was called outside the try/except block in both `cmd_query` (`cli/main.py`) and `query_endpoint` (`neuron/server.py`), so a schema-invalid `metadata.yaml` produced a raw Python traceback (CLI) or an unhandled 500 with no JSON `detail` (neuron) instead of the existing styled `❌`/`422` error paths. Both call sites now load metadata inside their error handling.
+
+---
+
+## [2026.7.3] — 2026-07-12 (RAG accuracy roadmap)
+
+### Added
+
+- **`metadata.yaml`** — curated table/column descriptions, synonyms, and value examples for silver/gold tables, with a `draft`/`approved`/`stale` status per table (approved tables' columns are the only ones injected into the LLM prompt). `medallion metadata generate` drafts descriptions via one LLM call per table (samples dtypes/values deterministically via DuckDB); `medallion metadata approve` is an interactive `[a]pprove/[s]kip/[q]uit` review loop, no LLM call. Regenerating always preserves `approved` tables untouched. User-maintained `metadata_enhancements.yaml` deep-merges on top. (`openmedallion/metadata/`)
+- **`relationships.yaml`** — explicit join paths between tables, detected via three deterministic rules (no LLM call): `fk_naming` (shared `<entity>_id` column, high confidence), `lineage` (one table's columns are a subset of another's, medium confidence), `grain` (shared non-id string column, low confidence). `medallion relationships generate`/`approve` mirror the metadata workflow; regenerating preserves `approved` and hand-added (no `method`) entries. (`openmedallion/relationships/`)
+- **Synthetic Q→SQL examples** — `medallion examples generate` asks the LLM for a batch of `(question, sql)` pairs from approved metadata + relationships, validating every SQL via the existing allowlist + DuckDB `EXPLAIN` check (unvalidatable examples are dropped). `medallion examples approve` reviews unverified entries; identity is a content hash of `(question, sql)` since JSONL has no natural key. (`openmedallion/examples/`)
+- **Dynamic few-shot retrieval** — `CerebrumPipeline` ranks verified examples by embedding similarity to the current question and injects the top 3 as few-shot context, falling back to the static built-in list when no `examples/` directory or no verified examples exist. ChromaDB is used only as an embedding-function provider; ranking is plain cosine similarity, fully testable without chromadb installed. (`cerebrum/retrieval.py`)
+- **Schema pruning** — `rank_relevant_tables()` narrows the DDL shown to the LLM to the top-k most relevant `status: approved` silver tables, using the same embedding-ranking technique. (`cerebrum/schema.py`)
+- **Result sanity check** — `check_result_sanity()` triggers only when a query returns zero rows, giving the LLM one confirm-or-fix attempt before falling back to the original SQL/result; never loops, never raises. (`cerebrum/validator.py`)
+- **Ambiguity detection + query decomposition** — opt-in `CerebrumPipeline` flags (`detect_ambiguity`, `decompose_queries`, both off by default). `ask()` raises `AmbiguousQuestionError` before generating SQL if the question is ambiguous, or returns `MultiQueryResult` (each sub-question run independently, no DataFrame merge) if it decomposes. Exposed via `medallion query --detect-ambiguity`/`--decompose`. (`cerebrum/decomposition.py`, `cerebrum/pipeline.py`)
+- **cortex thumbs up/down feedback** — every assistant reply gets 👍/👎 buttons; a click POSTs to a new neuron `POST /feedback` endpoint (cortex never touches project files directly), appending to `examples/harvested.jsonl` or `examples/failures.jsonl`. `medallion examples harvest` promotes thumbs-up candidates into `synthetic.jsonl` as unverified (idempotent, dedup by content hash); `medallion examples review` lists thumbs-down failures. (`neuron/server.py`, `cortex/tabs/chat.py`, `openmedallion/examples/feedback.py`, `openmedallion/examples/harvest.py`)
+- **Pydantic config schema (`config/schema.py`)** — the imperative `_validate_config()` checks in `config/validator.py` were replaced with typed Pydantic models (`extra="forbid"` throughout), catching config typos like `filter_propogate` at load time. Shared error-formatting (`config/errors.py:format_validation_error()`) is reused by `metadata/loader.py` and `relationships/loader.py`.
+- **`filter_defs`** — named, reusable SQL filter fragments on a `sql_database` source, referenced via `{ref:name}` in any table's `filter:` (composes with `filter_propagate`). (`pipeline/bronze.py`, `config/schema.py`)
+
+### Known gaps (flagged, not silently dropped)
+
+- Metadata drift detection (`medallion metadata refresh`, `status: stale`) is not built.
+- `MultiQueryResult`/`AmbiguousQuestionError` are only handled by `medallion query`'s CLI — not surfaced through neuron's `/query` endpoint or cortex's chat UI.
+
 ---
 
 ## [2026.6.9] — 2026-06-14 (silver transforms + gold utilities)
