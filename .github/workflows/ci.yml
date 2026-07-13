@@ -47,7 +47,7 @@ jobs:
         run: uv sync --group dev
 
       - name: Check formatting (ruff)
-        run: uv run ruff check openmedallion/ || true
+        run: uv run ruff check openmedallion/
 
       - name: Type check (pyright) — advisory only
         run: uv run pyright openmedallion/ || true

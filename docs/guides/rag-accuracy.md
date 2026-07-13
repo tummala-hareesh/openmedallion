@@ -103,6 +103,32 @@ Regenerating **always keeps** `status: approved` entries and any hand-added entr
 no `method` set untouched; `draft`/`stale` entries with a detection method are replaced
 by a fresh detection pass.
 
+### Visualizing relationships — `medallion relationships erd`
+
+```bash
+medallion relationships erd my_project           # approved relationships only (default)
+medallion relationships erd my_project --all      # include draft/stale too
+```
+
+Renders `relationships.yaml` as a Mermaid `erDiagram`, written to
+`<project>/relationships_erd.md` — a Markdown file with a fenced `mermaid` code
+block, directly viewable on GitHub and embeddable in mkdocs via `--8<--`. No LLM call.
+
+- **Approved-only by default** — matches the "approved is the trust boundary"
+  convention used everywhere else in this guide; pass `--all` to see drafts too
+  (useful while reviewing what the detector found, before approving anything).
+- **Only tables referenced by an included relationship are drawn** — no orphan
+  tables cluttering the diagram.
+- **Column types come from real Parquet dtypes** (DuckDB `DESCRIBE` against the
+  actual silver/gold files), not `metadata.yaml`'s optional `columns:` dict —
+  accurate even for a project with no curated metadata at all. A table referenced
+  by a relationship but missing from Parquet still renders (an empty entity block)
+  rather than failing.
+- **No primary-key inference** — nothing in `relationships.yaml`/`metadata.yaml`
+  actually asserts a primary key, so none is guessed at. Columns render as plain
+  typed fields; the relationship line itself implies the FK, with a default
+  many-to-one cardinality (`from_table` is the "many" side).
+
 ---
 
 ## 3. Dynamic few-shot retrieval + confidence-gated schema pruning

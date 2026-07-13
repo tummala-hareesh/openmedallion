@@ -202,12 +202,19 @@ already `status: approved` are always skipped and preserved untouched by `genera
 ## relationships
 
 Manage a project's `relationships.yaml` — explicit join paths between silver/gold
-tables, detected via deterministic pattern matching (no LLM call, either command).
+tables, detected via deterministic pattern matching (no LLM call for any subcommand).
 
 ```bash
 medallion relationships generate <project> [--projects PATH]
 medallion relationships approve  <project> [--projects PATH]
+medallion relationships erd      <project> [--projects PATH] [--all]
 ```
+
+| Subcommand | Purpose |
+| --- | --- |
+| `generate` | Detect relationships across silver/gold tables (FK naming, lineage, grain). |
+| `approve` | Interactive review of draft/stale relationships. |
+| `erd` | Render relationships as a Mermaid `erDiagram` to `<project>/relationships_erd.md`. Approved-only by default; `--all` includes draft/stale. Column types come from real Parquet dtypes, not `metadata.yaml`. No primary-key inference. |
 
 ---
 

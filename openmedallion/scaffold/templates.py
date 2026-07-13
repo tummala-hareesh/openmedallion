@@ -387,6 +387,7 @@ medallion metadata approve       {project}   # human review, one table at a time
 
 medallion relationships generate {project}   # detect joins — no LLM call
 medallion relationships approve  {project}
+medallion relationships erd      {project}   # Mermaid ER diagram → relationships_erd.md
 
 medallion examples generate      {project} --count 15   # LLM-draft Q→SQL pairs
 medallion examples approve       {project}
@@ -659,6 +660,7 @@ def _walkthrough_notebook(project: str, path_data: str = "data") -> str:
             f"# !medallion metadata approve  {project}\n",
             f"# !medallion relationships generate {project}\n",
             f"# !medallion relationships approve  {project}\n",
+            f"# !medallion relationships erd      {project}\n",
             f"# !medallion examples generate {project} --count 15\n",
             f"# !medallion examples approve  {project}",
         ]),

@@ -1,19 +1,46 @@
 name: OpenMedallian Documentation
 
 on:
-  push: 
+  push:
     branches: ["develop"]
   pull_request:
     branches: ["master"]
   workflow_dispatch:
 
-permissions:
-  contents: write
-
 jobs:
-  deploy:
-    name: "Build & deploy docs"
+  build:
+    # PRs only build (no push/deploy permission needed) — validates the docs
+    # site still builds cleanly without publishing anything.
+    name: "Build docs (validate only)"
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install docs dependencies
+        run: uv sync --extra docs
+
+      - name: Build docs (strict)
+        run: uv run mkdocs build --strict
+
+  deploy:
+    # Only push/workflow_dispatch actually deploy — never a pull_request event.
+    name: "Build & deploy docs"
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4

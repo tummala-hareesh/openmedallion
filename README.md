@@ -327,6 +327,7 @@ medallion metadata approve       my_project   # human review, one table at a tim
 
 medallion relationships generate my_project   # detect joins — no LLM call
 medallion relationships approve  my_project
+medallion relationships erd      my_project   # Mermaid ER diagram → relationships_erd.md
 
 medallion examples generate      my_project --count 15   # LLM-draft Q→SQL pairs
 medallion examples approve       my_project
@@ -343,7 +344,7 @@ extra flag needed. Two things happen behind the scenes:
   threshold, it falls back to a raw-schema search over *every* silver table (any
   status, no `metadata.yaml` required) rather than trusting a weak match.
 
-See [`docs/guides/rag-accuracy.md`](docs/guides/rag-accuracy.md) for the full design, and
+See [`docs/guides/rag-accuracy.md`](https://github.com/tummala-hareesh/openmedallion/blob/main/docs/guides/rag-accuracy.md) for the full design, and
 [`examples/sales_intelligence_demo/`](examples/sales_intelligence_demo/) for a runnable,
 offline (`show_rag_workflow.py`) walkthrough.
 
@@ -408,7 +409,7 @@ Restart with `make kestra-up` and Kestra picks up the change immediately.
 
 ## Examples
 
-Five self-contained examples — no cloud credentials required. See [`examples/README.md`](examples/README.md) for a side-by-side comparison.
+Five self-contained examples — no cloud credentials required. See [`examples/`](examples/) for a side-by-side comparison.
 
 | Example | Tables | What it demonstrates |
 | --- | --- | --- |

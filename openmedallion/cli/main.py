@@ -65,6 +65,15 @@ medallion relationships approve <project> [--projects PATH]
 
     --projects  Project root directory (default: . — current directory).
 
+medallion relationships erd <project> [--projects PATH] [--all]
+    Render relationships.yaml + real Parquet column dtypes as a Mermaid
+    erDiagram, written to <project>/relationships_erd.md. Approved-only by
+    default; only tables referenced by an included relationship are drawn.
+    No LLM call, no PK inference.
+
+    --projects  Project root directory (default: . — current directory).
+    --all       Include draft/stale relationships too (default: approved only).
+
 medallion examples generate <project> [--projects PATH] [--count N] [--model MODEL] [--provider PROVIDER]
     LLM-draft synthetic (question, sql) pairs from status: approved
     silver-layer tables in metadata.yaml + approved relationships between
@@ -135,6 +144,7 @@ Examples
     medallion metadata approve  sales_project
     medallion relationships generate sales_project
     medallion relationships approve  sales_project
+    medallion relationships erd      sales_project
     medallion examples generate sales_project --count 15
     medallion examples approve  sales_project
     medallion examples harvest  sales_project
@@ -448,6 +458,8 @@ def cmd_relationships(args: argparse.Namespace) -> None:
         cmd_relationships_generate(args)
     elif args.relationships_command == "approve":
         cmd_relationships_approve(args)
+    elif args.relationships_command == "erd":
+        cmd_relationships_erd(args)
 
 
 def cmd_relationships_generate(args: argparse.Namespace) -> None:
@@ -516,6 +528,26 @@ def cmd_relationships_approve(args: argparse.Namespace) -> None:
 
     print(f"  {'─' * (_W - 2)}")
     print(f"  {n_approved} relationship(s) approved this session.")
+    print(f"\n{'━' * _W}\n")
+
+
+def cmd_relationships_erd(args: argparse.Namespace) -> None:
+    from openmedallion.relationships.erd import generate_erd
+
+    _W = 58
+    print(f"\n{'━' * _W}")
+    print(f"  medallion  ·  relationships erd  ·  {args.project}")
+    print(f"{'━' * _W}\n")
+
+    try:
+        generate_erd(args.project, args.projects, include_all=args.all)
+    except Exception as exc:
+        print(f"  ❌  {exc}")
+        sys.exit(1)
+
+    scope = "every relationship (--all)" if args.all else "approved relationships only"
+    print(f"  🗺️   Rendered {scope} as a Mermaid erDiagram")
+    print(f"  📄  Written to: {Path(args.projects) / args.project / 'relationships_erd.md'}")
     print(f"\n{'━' * _W}\n")
 
 
@@ -874,6 +906,20 @@ def _build_parser() -> argparse.ArgumentParser:
     p_rel_approve.add_argument(
         "--projects", default=".", metavar="PATH",
         help="Parent directory containing the project folder (default: .)",
+    )
+
+    p_rel_erd = rel_sub.add_parser(
+        "erd",
+        help="Render relationships.yaml as a Mermaid ER diagram (relationships_erd.md)",
+    )
+    p_rel_erd.add_argument("project", help="Project name")
+    p_rel_erd.add_argument(
+        "--projects", default=".", metavar="PATH",
+        help="Parent directory containing the project folder (default: .)",
+    )
+    p_rel_erd.add_argument(
+        "--all", action="store_true", default=False,
+        help="Include draft/stale relationships too (default: approved only)",
     )
 
     # examples

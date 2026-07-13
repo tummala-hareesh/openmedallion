@@ -14,6 +14,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - **`docs/guides/rag-accuracy.md`** — new guide covering the full RAG accuracy design: `metadata.yaml`/`relationships.yaml`/synthetic examples, dynamic few-shot retrieval, and the confidence-gated schema-pruning fallback. `docs/reference/cli.md` filled in the previously-undocumented `query`, `ask`, `cortex`, `metadata`, `relationships`, and `examples` commands.
 - **`sales_intelligence_demo` extended** with curated `metadata.yaml`/`relationships.yaml`/`examples/synthetic.jsonl` and a new `show_rag_workflow.py` — a fully offline walkthrough (no Ollama/ChromaDB needed) of curated knowledge, dynamic few-shot retrieval, and both sides of the confidence gate.
 - **`medallion init` scaffold** — generated `README.md` and `walkthrough.ipynb` now document the RAG workflow (`metadata`/`relationships`/`examples generate`+`approve`, `medallion query`) as an optional next step. First tests added for the scaffold module (`tests/test_scaffold.py`).
+- **`medallion relationships erd`** — renders `relationships.yaml` + real Parquet column dtypes as a Mermaid `erDiagram`, written to `<project>/relationships_erd.md`. Approved-only by default (`--all` includes draft/stale); only tables referenced by an included relationship are drawn; column types come from DuckDB `DESCRIBE` against the real silver/gold Parquet, not `metadata.yaml`'s optional column list; no primary-key inference (nothing in the schema actually asserts one). No LLM call. (`openmedallion/relationships/erd.py`)
 
 ### Fixed
 

@@ -6,8 +6,37 @@ on:
       - "v*.*.*"   # triggers on v2026.4.1, v2026.5.1, v2026.5.2, etc.
 
 jobs:
+  test:
+    # A tag push doesn't imply ci.yml already passed on this exact commit —
+    # ci.yml only runs on push-to-develop / PR-to-master|develop, neither of
+    # which covers a tag ref. Gate the release on the test suite here too, so
+    # a commit that was never (or no longer) green can't reach PyPI.
+    name: "Test — Python ${{ matrix.python-version }}"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: uv sync --group dev
+
+      - name: Run tests
+        run: uv run pytest --tb=short -q
+
   build:
     name: "Build distribution"
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

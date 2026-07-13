@@ -196,6 +196,7 @@ medallion metadata approve       sales_intel     # human review, one table at a 
 
 medallion relationships generate sales_intel     # no LLM call — pure pattern matching
 medallion relationships approve  sales_intel
+medallion relationships erd      sales_intel     # Mermaid ER diagram → relationships_erd.md
 
 medallion examples generate      sales_intel --count 15
 medallion examples approve       sales_intel

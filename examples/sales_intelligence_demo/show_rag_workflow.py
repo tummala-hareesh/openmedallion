@@ -150,6 +150,7 @@ def main() -> None:
     print("    medallion metadata approve       sales_intel   # human review, one table at a time")
     print("    medallion relationships generate sales_intel   # no LLM call — pure pattern matching")
     print("    medallion relationships approve  sales_intel")
+    print("    medallion relationships erd      sales_intel   # Mermaid ER diagram, no LLM call")
     print("    medallion examples generate      sales_intel --count 15")
     print("    medallion examples approve       sales_intel")
     print()
