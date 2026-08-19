@@ -27,13 +27,13 @@ build:
 	uv build
 
 test:
-	uv run --active pytest --tb=short -q
+	uv run --active --extra cerebrum --extra cortex pytest --tb=short -q
 
 lint:
 	uv run --active ruff check openmedallion/ tests/
 
-coverage: 
-	uv run --active pytest --cov=openmedallion
+coverage:
+	uv run --active --extra cerebrum --extra cortex pytest --cov=openmedallion
 
 examples:
 	@.venv/bin/python3 examples/run_examples.py
