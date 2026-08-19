@@ -284,7 +284,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="reference/yaml-schema/" class="md-tabs__link">
+        <a href="reference/command-cheatsheet/" class="md-tabs__link">
           
   
   
@@ -554,6 +554,17 @@
     <span class="md-ellipsis">
       
         HTTP server + chat UI
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#per-person-chat-history-zero-cost-no-login-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-person chat history — zero cost, no login system
       
     </span>
   </a>
@@ -1017,6 +1028,34 @@
   
   
     <li class="md-nav__item">
+      <a href="reference/command-cheatsheet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command Cheatsheet
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="reference/yaml-schema/" class="md-nav__link">
         
   
@@ -1427,6 +1466,17 @@
     <span class="md-ellipsis">
       
         HTTP server + chat UI
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#per-person-chat-history-zero-cost-no-login-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-person chat history — zero cost, no login system
       
     </span>
   </a>
@@ -1888,6 +1938,10 @@
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>
 </span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>medallion<span class="w"> </span>query<span class="w"> </span>my_project<span class="w"> </span><span class="s2">&quot;What are the top 5 customers by revenue?&quot;</span>
 </span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>medallion<span class="w"> </span>query<span class="w"> </span>my_project<span class="w"> </span><span class="s2">&quot;Show monthly trends&quot;</span><span class="w"> </span>--model<span class="w"> </span>mistral
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>medallion<span class="w"> </span>query<span class="w"> </span>my_project<span class="w"> </span><span class="s2">&quot;Headcount by dept and revenue by region&quot;</span><span class="w"> </span>--decompose
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>medallion<span class="w"> </span>query<span class="w"> </span>my_project<span class="w"> </span><span class="s2">&quot;Show me the good ones&quot;</span><span class="w"> </span>--detect-ambiguity
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>medallion<span class="w"> </span>query<span class="w"> </span>my_project<span class="w"> </span><span class="s2">&quot;Revenue by region for 2024-Q2&quot;</span><span class="w"> </span>--use-templates
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>medallion<span class="w"> </span>query<span class="w"> </span>my_project<span class="w"> </span><span class="s2">&quot;Which rep leads in revenue?&quot;</span><span class="w"> </span>--user<span class="w"> </span>alice
 </span></code></pre></div>
 <p>This runs the full <strong>cerebrum</strong> pipeline locally: builds a schema context from your silver/gold Parquet files, generates SQL with an LLM, validates it against DuckDB, executes it, and prints the results alongside a canonical reproducible prompt.</p>
 <h3 id="provider-options">Provider options<a class="headerlink" href="#provider-options" title="Permanent link">&para;</a></h3>
@@ -1917,25 +1971,38 @@
 </span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">  </span><span class="nt">api_key</span><span class="p">:</span><span class="w">  </span><span class="l l-Scalar l-Scalar-Plain">sk-or-...</span>
 </span></code></pre></div>
 <h3 id="http-server-chat-ui">HTTP server + chat UI<a class="headerlink" href="#http-server-chat-ui" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>medallion<span class="w"> </span>ask<span class="w">    </span>my_project<span class="w">              </span><span class="c1"># start neuron FastAPI server on :8000</span>
-</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>medallion<span class="w"> </span>cortex<span class="w"> </span>my_project<span class="w">             </span><span class="c1"># start Dash chat UI on :8050</span>
+<div class="highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>medallion<span class="w"> </span>ask<span class="w">    </span>my_project<span class="w">                                   </span><span class="c1"># start neuron FastAPI server on :8000</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>medallion<span class="w"> </span>ask<span class="w">    </span>my_project<span class="w"> </span>--model<span class="w"> </span>mistral<span class="w"> </span>--port<span class="w"> </span><span class="m">8001</span><span class="w">       </span><span class="c1"># custom model + port</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>medallion<span class="w"> </span>cortex<span class="w"> </span>my_project<span class="w">                                   </span><span class="c1"># start Dash chat UI on :8050</span>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>medallion<span class="w"> </span>cortex<span class="w"> </span>my_project<span class="w"> </span>--neuron-url<span class="w"> </span>http://localhost:8001<span class="w"> </span>--debug
 </span></code></pre></div>
-<p><code>neuron</code> exposes a <code>/query</code> endpoint (Swagger UI at <code>/docs</code>). <code>cortex</code> connects to it and provides a three-tab UI: chat, table, and dashboard with CSV/Excel download.</p>
+<p><code>neuron</code> exposes <code>/query</code>, <code>/feedback</code>, <code>/history</code>, <code>/session/end</code>, <code>/health</code>, and <code>/docs</code> (Swagger UI). <code>cortex</code> connects to it over HTTP and provides a four-tab UI — chat (with 👍/👎 feedback on every reply), table, dashboard with CSV/Excel download, and history (your own past questions, with a "↻ Reuse" button).</p>
+<h3 id="per-person-chat-history-zero-cost-no-login-system">Per-person chat history — zero cost, no login system<a class="headerlink" href="#per-person-chat-history-zero-cost-no-login-system" title="Permanent link">&para;</a></h3>
+<p>Every question — from <code>cortex</code> or <code>medallion query</code> — is logged to <code>&lt;project&gt;/chat_history/&lt;username&gt;.jsonl</code>, a personal audit trail (never fed back into the LLM prompt). <code>username</code> is a plain display name, not real auth — <code>cortex</code> asks for one once (saved in the browser); the CLI defaults to your OS username or <code>--user NAME</code>.</p>
+<p>A 👍/👎 click sets that turn's <code>accepted</code> field in place (three-state — <code>true</code>/<code>false</code> only from an explicit click, <code>null</code> if you never rate it; <strong>never inferred</strong> from behavior, since a guessed signal risks reinforcing a wrong answer). Closing a session — an "End Session" button, 5 minutes idle, or closing the tab — rolls the session's rated turns into <code>examples/harvested.jsonl</code>/<code>failures.jsonl</code>, the same files <code>medallion examples harvest</code>/<code>review</code> already work with. Zero cost throughout: Ollama and the local <code>chromadb</code> embedding function used for few-shot ranking are both free — no paid API touches this loop unless you explicitly configure one for <code>LLM_PROVIDER</code> itself.</p>
 <h3 id="improving-accuracy-metadata-relationships-and-examples-rag">Improving accuracy — metadata, relationships, and examples (RAG)<a class="headerlink" href="#improving-accuracy-metadata-relationships-and-examples-rag" title="Permanent link">&para;</a></h3>
 <p>For larger schemas, curate what the LLM sees instead of dumping every table:</p>
 <div class="highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>medallion<span class="w"> </span>metadata<span class="w"> </span>generate<span class="w">      </span>my_project<span class="w">   </span><span class="c1"># LLM-draft table/column descriptions</span>
-</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>medallion<span class="w"> </span>metadata<span class="w"> </span>approve<span class="w">       </span>my_project<span class="w">   </span><span class="c1"># human review, one table at a time</span>
-</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
-</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>medallion<span class="w"> </span>relationships<span class="w"> </span>generate<span class="w"> </span>my_project<span class="w">   </span><span class="c1"># detect joins — no LLM call</span>
-</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>medallion<span class="w"> </span>relationships<span class="w"> </span>approve<span class="w">  </span>my_project
-</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>medallion<span class="w"> </span>relationships<span class="w"> </span>erd<span class="w">      </span>my_project<span class="w">   </span><span class="c1"># Mermaid ER diagram → relationships_erd.md</span>
-</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>
-</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>medallion<span class="w"> </span>examples<span class="w"> </span>generate<span class="w">      </span>my_project<span class="w"> </span>--count<span class="w"> </span><span class="m">15</span><span class="w">   </span><span class="c1"># LLM-draft Q→SQL pairs</span>
-</span><span id="__span-14-9"><a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a>medallion<span class="w"> </span>examples<span class="w"> </span>approve<span class="w">       </span>my_project
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>medallion<span class="w"> </span>metadata<span class="w"> </span>generate<span class="w">      </span>my_project<span class="w"> </span>--profile<span class="w">   </span><span class="c1"># + ydata-profiling dtype/stats/accepted_values</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>medallion<span class="w"> </span>metadata<span class="w"> </span>approve<span class="w">       </span>my_project<span class="w">   </span><span class="c1"># human review, one table at a time</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>medallion<span class="w"> </span>metadata<span class="w"> </span>refresh<span class="w">       </span>my_project<span class="w">   </span><span class="c1"># detect schema drift, re-draft affected tables</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>medallion<span class="w"> </span>metadata<span class="w"> </span>refresh<span class="w">       </span>my_project<span class="w"> </span>--check<span class="w">   </span><span class="c1"># CI gate: exit 1 if schema drifted</span>
+</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>
+</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>medallion<span class="w"> </span>relationships<span class="w"> </span>generate<span class="w"> </span>my_project<span class="w">   </span><span class="c1"># detect joins — no LLM call</span>
+</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>medallion<span class="w"> </span>relationships<span class="w"> </span>approve<span class="w">  </span>my_project
+</span><span id="__span-14-9"><a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a>medallion<span class="w"> </span>relationships<span class="w"> </span>erd<span class="w">      </span>my_project<span class="w">   </span><span class="c1"># Mermaid ER diagram → relationships_erd.md</span>
+</span><span id="__span-14-10"><a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a>
+</span><span id="__span-14-11"><a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a>medallion<span class="w"> </span>examples<span class="w"> </span>generate<span class="w">      </span>my_project<span class="w"> </span>--count<span class="w"> </span><span class="m">15</span><span class="w">   </span><span class="c1"># LLM-draft Q→SQL pairs</span>
+</span><span id="__span-14-12"><a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a>medallion<span class="w"> </span>examples<span class="w"> </span>approve<span class="w">       </span>my_project
+</span><span id="__span-14-13"><a id="__codelineno-14-13" name="__codelineno-14-13" href="#__codelineno-14-13"></a>medallion<span class="w"> </span>examples<span class="w"> </span>approve<span class="w">       </span>my_project<span class="w"> </span>--template<span class="w">   </span><span class="c1"># promote a verified example to a deterministic template</span>
+</span><span id="__span-14-14"><a id="__codelineno-14-14" name="__codelineno-14-14" href="#__codelineno-14-14"></a>medallion<span class="w"> </span>examples<span class="w"> </span>harvest<span class="w">       </span>my_project<span class="w">   </span><span class="c1"># promote cortex 👍 candidates into synthetic.jsonl</span>
+</span><span id="__span-14-15"><a id="__codelineno-14-15" name="__codelineno-14-15" href="#__codelineno-14-15"></a>medallion<span class="w"> </span>examples<span class="w"> </span>review<span class="w">        </span>my_project<span class="w">   </span><span class="c1"># list cortex 👎 failures for triage</span>
+</span><span id="__span-14-16"><a id="__codelineno-14-16" name="__codelineno-14-16" href="#__codelineno-14-16"></a>medallion<span class="w"> </span>examples<span class="w"> </span><span class="nb">eval</span><span class="w">          </span>my_project<span class="w">   </span><span class="c1"># regression check: did curation help or hurt?</span>
+</span><span id="__span-14-17"><a id="__codelineno-14-17" name="__codelineno-14-17" href="#__codelineno-14-17"></a>medallion<span class="w"> </span>examples<span class="w"> </span><span class="nb">eval</span><span class="w">          </span>my_project<span class="w"> </span>--use-templates<span class="w">   </span><span class="c1"># + compare template-routed results</span>
 </span></code></pre></div>
 <p>Once <code>metadata.yaml</code> has <code>status: approved</code> tables and <code>examples/synthetic.jsonl</code> has
 <code>verified: true</code> examples, <code>medallion query</code>/<code>ask</code> pick them up automatically — no
-extra flag needed. Two things happen behind the scenes:</p>
+extra flag needed. Three things happen behind the scenes:</p>
 <ul>
 <li><strong>Dynamic few-shot retrieval</strong> — the most relevant verified examples are ranked in as
   prompt context, instead of a fixed static list.</li>
@@ -1943,6 +2010,11 @@ extra flag needed. Two things happen behind the scenes:</p>
   are shown to the LLM. If similarity to the best match falls below a confidence
   threshold, it falls back to a raw-schema search over <em>every</em> silver table (any
   status, no <code>metadata.yaml</code> required) rather than trusting a weak match.</li>
+<li><strong>Template-routed queries (opt-in, <code>--use-templates</code>)</strong> — a high-confidence match to a
+  curated <code>templated: true</code> example skips SQL generation entirely; the LLM only fills
+  the template's declared parameters, never authors query logic. Closes a correctness
+  gap the other two mitigations can't: syntactically-valid-but-semantically-wrong SQL
+  for known, frequently-asked questions.</li>
 </ul>
 <p>See <a href="https://github.com/tummala-hareesh/openmedallion/blob/main/docs/guides/rag-accuracy.md"><code>docs/guides/rag-accuracy.md</code></a> for the full design, and
 <a href="examples/sales_intelligence_demo/"><code>examples/sales_intelligence_demo/</code></a> for a runnable,
@@ -2164,11 +2236,31 @@ offline (<code>show_rag_workflow.py</code>) walkthrough.</p>
 <td>✅ 2026.7.3</td>
 </tr>
 <tr>
-<td>REST API multi-resource support</td>
-<td>🔜 roadmap</td>
+<td><code>medallion relationships erd</code> — Mermaid ER diagrams</td>
+<td>✅ 2026.7.5</td>
 </tr>
 <tr>
 <td>Metadata drift detection (<code>medallion metadata refresh</code>)</td>
+<td>✅ 2026.7.5</td>
+</tr>
+<tr>
+<td>ydata-profiling enrichment for metadata.yaml (<code>--profile</code>)</td>
+<td>✅ 2026.7.5</td>
+</tr>
+<tr>
+<td>Template-Routed Query Layer — <code>examples approve --template</code>, <code>--use-templates</code> on query/ask/eval</td>
+<td>✅ Unreleased</td>
+</tr>
+<tr>
+<td>Per-person chat history + session-based curation loop</td>
+<td>✅ 2026.7.5</td>
+</tr>
+<tr>
+<td><code>medallion examples eval</code> — curation regression check</td>
+<td>✅ 2026.7.5</td>
+</tr>
+<tr>
+<td>REST API multi-resource support</td>
 <td>🔜 roadmap</td>
 </tr>
 <tr>

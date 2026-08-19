@@ -286,7 +286,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../yaml-schema/" class="md-tabs__link">
+        <a href="../command-cheatsheet/" class="md-tabs__link">
           
   
   
@@ -688,6 +688,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../command-cheatsheet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command Cheatsheet
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../yaml-schema/" class="md-nav__link">
         
   
@@ -820,6 +848,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#per-person-chat-history" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-person chat history
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#ask" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -849,6 +888,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="metadata">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#-profile-ydata-profiling-enrichment-opt-in" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --profile — ydata-profiling enrichment (opt-in)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1173,6 +1229,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#per-person-chat-history" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-person chat history
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#ask" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1202,6 +1269,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="metadata">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#-profile-ydata-profiling-enrichment-opt-in" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --profile — ydata-profiling enrichment (opt-in)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1260,6 +1344,10 @@
 
 <h1 id="cli-reference">CLI Reference<a class="headerlink" href="#cli-reference" title="Permanent link">&para;</a></h1>
 <p>The <code>medallion</code> command is the entry point for all pipeline operations. It is installed as a console script when you <code>pip install openmedallion</code>.</p>
+<div class="admonition tip">
+<p class="admonition-title">Quick reference</p>
+<p>For every command and flag on one page without the prose, see the <a href="../command-cheatsheet/">Command Cheatsheet</a>.</p>
+</div>
 <div class="highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>medallion &lt;command&gt; [options]
 </span></code></pre></div>
 <hr />
@@ -1286,26 +1374,27 @@
 </tr>
 <tr>
 <td><a href="#ask"><code>ask</code></a></td>
-<td>Start the neuron FastAPI server (<code>/query</code>, <code>/feedback</code>, <code>/health</code>, <code>/docs</code>)</td>
+<td>Start the neuron FastAPI server (<code>/query</code>, <code>/feedback</code>, <code>/history</code>, <code>/session/end</code>, <code>/health</code>, <code>/docs</code>)</td>
 </tr>
 <tr>
 <td><a href="#cortex"><code>cortex</code></a></td>
-<td>Start the cortex Dash chat UI</td>
+<td>Start the cortex Dash chat UI (chat, table, dashboard, history tabs)</td>
 </tr>
 <tr>
 <td><a href="#metadata"><code>metadata</code></a></td>
-<td>Generate / approve <code>metadata.yaml</code> (RAG accuracy)</td>
+<td>Generate / approve / refresh <code>metadata.yaml</code> (RAG accuracy)</td>
 </tr>
 <tr>
 <td><a href="#relationships"><code>relationships</code></a></td>
-<td>Generate / approve <code>relationships.yaml</code> (RAG accuracy)</td>
+<td>Generate / approve / render <code>relationships.yaml</code> (RAG accuracy)</td>
 </tr>
 <tr>
 <td><a href="#examples"><code>examples</code></a></td>
-<td>Generate / approve / harvest / review synthetic Q→SQL examples (RAG accuracy)</td>
+<td>Generate / approve / harvest / review / eval synthetic Q→SQL examples (RAG accuracy)</td>
 </tr>
 </tbody>
 </table>
+<p>See <a href="#per-person-chat-history">Per-person chat history</a> for <code>--user</code>, <code>session_id</code>, and the session-end curation loop.</p>
 <hr />
 <h2 id="init">init<a class="headerlink" href="#init" title="Permanent link">&para;</a></h2>
 <p>Scaffold a new project folder with YAML config templates and Python UDF stubs.</p>
@@ -1452,7 +1541,7 @@
 <p>Ask a natural-language question about a project's silver/gold data, directly in the
 terminal — runs the full <code>cerebrum</code> pipeline locally, no server needed. Requires
 <code>pip install "openmedallion[cerebrum]"</code>.</p>
-<div class="highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>medallion<span class="w"> </span>query<span class="w"> </span>&lt;project&gt;<span class="w"> </span><span class="s2">&quot;&lt;question&gt;&quot;</span><span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span><span class="w"> </span><span class="o">[</span>--model<span class="w"> </span>MODEL<span class="o">]</span><span class="w"> </span><span class="o">[</span>--provider<span class="w"> </span>PROVIDER<span class="o">]</span><span class="w"> </span><span class="o">[</span>--detect-ambiguity<span class="o">]</span><span class="w"> </span><span class="o">[</span>--decompose<span class="o">]</span>
+<div class="highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>medallion<span class="w"> </span>query<span class="w"> </span>&lt;project&gt;<span class="w"> </span><span class="s2">&quot;&lt;question&gt;&quot;</span><span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span><span class="w"> </span><span class="o">[</span>--model<span class="w"> </span>MODEL<span class="o">]</span><span class="w"> </span><span class="o">[</span>--provider<span class="w"> </span>PROVIDER<span class="o">]</span><span class="w"> </span><span class="o">[</span>--detect-ambiguity<span class="o">]</span><span class="w"> </span><span class="o">[</span>--decompose<span class="o">]</span><span class="w"> </span><span class="o">[</span>--use-templates<span class="o">]</span><span class="w"> </span><span class="o">[</span>--user<span class="w"> </span>NAME<span class="o">]</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -1481,15 +1570,33 @@ terminal — runs the full <code>cerebrum</code> pipeline locally, no server nee
 <tr>
 <td><code>--detect-ambiguity</code></td>
 <td>off</td>
-<td>One extra LLM call checks whether the question is ambiguous before generating SQL; raises with a clarification message instead of guessing</td>
+<td>One extra, <em>dedicated</em> LLM call checks whether the question is ambiguous before any SQL generation is attempted. A second, always-on mechanism (no flag) already does this for free — see below; this flag adds a guaranteed check independent of it.</td>
 </tr>
 <tr>
 <td><code>--decompose</code></td>
 <td>off</td>
 <td>One extra LLM call checks whether the question contains independent sub-questions; each runs through the pipeline separately if so</td>
 </tr>
+<tr>
+<td><code>--use-templates</code></td>
+<td>off</td>
+<td>A high-confidence match to a curated <code>templated: true</code> example (see <a href="../../guides/rag-accuracy/#6-template-routed-queries">Template-Routed Query Layer</a>) skips SQL generation entirely — the LLM only fills the template's declared <code>{param}</code> slots. Off by default; the filled SQL still goes through the same validation/execution safety net as any other query.</td>
+</tr>
+<tr>
+<td><code>--user</code></td>
+<td>OS username (<code>getpass.getuser()</code>)</td>
+<td>Display name chat history is recorded under — see <a href="#per-person-chat-history">Per-person chat history</a> below</td>
+</tr>
 </tbody>
 </table>
+<p><strong>Always on, no flag needed:</strong> the main SQL-generation prompt itself instructs the LLM
+to respond <code>CLARIFY: &lt;question&gt;</code> instead of guessing when the schema doesn't
+disambiguate the question — checked on the same call every query already makes, zero
+extra cost. Both this and <code>--detect-ambiguity</code> raise the same <code>AmbiguousQuestionError</code>
+(<code>❓ Your question is ambiguous: ...</code>). Relies on the model following the instruction —
+not a guarantee with smaller local models. See
+<a href="../../guides/rag-accuracy/#ambiguity-handling-two-independent-mechanisms">RAG Accuracy</a>
+for the full design.</p>
 <p>If a project has <code>status: approved</code> tables in <code>metadata.yaml</code> and/or
 <code>verified: true</code> examples in <code>examples/synthetic.jsonl</code>, they're picked up
 automatically — see <a href="../../guides/rag-accuracy/">RAG Accuracy</a> for the full design
@@ -1497,7 +1604,38 @@ automatically — see <a href="../../guides/rag-accuracy/">RAG Accuracy</a> for 
 <div class="highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>medallion<span class="w"> </span>query<span class="w"> </span>sales_project<span class="w"> </span><span class="s2">&quot;What are the top 5 products by revenue?&quot;</span>
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>medallion<span class="w"> </span>query<span class="w"> </span>sales_project<span class="w"> </span><span class="s2">&quot;Show monthly trends&quot;</span><span class="w"> </span>--model<span class="w"> </span>mistral
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>medallion<span class="w"> </span>query<span class="w"> </span>sales_project<span class="w"> </span><span class="s2">&quot;Headcount by dept and revenue by region&quot;</span><span class="w"> </span>--decompose
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>medallion<span class="w"> </span>query<span class="w"> </span>sales_project<span class="w"> </span><span class="s2">&quot;Which rep leads in revenue?&quot;</span><span class="w"> </span>--user<span class="w"> </span>alice
 </span></code></pre></div>
+<p>Every question — success or failure — is appended to
+<code>&lt;project&gt;/chat_history/&lt;user&gt;.jsonl</code> (best-effort; a logging failure never
+blocks the answer). One <code>--user</code>-less invocation = one CLI session (a fresh
+<code>session_id</code> per run) — there's no thumbs-up UI on the CLI path, so these
+turns stay unrated (<code>accepted: null</code>) unless promoted manually.</p>
+<hr />
+<h2 id="per-person-chat-history">Per-person chat history<a class="headerlink" href="#per-person-chat-history" title="Permanent link">&para;</a></h2>
+<p>Every <code>/query</code> call (from <code>cortex</code> or <code>medallion query</code>) is logged to
+<code>&lt;project&gt;/chat_history/&lt;username&gt;.jsonl</code> — a personal audit trail, UI/audit
+only, never fed back into the LLM prompt. <code>username</code> is a plain display
+name, not real auth: <code>cortex</code> asks for one once (persisted in the browser's
+localStorage), sent as an <code>X-Medallion-User</code> header; orthogonal to the
+optional <code>MEDALLION_API_KEY</code> bearer gate.</p>
+<p>Each turn also carries a <code>session_id</code> (ephemeral — one per browser tab or
+CLI invocation, additive to <code>username</code>) and a three-state <code>accepted</code> field:
+<code>true</code>/<code>false</code> only ever come from an explicit cortex 👍/👎 (never inferred
+from interaction — a guessed satisfaction signal risks reinforcing
+plausible-looking-but-wrong SQL), <code>null</code> means no feedback was given and
+stays excluded from the learning loop forever.</p>
+<p><strong>Closing a session</strong> (<code>POST /session/end</code>) is a <strong>curation-promotion
+trigger, not a data-sync call</strong> — chat_history is already written
+server-side in real time on every <code>/query</code>. It rolls that session's rated
+turns into the existing <code>examples/harvested.jsonl</code>/<code>failures.jsonl</code> (which
+<code>medallion examples harvest</code>/<code>review</code> already consume — see
+<a href="#examples">examples</a> below). In cortex, a session closes via an explicit
+"End Session" button, a 5-minute idle timeout, or a best-effort tab-close
+beacon (<code>navigator.sendBeacon</code> — can't carry an <code>Authorization</code> header, so
+this path only works when <code>MEDALLION_API_KEY</code> is unset).</p>
+<p>cortex also has a "History" tab listing your own past turns, with a
+"↻ Reuse" button per entry that reloads the question into chat.</p>
 <hr />
 <h2 id="ask">ask<a class="headerlink" href="#ask" title="Permanent link">&para;</a></h2>
 <p>Start the <code>neuron</code> FastAPI server, exposing <code>cerebrum</code> over HTTP for <code>cortex</code> (or any
@@ -1514,11 +1652,19 @@ HTTP client) to call. Requires <code>pip install "openmedallion[cerebrum]"</code
 <tbody>
 <tr>
 <td><code>POST /query</code></td>
-<td>Ask a question — same pipeline as <code>medallion query</code></td>
+<td>Ask a question — same pipeline as <code>medallion query</code>. Body: <code>{question, project, use_templates}</code> (<code>use_templates</code> defaults <code>false</code>). Logs a <code>chat_history</code> turn (success or failure); returns a <code>turn_id</code> for later <code>/feedback</code>.</td>
 </tr>
 <tr>
 <td><code>POST /feedback</code></td>
-<td>Record cortex 👍/👎 into <code>examples/harvested.jsonl</code> / <code>examples/failures.jsonl</code></td>
+<td>Record cortex 👍/👎 — sets the matching <code>chat_history</code> turn's <code>accepted</code> field in place (three-state: <code>true</code>/<code>false</code>/<code>null</code>, never inferred). Does <strong>not</strong> write <code>examples/harvested.jsonl</code>/<code>failures.jsonl</code> directly — see <code>/session/end</code>.</td>
+</tr>
+<tr>
+<td><code>GET /history?project=X</code></td>
+<td>Return the calling person's own past turns (cortex's "History" tab).</td>
+</tr>
+<tr>
+<td><code>POST /session/end</code></td>
+<td>Curation-promotion trigger, <strong>not a data sync</strong> (chat_history is already written in real time). Rolls a closed session's rated turns into <code>examples/harvested.jsonl</code>/<code>failures.jsonl</code>, which <code>medallion examples harvest</code>/<code>review</code> consume.</td>
 </tr>
 <tr>
 <td><code>GET /health</code></td>
@@ -1541,19 +1687,80 @@ CSV/Excel download.</p>
 <h2 id="metadata">metadata<a class="headerlink" href="#metadata" title="Permanent link">&para;</a></h2>
 <p>Manage a project's <code>metadata.yaml</code> — curated table/column descriptions used for
 schema pruning (see <a href="../../guides/rag-accuracy/">RAG Accuracy</a>).</p>
-<div class="highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>medallion<span class="w"> </span>metadata<span class="w"> </span>generate<span class="w"> </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span><span class="w"> </span><span class="o">[</span>--model<span class="w"> </span>MODEL<span class="o">]</span><span class="w"> </span><span class="o">[</span>--provider<span class="w"> </span>PROVIDER<span class="o">]</span>
+<div class="highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>medallion<span class="w"> </span>metadata<span class="w"> </span>generate<span class="w"> </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span><span class="w"> </span><span class="o">[</span>--model<span class="w"> </span>MODEL<span class="o">]</span><span class="w"> </span><span class="o">[</span>--provider<span class="w"> </span>PROVIDER<span class="o">]</span><span class="w"> </span><span class="o">[</span>--profile<span class="o">]</span>
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>medallion<span class="w"> </span>metadata<span class="w"> </span>approve<span class="w">  </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>medallion<span class="w"> </span>metadata<span class="w"> </span>refresh<span class="w">  </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span><span class="w"> </span><span class="o">[</span>--model<span class="w"> </span>MODEL<span class="o">]</span><span class="w"> </span><span class="o">[</span>--provider<span class="w"> </span>PROVIDER<span class="o">]</span><span class="w"> </span><span class="o">[</span>--check<span class="o">]</span><span class="w"> </span><span class="o">[</span>--profile<span class="o">]</span>
 </span></code></pre></div>
-<p><code>generate</code> requires <code>pip install "openmedallion[cerebrum]"</code>; <code>approve</code> does not (it's a
-plain interactive <code>[a]pprove / [s]kip / [q]uit</code> review loop, no LLM call). Tables
-already <code>status: approved</code> are always skipped and preserved untouched by <code>generate</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Subcommand</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>generate</code></td>
+<td>LLM-draft <code>metadata.yaml</code> for silver/gold tables not yet <code>status: approved</code>. Approved tables are always skipped and preserved untouched. Requires <code>[cerebrum]</code>.</td>
+</tr>
+<tr>
+<td><code>approve</code></td>
+<td>Interactive <code>[a]pprove / [s]kip / [q]uit</code> review of draft/stale tables — no LLM call.</td>
+</tr>
+<tr>
+<td><code>refresh</code></td>
+<td>Detect schema drift (live Parquet vs. the <code>schema_hash</code> stored in <code>metadata.yaml</code>) and re-draft only affected/unapproved tables. An <code>approved</code> table that drifts is flipped to <code>status: stale</code> <strong>without</strong> a new LLM draft — review again with <code>approve</code> or re-run <code>refresh</code> to redraft it. Dropped tables (Parquet no longer exists) are flagged, never deleted. <code>--check</code> runs drift detection only (no LLM call, no write) and exits 1 if any table is drifted/dropped — useful in CI. Requires <code>[cerebrum]</code> (except <code>--check</code>, which makes no LLM call).</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>medallion<span class="w"> </span>metadata<span class="w"> </span>refresh<span class="w"> </span>sales_project<span class="w"> </span>--check<span class="w">   </span><span class="c1"># CI gate: exit 1 if schema drifted</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>medallion<span class="w"> </span>metadata<span class="w"> </span>refresh<span class="w"> </span>sales_project<span class="w">            </span><span class="c1"># detect drift + re-draft affected tables</span>
+</span></code></pre></div>
+<h3 id="-profile-ydata-profiling-enrichment-opt-in"><code>--profile</code> — ydata-profiling enrichment (opt-in)<a class="headerlink" href="#-profile-ydata-profiling-enrichment-opt-in" title="Permanent link">&para;</a></h3>
+<p>On <code>generate</code> and <code>refresh</code>, <code>--profile</code> enriches every freshly-drafted table's columns
+with three additional fields, computed deterministically via
+<a href="https://github.com/ydataai/ydata-profiling">ydata-profiling</a> (<code>minimal=True</code> — no
+correlations/interactions) — zero extra LLM calls:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Populated when</th>
+<th>Contains</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dtype</code></td>
+<td>always</td>
+<td>ydata-profiling's inferred type: <code>Numeric</code>, <code>Categorical</code>, <code>Boolean</code>, <code>DateTime</code>, <code>Text</code>, ...</td>
+</tr>
+<tr>
+<td><code>stats</code></td>
+<td>always</td>
+<td><code>null_pct</code>, <code>distinct_count</code>, plus <code>min</code>/<code>max</code>/<code>mean</code> for <code>Numeric</code> columns</td>
+</tr>
+<tr>
+<td><code>accepted_values</code></td>
+<td>only for low-cardinality <code>Categorical</code>/<code>Boolean</code> columns (≤ 20 distinct values)</td>
+<td>the full sorted list of unique values — <code>None</code> for high-cardinality or numeric columns, to avoid dumping huge lists</td>
+</tr>
+</tbody>
+</table>
+<p><code>--profile</code> is opt-in and off by default — the default path stays fast and
+dependency-free. Approved-and-skipped tables are never profiled. Requires
+<code>pip install "openmedallion[profile]"</code>; missing the dependency prints install
+guidance instead of a raw traceback.</p>
+<div class="highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>medallion<span class="w"> </span>metadata<span class="w"> </span>generate<span class="w"> </span>sales_project<span class="w"> </span>--profile
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>medallion<span class="w"> </span>metadata<span class="w"> </span>refresh<span class="w">  </span>sales_project<span class="w"> </span>--profile
+</span></code></pre></div>
 <hr />
 <h2 id="relationships">relationships<a class="headerlink" href="#relationships" title="Permanent link">&para;</a></h2>
 <p>Manage a project's <code>relationships.yaml</code> — explicit join paths between silver/gold
 tables, detected via deterministic pattern matching (no LLM call for any subcommand).</p>
-<div class="highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>medallion<span class="w"> </span>relationships<span class="w"> </span>generate<span class="w"> </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span>
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>medallion<span class="w"> </span>relationships<span class="w"> </span>approve<span class="w">  </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span>
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>medallion<span class="w"> </span>relationships<span class="w"> </span>erd<span class="w">      </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span><span class="w"> </span><span class="o">[</span>--all<span class="o">]</span>
+<div class="highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>medallion<span class="w"> </span>relationships<span class="w"> </span>generate<span class="w"> </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>medallion<span class="w"> </span>relationships<span class="w"> </span>approve<span class="w">  </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>medallion<span class="w"> </span>relationships<span class="w"> </span>erd<span class="w">      </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span><span class="w"> </span><span class="o">[</span>--all<span class="o">]</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -1581,10 +1788,11 @@ tables, detected via deterministic pattern matching (no LLM call for any subcomm
 <h2 id="examples">examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
 <p>Manage a project's synthetic <code>(question, sql)</code> examples used for dynamic few-shot
 retrieval (see <a href="../../guides/rag-accuracy/">RAG Accuracy</a>).</p>
-<div class="highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>medallion<span class="w"> </span>examples<span class="w"> </span>generate<span class="w"> </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span><span class="w"> </span><span class="o">[</span>--count<span class="w"> </span>N<span class="o">]</span><span class="w"> </span><span class="o">[</span>--model<span class="w"> </span>MODEL<span class="o">]</span><span class="w"> </span><span class="o">[</span>--provider<span class="w"> </span>PROVIDER<span class="o">]</span>
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>medallion<span class="w"> </span>examples<span class="w"> </span>approve<span class="w">  </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span>
-</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>medallion<span class="w"> </span>examples<span class="w"> </span>harvest<span class="w">  </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span>
-</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>medallion<span class="w"> </span>examples<span class="w"> </span>review<span class="w">   </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span>
+<div class="highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>medallion<span class="w"> </span>examples<span class="w"> </span>generate<span class="w"> </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span><span class="w"> </span><span class="o">[</span>--count<span class="w"> </span>N<span class="o">]</span><span class="w"> </span><span class="o">[</span>--model<span class="w"> </span>MODEL<span class="o">]</span><span class="w"> </span><span class="o">[</span>--provider<span class="w"> </span>PROVIDER<span class="o">]</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>medallion<span class="w"> </span>examples<span class="w"> </span>approve<span class="w">  </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span><span class="w"> </span><span class="o">[</span>--template<span class="o">]</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>medallion<span class="w"> </span>examples<span class="w"> </span>harvest<span class="w">  </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>medallion<span class="w"> </span>examples<span class="w"> </span>review<span class="w">   </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>medallion<span class="w"> </span>examples<span class="w"> </span><span class="nb">eval</span><span class="w">     </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>--projects<span class="w"> </span>PATH<span class="o">]</span><span class="w"> </span><span class="o">[</span>--model<span class="w"> </span>MODEL<span class="o">]</span><span class="w"> </span><span class="o">[</span>--provider<span class="w"> </span>PROVIDER<span class="o">]</span><span class="w"> </span><span class="o">[</span>--use-templates<span class="o">]</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -1600,7 +1808,7 @@ retrieval (see <a href="../../guides/rag-accuracy/">RAG Accuracy</a>).</p>
 </tr>
 <tr>
 <td><code>approve</code></td>
-<td>Interactive review of unverified examples — no LLM call.</td>
+<td>Interactive review of unverified examples — no LLM call. With <code>--template</code>, reviews already-<code>verified: true</code> examples instead, for promotion to <code>templated: true</code> (see <a href="../../guides/rag-accuracy/#6-template-routed-queries">Template-Routed Query Layer</a>) — auto-detects <code>{slot}</code> placeholders in the SQL and prompts for a description per slot.</td>
 </tr>
 <tr>
 <td><code>harvest</code></td>
@@ -1610,8 +1818,15 @@ retrieval (see <a href="../../guides/rag-accuracy/">RAG Accuracy</a>).</p>
 <td><code>review</code></td>
 <td>Lists <code>examples/failures.jsonl</code> (cortex 👎) entries — a plain listing, no LLM call.</td>
 </tr>
+<tr>
+<td><code>eval</code></td>
+<td>Admin regression check: re-runs every <code>verified: true</code> example's question, executes both the stored ("golden") SQL and the freshly-generated SQL, and compares the <strong>results</strong> (not raw SQL text). Reports a ✅/❌ per question and a match summary — run this after curating metadata/relationships/examples to see whether it helped or hurt. With <code>--use-templates</code>, additionally re-runs each question through <code>CerebrumPipeline(use_templates=True)</code> and flags <code>⚠️  template-routing changed the result</code> wherever that path's outcome diverges from the golden result — the regression signal for the template layer specifically. No model retraining happens anywhere in this project; this checks curation changes, not weight changes. Requires <code>[cerebrum]</code>.</td>
+</tr>
 </tbody>
 </table>
+<div class="highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>medallion<span class="w"> </span>examples<span class="w"> </span>approve<span class="w">  </span>sales_intel<span class="w"> </span>--template<span class="w">   </span><span class="c1"># promote a verified example to templated:true</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>medallion<span class="w"> </span>examples<span class="w"> </span><span class="nb">eval</span><span class="w">     </span>sales_intel<span class="w"> </span>--use-templates
+</span></code></pre></div>
 <hr />
 <h2 id="global-behaviour">Global Behaviour<a class="headerlink" href="#global-behaviour" title="Permanent link">&para;</a></h2>
 <ul>
