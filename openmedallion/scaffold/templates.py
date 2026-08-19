@@ -377,13 +377,22 @@ Once the pipeline has silver/gold Parquet files, ask questions in plain English:
 ```bash
 pip install "openmedallion[cerebrum]"
 medallion query {project} "What are the top 5 <metric> by <dimension>?"
+medallion query {project} "<a two-part question>" --decompose
+medallion query {project} "<an ambiguous question>" --detect-ambiguity
+medallion query {project} "<a question>" --user your_name
 ```
+
+Every question is logged to `{project}/chat_history/<user>.jsonl` (a personal audit
+trail, never fed back into the LLM prompt) — `--user` defaults to your OS username.
 
 For larger schemas, curate what the LLM sees instead of showing every table:
 
 ```bash
 medallion metadata generate      {project}   # LLM-draft table/column descriptions
+medallion metadata generate      {project} --profile   # + ydata-profiling dtype/stats/accepted_values
 medallion metadata approve       {project}   # human review, one table at a time
+medallion metadata refresh       {project}   # detect schema drift, re-draft affected tables
+medallion metadata refresh       {project} --check   # CI gate: exit 1 if schema drifted
 
 medallion relationships generate {project}   # detect joins — no LLM call
 medallion relationships approve  {project}
@@ -391,6 +400,11 @@ medallion relationships erd      {project}   # Mermaid ER diagram → relationsh
 
 medallion examples generate      {project} --count 15   # LLM-draft Q→SQL pairs
 medallion examples approve       {project}
+
+# After closing a cortex session (End Session button / 5min idle / tab close)
+medallion examples harvest {project}   # promote thumbs-up turns into synthetic.jsonl
+medallion examples review  {project}   # list thumbs-down failures
+medallion examples eval    {project}   # regression check: did curation help or hurt?
 ```
 
 Once `metadata.yaml` has `status: approved` tables and `examples/synthetic.jsonl` has
@@ -654,15 +668,24 @@ def _walkthrough_notebook(project: str, path_data: str = "data") -> str:
         code([
             "# Uncomment after installing openmedallion[cerebrum] and starting Ollama:\n",
             f"# !medallion query {project} \"<a question about your data>\"\n",
+            f"# !medallion query {project} \"<a two-part question>\" --decompose\n",
+            f"# !medallion query {project} \"<an ambiguous question>\" --detect-ambiguity\n",
+            f"# !medallion query {project} \"<a question>\" --user your_name\n",
             "#\n",
             "# Curate schema knowledge for a larger project (each is optional, additive):\n",
             f"# !medallion metadata generate {project}\n",
             f"# !medallion metadata approve  {project}\n",
+            f"# !medallion metadata refresh  {project}\n",
             f"# !medallion relationships generate {project}\n",
             f"# !medallion relationships approve  {project}\n",
             f"# !medallion relationships erd      {project}\n",
             f"# !medallion examples generate {project} --count 15\n",
-            f"# !medallion examples approve  {project}",
+            f"# !medallion examples approve  {project}\n",
+            "#\n",
+            "# After closing a cortex session (End Session / 5min idle / tab close):\n",
+            f"# !medallion examples harvest {project}\n",
+            f"# !medallion examples review  {project}\n",
+            f"# !medallion examples eval    {project}",
         ]),
     ]
 

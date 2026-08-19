@@ -11,7 +11,7 @@ This demo is the reference for all features added after 2026.5.4:
 | Silver derived UDF (three-table join + attainment %) | `udf/silver/enrich.py` |
 | Gold pre-agg UDF (pass-through / hook) | `udf/gold/metrics.py` |
 | `explore: profile` on bronze, silver, gold | `bronze.yaml`, `silver.yaml`, `gold.yaml` |
-| RAG accuracy add-ons — metadata, relationships, examples, confidence-gated fallback | `sales_intel/metadata.yaml`, `sales_intel/relationships.yaml`, `sales_intel/examples/`, `show_rag_workflow.py` |
+| RAG accuracy add-ons — metadata, relationships, examples, confidence-gated fallback, template-routed queries | `sales_intel/metadata.yaml`, `sales_intel/relationships.yaml`, `sales_intel/examples/`, `show_rag_workflow.py` |
 
 ---
 
@@ -184,7 +184,12 @@ It shows:
    threshold (structured, approved-only ranking is trusted) and one clearly off-topic
    question that doesn't (the pipeline falls back to a raw-schema search over *every*
    silver table, regardless of metadata/approval status)
-4. **The commands to go live** — regenerating/reviewing metadata, relationships, and
+4. **Template-routed queries** — `synthetic.jsonl`'s one `templated: true` example
+   (a parameterized "revenue by region for a quarter" query) matched against a
+   closely-worded real question, gated by the stricter 0.85 confidence threshold; the
+   LLM fills only the `{quarter}` parameter, and the filled SQL still runs through the
+   same validation/execution safety net as any other query
+5. **The commands to go live** — regenerating/reviewing metadata, relationships, and
    examples with a real LLM, plus querying with the accuracy features engaged
 
 ### Go live with the LLM-backed commands
@@ -193,6 +198,8 @@ It shows:
 # Regenerate/refresh curated knowledge (Ollama by default)
 medallion metadata generate      sales_intel     # draft descriptions for any new tables
 medallion metadata approve       sales_intel     # human review, one table at a time
+medallion metadata refresh       sales_intel     # detect schema drift, re-draft affected tables
+medallion metadata refresh       sales_intel --check   # CI gate: exit 1 if schema drifted
 
 medallion relationships generate sales_intel     # no LLM call — pure pattern matching
 medallion relationships approve  sales_intel
@@ -200,17 +207,27 @@ medallion relationships erd      sales_intel     # Mermaid ER diagram → relati
 
 medallion examples generate      sales_intel --count 15
 medallion examples approve       sales_intel
+medallion examples approve       sales_intel --template   # promote a verified example to a template
 
-# After a cortex 👍/👎 session
+# After closing a cortex session (End Session button / 5min idle / tab close —
+# a session close is what promotes rated turns, not the thumbs click itself)
 medallion examples harvest sales_intel           # promote thumbs-up into synthetic.jsonl
 medallion examples review  sales_intel           # list thumbs-down failures
+medallion examples eval    sales_intel           # regression check: did curation help or hurt?
+medallion examples eval    sales_intel --use-templates   # + compare template-routed results
 
 # Query — metadata.yaml/examples/ are picked up automatically, no extra flag needed
 medallion query sales_intel "Which rep is leading in revenue this quarter?"
 
-# Opt-in: ambiguity detection / query decomposition (each costs one extra LLM call)
+# Opt-in: ambiguity detection / query decomposition / template routing (each costs
+# zero-to-one extra LLM call, all off by default)
 medallion query sales_intel "Show me the good ones" --detect-ambiguity
 medallion query sales_intel "Headcount by team and revenue by region" --decompose
+medallion query sales_intel "Revenue by region for 2024-Q2" --use-templates
+
+# Every question is logged to sales_intel/chat_history/<user>.jsonl (audit only,
+# never fed back into the LLM prompt) — --user defaults to your OS username
+medallion query sales_intel "Which rep leads in revenue?" --user alice
 ```
 
 Requires: `pip install "openmedallion[cerebrum]"` (bundles `chromadb`, used only as an

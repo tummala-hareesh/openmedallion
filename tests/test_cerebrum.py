@@ -24,7 +24,14 @@ from openmedallion.cerebrum.pipeline    import (
     MultiQueryResult,
     QueryResult,
 )
-from openmedallion.cerebrum.prompt      import build_prompt, system_prompt
+from openmedallion.cerebrum.prompt      import (
+    build_prompt,
+    build_template_fill_prompt,
+    fill_template,
+    is_clarification_response,
+    parse_template_fill_response,
+    system_prompt,
+)
 from openmedallion.cerebrum.recommender import recommend
 from openmedallion.cerebrum.schema      import (
     build_schema_context,
@@ -291,6 +298,141 @@ class TestBuildPrompt:
     def test_system_prompt_non_empty(self):
         assert len(system_prompt()) > 20
 
+    def test_system_prompt_instructs_inline_clarification(self):
+        # The main SQL-generation prompt itself now tells the LLM to ask for
+        # clarification (via the CLARIFY: contract) instead of guessing when
+        # the question is ambiguous — no separate LLM call required, unlike
+        # the opt-in detect_ambiguity pre-check.
+        assert "CLARIFY:" in system_prompt()
+
+    def test_system_prompt_instructs_information_schema_for_meta_questions(self):
+        # "What tables exist?" / "What columns does orders have?" have no
+        # natural SELECT ... FROM <data-table> — the LLM must be told it can
+        # answer these via DuckDB's information_schema, scoped to whatever
+        # tables/views are registered (i.e. this database only, nothing
+        # external).
+        assert "information_schema" in system_prompt()
+
+    def test_default_few_shot_includes_a_schema_meta_question(self):
+        prompt = build_prompt("schema", "q")
+        assert "information_schema" in prompt
+
+
+class TestIsClarificationResponse:
+    """Pure function — no LLM needed. Detects the CLARIFY: contract baked
+    into prompt.py's _SYSTEM prompt, so pipeline.py can intercept an
+    ambiguous-question response from the *same* SQL-generation call instead
+    of treating it as invalid SQL and retrying uselessly."""
+
+    def test_plain_clarify_response(self):
+        assert is_clarification_response("CLARIFY: Which region do you mean?") == "Which region do you mean?"
+
+    def test_case_insensitive_prefix(self):
+        assert is_clarification_response("clarify: lowercase works too") == "lowercase works too"
+
+    def test_strips_surrounding_whitespace(self):
+        assert is_clarification_response("  CLARIFY:   extra spaces around it   ") == "extra spaces around it"
+
+    def test_strips_markdown_fences(self):
+        assert is_clarification_response("```\nCLARIFY: fenced question?\n```") == "fenced question?"
+
+    def test_normal_sql_returns_none(self):
+        assert is_clarification_response("SELECT * FROM orders") is None
+
+    def test_prefix_must_anchor_at_start_not_appear_mid_text(self):
+        # A SELECT with the word "clarify" somewhere in a comment must NOT
+        # be misdetected as a clarification response.
+        sql = "-- please clarify: is this right?\nSELECT * FROM orders"
+        assert is_clarification_response(sql) is None
+
+    def test_empty_string_returns_none(self):
+        assert is_clarification_response("") is None
+
+
+class TestBuildTemplateFillPrompt:
+    """Template-Routed Query Layer roadmap (see CLAUDE.md), build order step 4:
+    a narrow, single-purpose prompt — analogous in spirit to decomposition.py's
+    detect_ambiguity/decompose_question — that asks the LLM only to fill a
+    matched template's declared parameters, never to author SQL logic."""
+
+    def test_prompt_includes_question_and_params(self):
+        template = {
+            "question": "Revenue by region for {date_range}?",
+            "sql": "SELECT region, SUM(amount) FROM orders WHERE order_date BETWEEN {date_range} GROUP BY region",
+            "params": {"date_range": "ISO date range, e.g. 2026-Q1"},
+        }
+        prompt = build_template_fill_prompt("What was revenue by region last quarter?", template)
+        assert "What was revenue by region last quarter?" in prompt
+        assert "date_range" in prompt
+        assert "ISO date range, e.g. 2026-Q1" in prompt
+
+    def test_prompt_never_includes_raw_sql_as_something_to_edit(self):
+        # The LLM must not be invited to rewrite the SQL — only fill params.
+        template = {
+            "question": "q",
+            "sql": "SELECT region, SUM(amount) FROM orders WHERE order_date BETWEEN {date_range} GROUP BY region",
+            "params": {"date_range": "ISO date range"},
+        }
+        prompt = build_template_fill_prompt("q2", template)
+        assert "SQL" not in prompt or "GROUP BY" not in prompt
+
+    def test_prompt_handles_no_params(self):
+        template = {"question": "count everything", "sql": "SELECT COUNT(*) FROM orders", "params": {}}
+        prompt = build_template_fill_prompt("how many rows total?", template)
+        assert "how many rows total?" in prompt
+
+
+class TestParseTemplateFillResponse:
+
+    def test_parses_plain_json_object(self):
+        result = parse_template_fill_response('{"date_range": "2026-Q1"}')
+        assert result == {"date_range": "2026-Q1"}
+
+    def test_strips_markdown_fences(self):
+        result = parse_template_fill_response('```json\n{"region": "US"}\n```')
+        assert result == {"region": "US"}
+
+    def test_multiple_params(self):
+        result = parse_template_fill_response('{"region": "US", "date_range": "2026-Q1"}')
+        assert result == {"region": "US", "date_range": "2026-Q1"}
+
+    def test_invalid_json_returns_none(self):
+        assert parse_template_fill_response("not json at all") is None
+
+    def test_non_object_json_returns_none(self):
+        assert parse_template_fill_response('["a", "b"]') is None
+
+    def test_non_string_values_returns_none(self):
+        assert parse_template_fill_response('{"count": 5}') is None
+
+    def test_empty_object_is_valid_for_no_params(self):
+        assert parse_template_fill_response("{}") == {}
+
+
+class TestFillTemplate:
+
+    def test_substitutes_single_param(self):
+        sql = "SELECT * FROM orders WHERE region = {region}"
+        result = fill_template(sql, {"region": "'US'"})
+        assert result == "SELECT * FROM orders WHERE region = 'US'"
+
+    def test_substitutes_multiple_params(self):
+        sql = "SELECT region, SUM(amount) FROM orders WHERE order_date BETWEEN {start} AND {end} GROUP BY region"
+        result = fill_template(sql, {"start": "'2026-01-01'", "end": "'2026-03-31'"})
+        assert "'2026-01-01'" in result
+        assert "'2026-03-31'" in result
+        assert "{start}" not in result
+        assert "{end}" not in result
+
+    def test_no_params_returns_sql_unchanged(self):
+        sql = "SELECT COUNT(*) FROM orders"
+        assert fill_template(sql, {}) == sql
+
+    def test_extra_values_not_in_sql_are_ignored(self):
+        sql = "SELECT * FROM orders WHERE region = {region}"
+        result = fill_template(sql, {"region": "'US'", "unused": "ignored"})
+        assert result == "SELECT * FROM orders WHERE region = 'US'"
+
 
 # ── validator ────────────────────────────────────────────────────────────────
 
@@ -306,6 +448,16 @@ class TestValidator:
 
     def test_valid_aggregation(self, silver_dir):
         sql = "SELECT region, COUNT(*) AS n FROM orders GROUP BY region"
+        ok, msg = validate(sql, str(silver_dir))
+        assert ok, msg
+
+    def test_valid_information_schema_tables_query(self, silver_dir):
+        sql = "SELECT table_name FROM information_schema.tables"
+        ok, msg = validate(sql, str(silver_dir))
+        assert ok, msg
+
+    def test_valid_information_schema_columns_query(self, silver_dir):
+        sql = "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'orders'"
         ok, msg = validate(sql, str(silver_dir))
         assert ok, msg
 
@@ -455,6 +607,25 @@ class TestExecutor:
         )
         df = execute(sql, silver_dir)
         assert len(df) == 2
+
+    def test_information_schema_lists_registered_tables_only(self, silver_dir):
+        # "What tables are in the database?" — must reflect exactly the
+        # views registered from silver_dir (orders, products), and nothing
+        # external (no other schemas, no system tables leaking in).
+        df = execute(
+            "SELECT table_name FROM information_schema.tables "
+            "WHERE table_schema = 'main' ORDER BY table_name",
+            silver_dir,
+        )
+        assert df["table_name"].to_list() == ["orders", "products"]
+
+    def test_information_schema_lists_columns_for_one_table(self, silver_dir):
+        df = execute(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_name = 'orders' ORDER BY ordinal_position",
+            silver_dir,
+        )
+        assert df["column_name"].to_list() == ["order_id", "customer_id", "amount", "region"]
 
 
 # ── recommender ──────────────────────────────────────────────────────────────
@@ -820,6 +991,180 @@ class TestCerebrumPipelineSchemaPruning:
         assert len(corpus_embed_calls) == 1
 
 
+# ── template-routed query layer (Template-Routed Query Layer roadmap,
+#    build order step 5) ──────────────────────────────────────────────────
+
+class TestCerebrumPipelineTemplateRouting:
+
+    _TEMPLATE_QUESTION = "orders in a given region?"
+    _TEMPLATE_SQL = "SELECT * FROM orders WHERE region = {region}"
+
+    def _fake_embed_fn(self, vectors: dict[str, list[float]]):
+        def _embed(texts: list[str]) -> list[list[float]]:
+            return [vectors[t] for t in texts]
+        return _embed
+
+    def _write_templated_synthetic(self, examples_dir):
+        examples_dir.mkdir(exist_ok=True)
+        (examples_dir / "synthetic.jsonl").write_text(
+            '{"question": "%s", "sql": "%s", "verified": true, "templated": true, '
+            '"params": {"region": "SQL string literal, e.g. \'North\'"}}\n'
+            % (self._TEMPLATE_QUESTION, self._TEMPLATE_SQL.replace('"', '\\"'))
+        )
+
+    def test_default_off_never_matches_even_with_templates_present(self, tmp_path, silver_dir):
+        examples_dir = tmp_path / "examples"
+        self._write_templated_synthetic(examples_dir)
+        embed_fn = self._fake_embed_fn({
+            self._TEMPLATE_QUESTION: [1.0, 0.0],
+            "orders in the north region": [1.0, 0.0],
+        })
+        # use_templates defaults False -- normal SQL-gen flow runs even though
+        # a high-confidence template match exists.
+        mock_llm = MagicMock(side_effect=["SELECT * FROM orders WHERE region = 'North'", "q"])
+        pipeline = CerebrumPipeline(
+            silver_dir, examples_dir=examples_dir, _client=mock_llm, _embed_fn=embed_fn,
+        )
+        result = pipeline.ask("orders in the north region")
+        assert mock_llm.call_count == 2
+        assert result.sql == "SELECT * FROM orders WHERE region = 'North'"
+
+    def test_high_confidence_match_skips_sql_generation(self, tmp_path, silver_dir):
+        examples_dir = tmp_path / "examples"
+        self._write_templated_synthetic(examples_dir)
+        embed_fn = self._fake_embed_fn({
+            self._TEMPLATE_QUESTION: [1.0, 0.0],
+            "orders in the north region": [1.0, 0.0],
+        })
+        # call sequence: fill-params call (JSON) -> recommend call. No raw
+        # SQL-generation call is ever made.
+        mock_llm = MagicMock(side_effect=['{"region": "\'North\'"}', "Orders in the north region"])
+        pipeline = CerebrumPipeline(
+            silver_dir, examples_dir=examples_dir, _client=mock_llm, _embed_fn=embed_fn,
+            use_templates=True,
+        )
+        result = pipeline.ask("orders in the north region")
+
+        assert result.sql == "SELECT * FROM orders WHERE region = 'North'"
+        assert len(result.result) == 1
+        assert mock_llm.call_count == 2
+
+    def test_low_confidence_falls_through_to_normal_generation(self, tmp_path, silver_dir):
+        examples_dir = tmp_path / "examples"
+        self._write_templated_synthetic(examples_dir)
+        embed_fn = self._fake_embed_fn({
+            self._TEMPLATE_QUESTION: [1.0, 0.0],
+            "how many products are there": [0.0, 1.0],  # orthogonal -> confidence 0.0
+        })
+        mock_llm = MagicMock(side_effect=["SELECT COUNT(*) AS n FROM products", "q"])
+        pipeline = CerebrumPipeline(
+            silver_dir, examples_dir=examples_dir, _client=mock_llm, _embed_fn=embed_fn,
+            use_templates=True,
+        )
+        result = pipeline.ask("how many products are there")
+
+        assert result.sql == "SELECT COUNT(*) AS n FROM products"
+        assert mock_llm.call_count == 2
+
+    def test_on_step_reports_the_match(self, tmp_path, silver_dir):
+        examples_dir = tmp_path / "examples"
+        self._write_templated_synthetic(examples_dir)
+        embed_fn = self._fake_embed_fn({
+            self._TEMPLATE_QUESTION: [1.0, 0.0],
+            "orders in the north region": [1.0, 0.0],
+        })
+        mock_llm = MagicMock(side_effect=['{"region": "\'North\'"}', "q"])
+        pipeline = CerebrumPipeline(
+            silver_dir, examples_dir=examples_dir, _client=mock_llm, _embed_fn=embed_fn,
+            use_templates=True,
+        )
+        steps: list[str] = []
+        pipeline.ask("orders in the north region", on_step=steps.append)
+        assert any("matched template" in s.lower() for s in steps)
+
+    def test_invalid_fill_response_falls_back_to_normal_generation(self, tmp_path, silver_dir):
+        examples_dir = tmp_path / "examples"
+        self._write_templated_synthetic(examples_dir)
+        embed_fn = self._fake_embed_fn({
+            self._TEMPLATE_QUESTION: [1.0, 0.0],
+            "orders in the north region": [1.0, 0.0],
+        })
+        # call sequence: fill attempt (malformed) -> normal SQL-gen -> recommend
+        mock_llm = MagicMock(side_effect=[
+            "not valid json",
+            "SELECT * FROM orders WHERE region = 'North'",
+            "q",
+        ])
+        pipeline = CerebrumPipeline(
+            silver_dir, examples_dir=examples_dir, _client=mock_llm, _embed_fn=embed_fn,
+            use_templates=True,
+        )
+        result = pipeline.ask("orders in the north region")
+
+        assert result.sql == "SELECT * FROM orders WHERE region = 'North'"
+        assert mock_llm.call_count == 3
+
+    def test_no_examples_dir_never_matches(self, silver_dir):
+        mock_llm = MagicMock(side_effect=["SELECT * FROM orders LIMIT 1", "q"])
+        pipeline = CerebrumPipeline(silver_dir, _client=mock_llm, use_templates=True)
+        result = pipeline.ask("show one order")
+        assert mock_llm.call_count == 2
+        assert result.sql == "SELECT * FROM orders LIMIT 1"
+
+    def test_embedded_templates_cached_across_multiple_ask_calls(self, tmp_path, silver_dir):
+        examples_dir = tmp_path / "examples"
+        self._write_templated_synthetic(examples_dir)
+        embed_calls: list[list[str]] = []
+
+        def _embed(texts: list[str]) -> list[list[float]]:
+            embed_calls.append(texts)
+            return [[1.0, 0.0] for _ in texts]
+
+        mock_llm = MagicMock(side_effect=[
+            '{"region": "\'North\'"}', "q1",
+            '{"region": "\'North\'"}', "q2",
+        ])
+        pipeline = CerebrumPipeline(
+            silver_dir, examples_dir=examples_dir, _client=mock_llm, _embed_fn=_embed,
+            use_templates=True,
+        )
+        pipeline.ask("orders in the north region")
+        pipeline.ask("orders in the north region")
+
+        corpus_embed_calls = [c for c in embed_calls if c == [self._TEMPLATE_QUESTION]]
+        assert len(corpus_embed_calls) == 1
+
+    def test_filled_sql_still_goes_through_validate_and_fix(self, tmp_path, silver_dir):
+        # A bad fill value produces SQL that fails EXPLAIN -- the retry loop
+        # (an LLM call, not a silent execution of malformed SQL) must still
+        # fire, proving the safety net is not bypassed on the template path.
+        examples_dir = tmp_path / "examples"
+        examples_dir.mkdir()
+        (examples_dir / "synthetic.jsonl").write_text(
+            '{"question": "orders over a threshold?", '
+            '"sql": "SELECT * FROM orders WHERE amount > {threshold}", '
+            '"verified": true, "templated": true, '
+            '"params": {"threshold": "numeric literal"}}\n'
+        )
+        embed_fn = self._fake_embed_fn({
+            "orders over a threshold?": [1.0, 0.0],
+            "orders over 100": [1.0, 0.0],
+        })
+        # fill call returns an unquoted non-numeric placeholder -> invalid SQL
+        # -> validate_and_fix's retry closure fires a real LLM call to fix it.
+        mock_llm = MagicMock(side_effect=[
+            '{"threshold": "not_a_number"}',
+            "SELECT * FROM orders WHERE amount > 100",
+            "q",
+        ])
+        pipeline = CerebrumPipeline(
+            silver_dir, examples_dir=examples_dir, _client=mock_llm, _embed_fn=embed_fn,
+            use_templates=True,
+        )
+        result = pipeline.ask("orders over 100")
+        assert result.sql == "SELECT * FROM orders WHERE amount > 100"
+
+
 # ── ambiguity detection + query decomposition (build order step 12) ─────────
 
 class TestCerebrumPipelineAmbiguityAndDecomposition:
@@ -891,3 +1236,127 @@ class TestCerebrumPipelineAmbiguityAndDecomposition:
         with pytest.raises(AmbiguousQuestionError):
             pipeline.ask("show me recent orders")
         mock_llm.assert_called_once()  # decomposition check never runs
+
+
+class TestCerebrumPipelineInlineClarification:
+    """The main SQL-generation prompt itself can now ask for clarification
+    (CLARIFY: contract in prompt.py's _SYSTEM) instead of guessing — a
+    single-call, always-on mechanism, distinct from and independent of the
+    opt-in detect_ambiguity pre-check (which makes a dedicated extra call
+    before any SQL generation is attempted)."""
+
+    def test_clarify_response_raises_with_no_extra_calls(self, silver_dir):
+        clarification = "Which region — sales territory or shipping region?"
+        mock_llm = MagicMock(return_value=f"CLARIFY: {clarification}")
+        pipeline = CerebrumPipeline(silver_dir, _client=mock_llm)  # detect_ambiguity NOT set
+        with pytest.raises(AmbiguousQuestionError) as exc_info:
+            pipeline.ask("show me revenue by region")
+        assert exc_info.value.clarification == clarification
+        assert exc_info.value.question == "show me revenue by region"
+        mock_llm.assert_called_once()  # no retry, no execute, no recommend call
+
+    def test_normal_sql_response_is_unaffected(self, silver_dir):
+        mock_llm = MagicMock(side_effect=["SELECT * FROM orders LIMIT 1", "recommended"])
+        pipeline = CerebrumPipeline(silver_dir, _client=mock_llm)
+        result = pipeline.ask("show me one order")
+        assert isinstance(result, QueryResult)
+        assert mock_llm.call_count == 2
+
+    def test_inline_clarify_is_independent_of_detect_ambiguity_flag(self, silver_dir):
+        # detect_ambiguity=True's pre-check says CLEAR, but the main
+        # SQL-generation call itself still asks for clarification — both
+        # mechanisms are independent and either can trigger it.
+        clarification = "Which time period?"
+        mock_llm = MagicMock(side_effect=["CLEAR", f"CLARIFY: {clarification}"])
+        pipeline = CerebrumPipeline(silver_dir, _client=mock_llm, detect_ambiguity=True)
+        with pytest.raises(AmbiguousQuestionError) as exc_info:
+            pipeline.ask("show me recent orders")
+        assert exc_info.value.clarification == clarification
+        assert mock_llm.call_count == 2  # ambiguity pre-check + SQL-gen call, no more
+
+    def test_inline_clarify_aborts_remaining_sub_questions(self, silver_dir):
+        decompose_response = '["How many orders?", "What is total revenue?"]'
+        clarification = "Which time range for total revenue?"
+        mock_llm = MagicMock(side_effect=[
+            decompose_response,
+            "SELECT COUNT(*) AS n FROM orders", "sub-q 1 recommend",
+            f"CLARIFY: {clarification}",
+        ])
+        pipeline = CerebrumPipeline(silver_dir, _client=mock_llm, decompose_queries=True)
+        with pytest.raises(AmbiguousQuestionError) as exc_info:
+            pipeline.ask("How many orders are there and what is total revenue?")
+        assert exc_info.value.clarification == clarification
+        assert exc_info.value.question == "What is total revenue?"
+
+
+# ── dual LLM: separate SQL vs NLG models ─────────────────────────────────────
+
+class TestCerebrumPipelineSchemaMetaQuestions:
+    """Schema/meta-questions ("what tables exist?") are routed to the NLG
+    model directly — no SQL is generated/executed at all, and the SQL
+    client is never called."""
+
+    def test_meta_question_never_calls_sql_client(self, silver_dir):
+        sql_client = MagicMock(side_effect=AssertionError("SQL client must not be called"))
+        nlg_client = MagicMock(return_value="There are two tables: orders and products.")
+        pipeline = CerebrumPipeline(silver_dir, _client=sql_client, _nlg_client=nlg_client)
+
+        result = pipeline.ask("What tables are in the database?")
+
+        sql_client.assert_not_called()
+        nlg_client.assert_called_once()
+        assert isinstance(result, QueryResult)
+        assert result.answer == "There are two tables: orders and products."
+        assert result.sql == ""
+
+    def test_meta_question_answer_uses_real_schema(self, silver_dir):
+        captured = {}
+
+        def _fake_nlg(prompt_text: str) -> str:
+            captured["prompt"] = prompt_text
+            return "answer"
+
+        pipeline = CerebrumPipeline(
+            silver_dir, _client=MagicMock(), _nlg_client=_fake_nlg,
+        )
+        pipeline.ask("What columns does the orders table have?")
+        assert "TABLE orders" in captured["prompt"]
+
+    def test_normal_data_question_still_uses_sql_client(self, silver_dir):
+        sql_client = MagicMock(return_value="SELECT * FROM orders LIMIT 1")
+        nlg_client = MagicMock(return_value="Show the first order row")
+        pipeline = CerebrumPipeline(silver_dir, _client=sql_client, _nlg_client=nlg_client)
+
+        result = pipeline.ask("Show me one order")
+
+        sql_client.assert_called_once()
+        nlg_client.assert_called_once()  # recommend() only
+        assert result.sql == "SELECT * FROM orders LIMIT 1"
+        assert result.answer is None
+
+
+class TestCerebrumPipelineDualClientConstruction:
+    """Without an explicit nlg_client/nlg_model/nlg_provider, the NLG path
+    reuses the same SQL client — fully backward compatible, zero config."""
+
+    def test_recommend_uses_same_client_by_default(self, silver_dir):
+        mock_llm = MagicMock(side_effect=["SELECT * FROM orders LIMIT 1", "recommended text"])
+        pipeline = CerebrumPipeline(silver_dir, _client=mock_llm)
+        result = pipeline.ask("show one order")
+        assert mock_llm.call_count == 2
+        assert result.recommended_prompt == "recommended text"
+
+    def test_explicit_nlg_model_builds_a_distinct_client(self, silver_dir):
+        with patch("openmedallion.cerebrum.llm.get_client") as mock_factory:
+            sql_client = MagicMock(return_value="SELECT 1")
+            nlg_client = MagicMock(return_value="recommended")
+            mock_factory.side_effect = [sql_client, nlg_client]
+
+            pipeline = CerebrumPipeline(
+                silver_dir, model="llama3.2", nlg_model="mistral",
+            )
+            pipeline.ask("q")
+
+            assert mock_factory.call_count == 2
+            _, nlg_kwargs = mock_factory.call_args_list[1]
+            assert mock_factory.call_args_list[1].args[1] == "mistral"

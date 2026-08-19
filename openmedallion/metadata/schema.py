@@ -27,6 +27,12 @@ class ColumnMeta(BaseModel):
     description: str | None = None
     value_examples: list[Any] | None = None
     synonyms: list[str] | None = None
+    # Opt-in ydata-profiling enrichment (`metadata generate/refresh --profile`,
+    # see openmedallion/metadata/profiling.py). None unless a profiling run has
+    # populated them — never set from the LLM draft or plain DuckDB sampling.
+    dtype: str | None = None
+    stats: dict[str, Any] | None = None
+    accepted_values: list[Any] | None = None
 
 
 class TableMeta(BaseModel):
@@ -37,6 +43,7 @@ class TableMeta(BaseModel):
     status: Literal["draft", "approved", "stale"] = "draft"
     synonyms: list[str] | None = None
     columns: dict[str, ColumnMeta] = Field(default_factory=dict)
+    schema_hash: str | None = None
 
 
 class MetadataConfig(BaseModel):

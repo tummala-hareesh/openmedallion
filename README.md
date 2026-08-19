@@ -271,6 +271,10 @@ pip install "openmedallion[cerebrum]"
 
 medallion query my_project "What are the top 5 customers by revenue?"
 medallion query my_project "Show monthly trends" --model mistral
+medallion query my_project "Headcount by dept and revenue by region" --decompose
+medallion query my_project "Show me the good ones" --detect-ambiguity
+medallion query my_project "Revenue by region for 2024-Q2" --use-templates
+medallion query my_project "Which rep leads in revenue?" --user alice
 ```
 
 This runs the full **cerebrum** pipeline locally: builds a schema context from your silver/gold Parquet files, generates SQL with an LLM, validates it against DuckDB, executes it, and prints the results alongside a canonical reproducible prompt.
@@ -311,11 +315,19 @@ llm:
 ### HTTP server + chat UI
 
 ```bash
-medallion ask    my_project              # start neuron FastAPI server on :8000
-medallion cortex my_project             # start Dash chat UI on :8050
+medallion ask    my_project                                   # start neuron FastAPI server on :8000
+medallion ask    my_project --model mistral --port 8001       # custom model + port
+medallion cortex my_project                                   # start Dash chat UI on :8050
+medallion cortex my_project --neuron-url http://localhost:8001 --debug
 ```
 
-`neuron` exposes a `/query` endpoint (Swagger UI at `/docs`). `cortex` connects to it and provides a three-tab UI: chat, table, and dashboard with CSV/Excel download.
+`neuron` exposes `/query`, `/feedback`, `/history`, `/session/end`, `/health`, and `/docs` (Swagger UI). `cortex` connects to it over HTTP and provides a four-tab UI — chat (with 👍/👎 feedback on every reply), table, dashboard with CSV/Excel download, and history (your own past questions, with a "↻ Reuse" button).
+
+### Per-person chat history — zero cost, no login system
+
+Every question — from `cortex` or `medallion query` — is logged to `<project>/chat_history/<username>.jsonl`, a personal audit trail (never fed back into the LLM prompt). `username` is a plain display name, not real auth — `cortex` asks for one once (saved in the browser); the CLI defaults to your OS username or `--user NAME`.
+
+A 👍/👎 click sets that turn's `accepted` field in place (three-state — `true`/`false` only from an explicit click, `null` if you never rate it; **never inferred** from behavior, since a guessed signal risks reinforcing a wrong answer). Closing a session — an "End Session" button, 5 minutes idle, or closing the tab — rolls the session's rated turns into `examples/harvested.jsonl`/`failures.jsonl`, the same files `medallion examples harvest`/`review` already work with. Zero cost throughout: Ollama and the local `chromadb` embedding function used for few-shot ranking are both free — no paid API touches this loop unless you explicitly configure one for `LLM_PROVIDER` itself.
 
 ### Improving accuracy — metadata, relationships, and examples (RAG)
 
@@ -323,7 +335,10 @@ For larger schemas, curate what the LLM sees instead of dumping every table:
 
 ```bash
 medallion metadata generate      my_project   # LLM-draft table/column descriptions
+medallion metadata generate      my_project --profile   # + ydata-profiling dtype/stats/accepted_values
 medallion metadata approve       my_project   # human review, one table at a time
+medallion metadata refresh       my_project   # detect schema drift, re-draft affected tables
+medallion metadata refresh       my_project --check   # CI gate: exit 1 if schema drifted
 
 medallion relationships generate my_project   # detect joins — no LLM call
 medallion relationships approve  my_project
@@ -331,11 +346,16 @@ medallion relationships erd      my_project   # Mermaid ER diagram → relations
 
 medallion examples generate      my_project --count 15   # LLM-draft Q→SQL pairs
 medallion examples approve       my_project
+medallion examples approve       my_project --template   # promote a verified example to a deterministic template
+medallion examples harvest       my_project   # promote cortex 👍 candidates into synthetic.jsonl
+medallion examples review        my_project   # list cortex 👎 failures for triage
+medallion examples eval          my_project   # regression check: did curation help or hurt?
+medallion examples eval          my_project --use-templates   # + compare template-routed results
 ```
 
 Once `metadata.yaml` has `status: approved` tables and `examples/synthetic.jsonl` has
 `verified: true` examples, `medallion query`/`ask` pick them up automatically — no
-extra flag needed. Two things happen behind the scenes:
+extra flag needed. Three things happen behind the scenes:
 
 - **Dynamic few-shot retrieval** — the most relevant verified examples are ranked in as
   prompt context, instead of a fixed static list.
@@ -343,6 +363,11 @@ extra flag needed. Two things happen behind the scenes:
   are shown to the LLM. If similarity to the best match falls below a confidence
   threshold, it falls back to a raw-schema search over *every* silver table (any
   status, no `metadata.yaml` required) rather than trusting a weak match.
+- **Template-routed queries (opt-in, `--use-templates`)** — a high-confidence match to a
+  curated `templated: true` example skips SQL generation entirely; the LLM only fills
+  the template's declared parameters, never authors query logic. Closes a correctness
+  gap the other two mitigations can't: syntactically-valid-but-semantically-wrong SQL
+  for known, frequently-asked questions.
 
 See [`docs/guides/rag-accuracy.md`](https://github.com/tummala-hareesh/openmedallion/blob/main/docs/guides/rag-accuracy.md) for the full design, and
 [`examples/sales_intelligence_demo/`](examples/sales_intelligence_demo/) for a runnable,
@@ -470,8 +495,13 @@ A great fit if you:
 | Schema contract enforcement (Pydantic config schemas) | ✅ 2026.7.1 |
 | Named filter fragments (`filter_defs`) | ✅ 2026.7.1 |
 | RAG accuracy — metadata, relationships, examples generate/approve, dynamic few-shot, confidence-gated schema pruning fallback | ✅ 2026.7.3 |
+| `medallion relationships erd` — Mermaid ER diagrams | ✅ 2026.7.5 |
+| Metadata drift detection (`medallion metadata refresh`) | ✅ 2026.7.5 |
+| ydata-profiling enrichment for metadata.yaml (`--profile`) | ✅ 2026.7.5 |
+| Template-Routed Query Layer — `examples approve --template`, `--use-templates` on query/ask/eval | ✅ Unreleased |
+| Per-person chat history + session-based curation loop | ✅ 2026.7.5 |
+| `medallion examples eval` — curation regression check | ✅ 2026.7.5 |
 | REST API multi-resource support | 🔜 roadmap |
-| Metadata drift detection (`medallion metadata refresh`) | 🔜 roadmap |
 | Additional cloud destinations | 🔜 roadmap |
 
 ---

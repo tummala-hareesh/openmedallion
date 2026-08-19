@@ -159,9 +159,12 @@ def register_callbacks(client) -> None:
         State("chat-history",          "children"),
         State("store-project",         "data"),
         State("store-chat-metadata",   "data"),
+        State("store-username",        "data"),
+        State("store-session-id",      "data"),
+        running=[(Output("chat-ask-btn", "disabled"), True, False)],
         prevent_initial_call=True,
     )
-    def handle_ask(n_clicks, question, history, project, chat_metadata):
+    def handle_ask(n_clicks, question, history, project, chat_metadata, username, session_id):
         chat_metadata = list(chat_metadata or [])
         if not question or not question.strip():
             return history, question, None, None, None, None, True, [], {"display": "none"}, chat_metadata
@@ -170,10 +173,11 @@ def register_callbacks(client) -> None:
         history.append(_user_bubble(question.strip()))
 
         try:
-            result = client.ask(question.strip(), project or "")
+            result = client.ask(question.strip(), project or "", username=username, session_id=session_id)
             index = len(chat_metadata)
             history.append(_assistant_bubble(result.answer, result.sql, index))
             chat_metadata.append({
+                "turn_id":   result.turn_id,
                 "question": question.strip(),
                 "sql":      result.sql,
                 "columns":  result.columns,
@@ -200,9 +204,10 @@ def register_callbacks(client) -> None:
         Input({"type": "thumb-down",    "index": MATCH}, "n_clicks"),
         State("store-chat-metadata",    "data"),
         State("store-project",         "data"),
+        State("store-username",        "data"),
         prevent_initial_call=True,
     )
-    def handle_feedback(up_clicks, down_clicks, chat_metadata, project):
+    def handle_feedback(up_clicks, down_clicks, chat_metadata, project, username):
         triggered = ctx.triggered_id
         if not triggered or not (up_clicks or down_clicks):
             raise PreventUpdate
@@ -216,9 +221,7 @@ def register_callbacks(client) -> None:
 
         try:
             client.feedback(
-                entry["question"], entry["sql"],
-                entry.get("columns", []), entry.get("row_count", 0),
-                thumbs_up, project or "",
+                entry["turn_id"], thumbs_up, project or "", username=username,
             )
             status = "Thanks for the feedback!"
         except Exception:

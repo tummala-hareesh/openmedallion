@@ -36,6 +36,16 @@ Locked design decisions (see CLAUDE.md "Roadmap: RAG Accuracy Improvement"):
   metadata/approval status (see ``cerebrum/schema.py:rank_relevant_tables_scored``/
   ``describe_all_tables``, and ``CerebrumPipeline._get_relevant_tables``).
   ``CONFIDENCE_THRESHOLD`` below is that gate.
+
+Template-Routed Query Layer roadmap (see CLAUDE.md), build order step 3:
+``load_templated_examples``/``embed_templates``/``rank_templates_scored``
+apply the same generic ``embed_payloads``/``rank_payloads_scored`` core a
+third time, this time over ``templated: true`` examples' ``question`` text.
+``TEMPLATE_CONFIDENCE_THRESHOLD`` gates whether a matched template is trusted
+enough to skip SQL generation entirely — deliberately stricter than
+``CONFIDENCE_THRESHOLD`` (schema pruning only narrows context on a
+low-confidence miss; a false-positive template match skips SQL
+generation/validation altogether, so it is a costlier mistake).
 """
 from __future__ import annotations
 
@@ -52,6 +62,12 @@ T = TypeVar("T")
 #: schema retrieval is considered unreliable and callers should fall back to
 #: a broader raw-schema search. Locked value from CLAUDE.md's RAG roadmap.
 CONFIDENCE_THRESHOLD = 0.7
+
+#: Below this top-1 cosine similarity, a candidate template match is not
+#: trusted — the question falls through to normal SQL generation instead.
+#: Stricter than CONFIDENCE_THRESHOLD (see module docstring). Template-Routed
+#: Query Layer roadmap, build order step 3.
+TEMPLATE_CONFIDENCE_THRESHOLD = 0.85
 
 
 def get_embed_fn() -> EmbedFn:
@@ -182,3 +198,55 @@ def rank_examples(
     """Return up to *top_k* examples most similar to *question* — a thin
     specialization of :func:`rank_payloads`."""
     return rank_payloads(question, embedded_examples, embed_fn, top_k)
+
+
+def load_templated_examples(examples_dir: str | Path) -> list[dict]:
+    """Read ``templated: true`` examples from ``<examples_dir>/synthetic.jsonl``.
+
+    Template-Routed Query Layer roadmap (see CLAUDE.md), build order step 3.
+    The schema (``SyntheticExample``, see ``examples/schema.py``) already
+    guarantees every ``templated: true`` entry is also ``verified: true`` —
+    no separate check needed here. Each returned dict has ``question``,
+    ``sql`` (with literal ``{param}`` placeholders), and ``params`` (empty
+    dict if the template declares none).
+
+    Returns an empty list if the file doesn't exist or has no templated entries.
+    """
+    path = Path(examples_dir) / "synthetic.jsonl"
+    if not path.exists():
+        return []
+
+    templates: list[dict] = []
+    with open(path) as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            obj = json.loads(line)
+            if obj.get("templated"):
+                templates.append({
+                    "question": obj["question"],
+                    "sql": obj["sql"],
+                    "params": obj.get("params") or {},
+                })
+    return templates
+
+
+def embed_templates(
+    templates: list[dict], embed_fn: EmbedFn
+) -> list[tuple[dict, list[float]]]:
+    """Embed every template's ``question`` — a thin specialization of
+    :func:`embed_payloads` for the dicts :func:`load_templated_examples` returns."""
+    return embed_payloads(templates, lambda t: t["question"], embed_fn)
+
+
+def rank_templates_scored(
+    question: str,
+    embedded_templates: list[tuple[dict, list[float]]],
+    embed_fn: EmbedFn,
+    top_k: int = 1,
+) -> list[tuple[dict, float]]:
+    """Return up to *top_k* ``(template, similarity)`` pairs, most similar first
+    — a thin specialization of :func:`rank_payloads_scored`. Callers gate on
+    the top score against :data:`TEMPLATE_CONFIDENCE_THRESHOLD`."""
+    return rank_payloads_scored(question, embedded_templates, embed_fn, top_k)

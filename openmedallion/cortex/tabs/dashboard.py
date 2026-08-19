@@ -82,15 +82,23 @@ def register_callbacks() -> None:
 
     @callback(
         Output("filter-region",   "options"),
+        Output("filter-region",   "value"),
         Output("filter-category", "options"),
+        Output("filter-category", "value"),
         Input("store-query-results", "data"),
     )
     def update_filter_options(rows):
+        # Reset the selected value alongside the options whenever a new
+        # query lands — options changing does NOT clear a stale selection
+        # on its own (Dash doesn't do this automatically), so without this
+        # a filter picked for one question (e.g. region="North") silently
+        # carries over and zeroes out an unrelated later question's result
+        # set if "North" isn't present in it, looking like a broken filter.
         if not rows:
-            return [], []
+            return [], None, [], None
         import polars as pl
         df = pl.DataFrame(rows)
-        return _unique_opts(df, "region"), _unique_opts(df, "category")
+        return _unique_opts(df, "region"), None, _unique_opts(df, "category"), None
 
     @callback(
         Output("dashboard-dynamic-content", "children"),

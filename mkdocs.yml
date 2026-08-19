@@ -60,6 +60,7 @@ nav:
     - Scheduling with Kestra: guides/kestra.md
     - RAG Accuracy (metadata, relationships, examples): guides/rag-accuracy.md
   - Reference:
+    - Command Cheatsheet: reference/command-cheatsheet.md
     - YAML Schema: reference/yaml-schema.md
     - CLI: reference/cli.md
   - API:

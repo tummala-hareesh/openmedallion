@@ -17,6 +17,7 @@ from openmedallion.examples.approve import (
     approve_examples,
     content_hash,
     list_reviewable_examples,
+    list_templatable_examples,
 )
 
 
@@ -25,6 +26,25 @@ def _raw() -> list[dict]:
         {"question": "How many orders?", "sql": "SELECT COUNT(*) AS n FROM orders", "verified": False},
         {"question": "Total revenue?", "sql": "SELECT SUM(amount) FROM orders", "verified": False},
         {"question": "Already checked", "sql": "SELECT 1", "verified": True},
+    ]
+
+
+def _raw_with_templating() -> list[dict]:
+    return [
+        {"question": "How many orders?", "sql": "SELECT COUNT(*) AS n FROM orders", "verified": False},
+        {"question": "Already checked", "sql": "SELECT 1", "verified": True},
+        {
+            "question": "Revenue by region for {date_range}?",
+            "sql": "SELECT region, SUM(amount) FROM orders WHERE order_date BETWEEN {date_range} GROUP BY region",
+            "verified": True,
+        },
+        {
+            "question": "Already a template",
+            "sql": "SELECT * FROM orders WHERE region = {region}",
+            "verified": True,
+            "templated": True,
+            "params": {"region": "one of: US, EU, APAC"},
+        },
     ]
 
 
@@ -173,3 +193,121 @@ class TestApproveExamples:
         key = content_hash("Total revenue?", "SELECT SUM(amount) FROM orders")
         result = approve_examples("proj", tmp_path, {key: {"verified": True}})
         assert [e.question for e in result] == [r["question"] for r in raw]
+
+
+class TestListTemplatableExamples:
+    """Template-Routed Query Layer roadmap (see CLAUDE.md), build order step 2:
+    `medallion examples approve --template` reviews only already-`verified:
+    true` examples not yet promoted to `templated: true` — templating is a
+    stricter, later, separate review pass, never implied by verification.
+    """
+
+    def _write(self, root: Path, project: str, lines: list[dict]) -> Path:
+        project_dir = root / project / "examples"
+        project_dir.mkdir(parents=True, exist_ok=True)
+        with open(project_dir / "synthetic.jsonl", "w") as f:
+            for line in lines:
+                import json
+                f.write(json.dumps(line) + "\n")
+        return project_dir
+
+    def test_returns_verified_untemplated_only(self, tmp_path):
+        self._write(tmp_path, "proj", _raw_with_templating())
+        templatable = list_templatable_examples("proj", tmp_path)
+        questions = {e.question for e in templatable}
+        assert questions == {"Already checked", "Revenue by region for {date_range}?"}
+
+    def test_excludes_unverified_entries(self, tmp_path):
+        self._write(tmp_path, "proj", _raw_with_templating())
+        templatable = list_templatable_examples("proj", tmp_path)
+        assert "How many orders?" not in {e.question for e in templatable}
+
+    def test_excludes_already_templated_entries(self, tmp_path):
+        self._write(tmp_path, "proj", _raw_with_templating())
+        templatable = list_templatable_examples("proj", tmp_path)
+        assert "Already a template" not in {e.question for e in templatable}
+
+    def test_preserves_file_order(self, tmp_path):
+        raw = _raw_with_templating()
+        self._write(tmp_path, "proj", raw)
+        templatable = list_templatable_examples("proj", tmp_path)
+        expected_order = [r["question"] for r in raw if r["verified"] and not r.get("templated")]
+        assert [e.question for e in templatable] == expected_order
+
+    def test_empty_when_nothing_verified(self, tmp_path):
+        self._write(tmp_path, "proj", _raw())
+        # _raw() has one verified entry ("Already checked") with no params.
+        templatable = list_templatable_examples("proj", tmp_path)
+        assert [e.question for e in templatable] == ["Already checked"]
+
+    def test_missing_file_returns_empty(self, tmp_path):
+        (tmp_path / "proj").mkdir(parents=True)
+        assert list_templatable_examples("proj", tmp_path) == []
+
+
+class TestTemplatingDecisions:
+    """Promotion itself is a generic decisions-dict merge (apply_approvals
+    already supports arbitrary field edits) — these tests lock the specific
+    templated/params promotion path end-to-end through approve_examples,
+    including the schema's `templated` requires `verified` guard.
+    """
+
+    def _write(self, root: Path, project: str, lines: list[dict]) -> Path:
+        project_dir = root / project / "examples"
+        project_dir.mkdir(parents=True, exist_ok=True)
+        with open(project_dir / "synthetic.jsonl", "w") as f:
+            for line in lines:
+                import json
+                f.write(json.dumps(line) + "\n")
+        return project_dir
+
+    def test_promotes_verified_example_to_template(self, tmp_path):
+        raw = _raw_with_templating()
+        self._write(tmp_path, "proj", raw)
+        key = content_hash(
+            "Revenue by region for {date_range}?",
+            "SELECT region, SUM(amount) FROM orders WHERE order_date BETWEEN {date_range} GROUP BY region",
+        )
+        decisions = {key: {"templated": True, "params": {"date_range": "ISO date range, e.g. 2026-Q1"}}}
+        result = approve_examples("proj", tmp_path, decisions)
+        promoted = next(e for e in result if e.question == "Revenue by region for {date_range}?")
+        assert promoted.templated is True
+        assert promoted.params == {"date_range": "ISO date range, e.g. 2026-Q1"}
+
+    def test_promotion_persists_to_disk(self, tmp_path):
+        raw = _raw_with_templating()
+        self._write(tmp_path, "proj", raw)
+        key = content_hash(
+            "Revenue by region for {date_range}?",
+            "SELECT region, SUM(amount) FROM orders WHERE order_date BETWEEN {date_range} GROUP BY region",
+        )
+        decisions = {key: {"templated": True, "params": {"date_range": "ISO date range, e.g. 2026-Q1"}}}
+        approve_examples("proj", tmp_path, decisions)
+
+        path = tmp_path / "proj" / "examples" / "synthetic.jsonl"
+        import json
+        lines = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+        promoted = next(line for line in lines if line["question"] == "Revenue by region for {date_range}?")
+        assert promoted["templated"] is True
+        assert promoted["params"] == {"date_range": "ISO date range, e.g. 2026-Q1"}
+
+    def test_templating_an_unverified_example_raises(self, tmp_path):
+        raw = _raw_with_templating()
+        self._write(tmp_path, "proj", raw)
+        key = content_hash("How many orders?", "SELECT COUNT(*) AS n FROM orders")
+        decisions = {key: {"templated": True, "params": {}}}
+        with pytest.raises(ValueError, match="templated"):
+            approve_examples("proj", tmp_path, decisions)
+
+    def test_templating_does_not_disturb_other_entries(self, tmp_path):
+        raw = _raw_with_templating()
+        self._write(tmp_path, "proj", raw)
+        key = content_hash(
+            "Revenue by region for {date_range}?",
+            "SELECT region, SUM(amount) FROM orders WHERE order_date BETWEEN {date_range} GROUP BY region",
+        )
+        decisions = {key: {"templated": True, "params": {"date_range": "ISO date range, e.g. 2026-Q1"}}}
+        result = approve_examples("proj", tmp_path, decisions)
+        untouched = next(e for e in result if e.question == "Already checked")
+        assert untouched.templated is False
+        assert untouched.params is None

@@ -19,12 +19,16 @@ import pytest
 
 from openmedallion.cerebrum.retrieval import (
     CONFIDENCE_THRESHOLD,
+    TEMPLATE_CONFIDENCE_THRESHOLD,
     embed_examples,
     embed_payloads,
+    embed_templates,
+    load_templated_examples,
     load_verified_examples,
     rank_examples,
     rank_payloads,
     rank_payloads_scored,
+    rank_templates_scored,
 )
 
 
@@ -194,3 +198,106 @@ class TestRankPayloadsScored:
 
     def test_confidence_threshold_is_the_locked_value(self):
         assert CONFIDENCE_THRESHOLD == 0.7
+
+
+class TestLoadTemplatedExamples:
+    """Template-Routed Query Layer roadmap (see CLAUDE.md), build order step 3:
+    only `templated: true` examples (which the schema already guarantees are
+    also `verified: true`, see tests/test_examples_schema.py) are eligible
+    for template routing."""
+
+    def _write(self, tmp_path: Path, lines: list[dict]) -> Path:
+        examples_dir = tmp_path / "examples"
+        examples_dir.mkdir()
+        with open(examples_dir / "synthetic.jsonl", "w") as f:
+            for line in lines:
+                f.write(json.dumps(line) + "\n")
+        return examples_dir
+
+    def test_returns_only_templated(self, tmp_path):
+        examples_dir = self._write(tmp_path, [
+            {"question": "revenue by region for {date_range}?",
+             "sql": "SELECT region, SUM(amount) FROM orders WHERE order_date BETWEEN {date_range} GROUP BY region",
+             "verified": True, "templated": True,
+             "params": {"date_range": "ISO date range, e.g. 2026-Q1"}},
+            {"question": "verified but not templated", "sql": "SELECT 1", "verified": True},
+            {"question": "unverified", "sql": "SELECT 2", "verified": False},
+        ])
+        result = load_templated_examples(examples_dir)
+        assert [e["question"] for e in result] == ["revenue by region for {date_range}?"]
+
+    def test_result_includes_sql_and_params(self, tmp_path):
+        examples_dir = self._write(tmp_path, [
+            {"question": "q", "sql": "SELECT * FROM orders WHERE region = {region}",
+             "verified": True, "templated": True, "params": {"region": "one of: US, EU, APAC"}},
+        ])
+        result = load_templated_examples(examples_dir)
+        assert result[0]["sql"] == "SELECT * FROM orders WHERE region = {region}"
+        assert result[0]["params"] == {"region": "one of: US, EU, APAC"}
+
+    def test_missing_params_defaults_empty_dict(self, tmp_path):
+        # templated: true with no params (a template with no fillable slots)
+        # should still round-trip cleanly, not raise a KeyError.
+        examples_dir = self._write(tmp_path, [
+            {"question": "count everything", "sql": "SELECT COUNT(*) FROM orders",
+             "verified": True, "templated": True},
+        ])
+        result = load_templated_examples(examples_dir)
+        assert result[0]["params"] == {}
+
+    def test_missing_file_returns_empty(self, tmp_path):
+        assert load_templated_examples(tmp_path / "examples") == []
+
+    def test_empty_file_returns_empty(self, tmp_path):
+        examples_dir = self._write(tmp_path, [])
+        assert load_templated_examples(examples_dir) == []
+
+
+class TestEmbedAndRankTemplates:
+    """embed_templates/rank_templates_scored are thin specializations of
+    embed_payloads/rank_payloads_scored over templated-example dicts, ranking
+    on `question` text — same pattern as embed_examples/rank_examples and
+    schema.py's rank_relevant_tables_scored, applied a third time."""
+
+    def test_ranks_by_question_similarity(self):
+        templates = [
+            {"question": "revenue by region for {date_range}?",
+             "sql": "SELECT region, SUM(amount) FROM orders WHERE order_date BETWEEN {date_range} GROUP BY region",
+             "params": {"date_range": "ISO date range"}},
+            {"question": "headcount by department?",
+             "sql": "SELECT department, COUNT(*) FROM employees GROUP BY department",
+             "params": {}},
+        ]
+        vectors = {
+            "revenue by region for {date_range}?": [1.0, 0.0],
+            "headcount by department?": [0.0, 1.0],
+            "what's the revenue by region last quarter": [0.9, 0.1],
+        }
+        embed_fn = _fake_embed_fn(vectors)
+        embedded = embed_templates(templates, embed_fn)
+        ranked = rank_templates_scored("what's the revenue by region last quarter", embedded, embed_fn, top_k=1)
+        assert len(ranked) == 1
+        assert ranked[0][0]["question"] == "revenue by region for {date_range}?"
+        assert ranked[0][1] == pytest.approx(1.0, abs=0.05)
+
+    def test_embed_templates_embeds_question_field(self):
+        calls: list[list[str]] = []
+        def _embed(texts: list[str]) -> list[list[float]]:
+            calls.append(texts)
+            return [[1.0, 0.0] for _ in texts]
+
+        templates = [{"question": "a?", "sql": "SELECT 1", "params": {}}]
+        embed_templates(templates, _embed)
+        assert calls == [["a?"]]
+
+    def test_empty_templates_returns_empty(self):
+        embed_fn = _fake_embed_fn({"query": [1.0, 0.0]})
+        assert embed_templates([], embed_fn) == []
+        assert rank_templates_scored("query", [], embed_fn) == []
+
+    def test_template_confidence_threshold_stricter_than_schema_threshold(self):
+        # Locked decision: a false-positive template match skips SQL
+        # generation/validation entirely, so it must require a stricter
+        # confidence than schema-pruning's fallback gate.
+        assert TEMPLATE_CONFIDENCE_THRESHOLD > CONFIDENCE_THRESHOLD
+        assert TEMPLATE_CONFIDENCE_THRESHOLD == 0.85

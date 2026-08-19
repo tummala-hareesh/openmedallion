@@ -70,6 +70,27 @@ def list_reviewable_examples(
     return [e for e in (SyntheticExample(**line) for line in raw) if not e.verified]
 
 
+def list_templatable_examples(
+    project: str, projects_root: str | Path = "projects"
+) -> list[SyntheticExample]:
+    """Return every ``verified: true``, ``templated: false`` example, in file order.
+
+    Template-Routed Query Layer roadmap (see CLAUDE.md), build order step 2:
+    the pool reviewed by ``medallion examples approve --template``. Templating
+    is a separate, stricter, later review pass than verification — an
+    already-``templated: true`` example is never re-offered, and a
+    ``verified: false`` example is never eligible (the schema forbids
+    ``templated: true`` without ``verified: true`` regardless).
+
+    Returns an empty list if ``synthetic.jsonl`` doesn't exist yet.
+    """
+    raw = _read_raw(project, projects_root)
+    return [
+        e for e in (SyntheticExample(**line) for line in raw)
+        if e.verified and not e.templated
+    ]
+
+
 def approve_examples(
     project: str,
     projects_root: str | Path = "projects",

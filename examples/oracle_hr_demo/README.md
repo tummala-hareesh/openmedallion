@@ -52,6 +52,35 @@ pip install "openmedallion[oracle]"   # for Oracle
 
 ---
 
+## RAG accuracy — the worked `metadata.yaml` / `relationships.yaml` example
+
+`oracle_hr/metadata.yaml` and `oracle_hr/relationships.yaml` are hand-written worked
+examples referenced from the main project's RAG accuracy roadmap — including a
+self-referential relationship (`employees.manager_id → employees.employee_id`,
+employees managing employees). No LLM call is required to inspect or render them:
+
+```bash
+medallion relationships erd oracle_hr --projects .           # approved relationships only
+medallion relationships erd oracle_hr --projects . --all     # include draft/stale too
+```
+
+Renders a Mermaid `erDiagram` to `oracle_hr/relationships_erd.md`. To review/approve
+metadata or relationships interactively (no LLM needed either):
+
+```bash
+medallion metadata approve      oracle_hr --projects .
+medallion relationships approve oracle_hr --projects .
+```
+
+Regenerating drafts (`metadata generate`, `examples generate`) requires
+`pip install "openmedallion[cerebrum]"` and a running LLM — see
+[docs/guides/rag-accuracy.md](https://github.com/tummala-hareesh/openmedallion/blob/main/docs/guides/rag-accuracy.md)
+for the full design, or
+[examples/sales_intelligence_demo/](https://github.com/tummala-hareesh/openmedallion/tree/main/examples/sales_intelligence_demo)
+for a runnable, offline RAG walkthrough.
+
+---
+
 ## Walkthrough notebook
 
 Open `oracle_hr/ipynb/walkthrough.ipynb` for a guided run with inline output.

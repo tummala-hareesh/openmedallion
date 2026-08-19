@@ -6,12 +6,16 @@ same `_embed_fn=` injection point `CerebrumPipeline` exposes for tests. This
 lets the demo show real ranking/confidence-gating behavior without a network
 call or a heavy embedding-model download.
 
-Covers the four pieces of the RAG accuracy roadmap (see CLAUDE.md):
+Covers the RAG accuracy roadmap + the Template-Routed Query Layer roadmap
+(see CLAUDE.md):
   1. metadata.yaml / relationships.yaml — curated schema knowledge
   2. Dynamic few-shot retrieval          — examples/synthetic.jsonl
   3. Schema pruning + confidence gate    — approved-only ranking, with a
      raw-schema ChromaDB fallback when confidence is low
-  4. How to go live with the LLM-backed commands (metadata/relationships/
+  4. Template-routed queries             — templated:true examples in
+     synthetic.jsonl skip SQL generation entirely on a high-confidence
+     match; the LLM only fills the template's declared {param} slots
+  5. How to go live with the LLM-backed commands (metadata/relationships/
      examples generate+approve, and `medallion query`)
 
 Run after the pipeline has been seeded and run at least through silver:
@@ -143,8 +147,49 @@ def main() -> None:
     print(f"    (compare: describe_all_tables() sees {len(describe_all_tables(SILVER_DIR))} "
           f"raw silver table(s), metadata.yaml or not)")
 
-    # ── 4. Go live ──────────────────────────────────────────────────────────
-    _section(4, "Go live with the LLM-backed commands")
+    # ── 4. Template-routed queries ──────────────────────────────────────────
+    _section(4, "Template-routed queries (Template-Routed Query Layer roadmap)")
+
+    print("  synthetic.jsonl has a templated:true example for a parameterized question:")
+    print('    "What is the total revenue by region for a given quarter?"')
+    print("    sql: SELECT region, SUM(amount) ... WHERE quarter = {quarter} GROUP BY region ...")
+    print("    params: {quarter: \"SQL string literal quarter code, e.g. '2024-Q2'\"}")
+    print()
+    print("  A closely-worded real question is ranked against templated:true examples'")
+    print("  question text (same embedding machinery as few-shot retrieval, gated by a")
+    print("  stricter TEMPLATE_CONFIDENCE_THRESHOLD=0.85 — a false-positive match here")
+    print("  skips SQL generation entirely, so it's a costlier mistake than schema pruning's):")
+
+    def _fill_client(prompt_text: str) -> str:
+        # Simulates the LLM's ONLY job on a template match: choosing a
+        # parameter value, never authoring SQL logic. A real LLM sees
+        # build_template_fill_prompt()'s narrow prompt and returns JSON.
+        return '{"quarter": "\'2024-Q2\'"}'
+
+    template_pipeline = CerebrumPipeline(
+        SILVER_DIR,
+        examples_dir=Path("sales_intel/examples"),
+        metadata=metadata,
+        _embed_fn=bag_of_words_embed,
+        _client=_fill_client,
+        use_templates=True,
+    )
+    steps: list[str] = []
+    qr = template_pipeline.ask(
+        "What is the total revenue by region for the 2024-Q2 quarter?", on_step=steps.append
+    )
+    for s in steps:
+        if "template" in s.lower():
+            print(f"    · {s}")
+    print(f"    → filled SQL: {qr.sql}")
+    print(f"    → {len(qr.result)} row(s) — filled SQL still ran through the same")
+    print("       validate_and_fix()/execute() safety net as any other query, not a shortcut")
+    print()
+    print("  Off by default — opt in with CerebrumPipeline(use_templates=True), or")
+    print("  --use-templates on `medallion query`/`medallion examples eval`.")
+
+    # ── 5. Go live ──────────────────────────────────────────────────────────
+    _section(5, "Go live with the LLM-backed commands")
     print("  Regenerate/refresh curated knowledge (all require an LLM — Ollama by default):")
     print("    medallion metadata generate      sales_intel   # draft descriptions for new tables")
     print("    medallion metadata approve       sales_intel   # human review, one table at a time")
@@ -153,19 +198,23 @@ def main() -> None:
     print("    medallion relationships erd      sales_intel   # Mermaid ER diagram, no LLM call")
     print("    medallion examples generate      sales_intel --count 15")
     print("    medallion examples approve       sales_intel")
+    print("    medallion examples approve       sales_intel --template   # promote a verified example")
     print()
-    print("  After a cortex thumbs-up/down session, promote/inspect feedback:")
+    print("  After closing a cortex session (End Session / 5min idle / tab close — a session")
+    print("  close is what promotes rated turns, not the thumbs click itself):")
     print("    medallion examples harvest sales_intel   # promote thumbs-up into synthetic.jsonl")
     print("    medallion examples review  sales_intel   # list thumbs-down failures")
+    print("    medallion examples eval    sales_intel   # regression check: did curation help or hurt?")
+    print("    medallion examples eval    sales_intel --use-templates   # + compare template-routed results")
     print()
     print("  Query with the accuracy features engaged automatically (metadata=/examples_dir=")
     print("  are always passed once metadata.yaml/examples/ exist — no extra flag needed):")
     print('    medallion query sales_intel "Which rep is leading in revenue this quarter?"')
     print()
-    print("  Opt-in flags for ambiguity detection / query decomposition (each costs one")
-    print("  extra LLM call, off by default):")
+    print("  Opt-in flags — each is off by default (\"zero cost by default\"):")
     print('    medallion query sales_intel "Show me the good ones" --detect-ambiguity')
     print('    medallion query sales_intel "Headcount by team and revenue by region" --decompose')
+    print('    medallion query sales_intel "Revenue by region for 2024-Q2" --use-templates')
     print(f"\n{'━' * W}\n")
 
 

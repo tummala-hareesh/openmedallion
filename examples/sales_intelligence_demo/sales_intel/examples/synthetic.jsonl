@@ -2,3 +2,4 @@
 {"question": "What is the total revenue by region?", "sql": "SELECT region, SUM(amount) AS total_revenue FROM rep_performance GROUP BY region ORDER BY total_revenue DESC", "verified": true}
 {"question": "Which team closed more deals, Enterprise or SMB?", "sql": "SELECT team, COUNT(*) AS num_deals FROM rep_performance GROUP BY team ORDER BY num_deals DESC", "verified": true}
 {"question": "Who is closest to hitting their quarterly target?", "sql": "SELECT name, region, quarter, ROUND(AVG(attainment_pct), 1) AS avg_attainment_pct FROM rep_performance GROUP BY name, region, quarter ORDER BY avg_attainment_pct DESC LIMIT 5", "verified": true}
+{"question": "What is the total revenue by region for a given quarter?", "sql": "SELECT region, SUM(amount) AS total_revenue FROM rep_performance WHERE quarter = {quarter} GROUP BY region ORDER BY total_revenue DESC", "verified": true, "templated": true, "params": {"quarter": "SQL string literal quarter code, e.g. '2024-Q2'"}}

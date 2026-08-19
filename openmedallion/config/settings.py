@@ -10,6 +10,12 @@ settings.yaml format
     llm:
       model:      llama3.2
       ollama_url: http://localhost:11434
+      # nlg_model:    mistral      # optional — separate model for recommend()
+      #                            # + schema/meta-question answers; unset =
+      #                            # reuse the SQL model above
+      # nlg_provider: ollama
+      # nlg_api_key:  sk-...
+      # nlg_base_url: https://...
 
     neuron:
       rate_limit: 60
@@ -27,6 +33,10 @@ Environment variable reference
                               Ollama tag or provider model ID (e.g. openai/gpt-4o)
     MEDALLION_LLM_API_KEY     API key for non-Ollama providers (unset = Ollama only)
     MEDALLION_LLM_BASE_URL    Override provider endpoint URL  (unset = provider default)
+    MEDALLION_LLM_NLG_PROVIDER  NLG-model backend         (unset = same as LLM_PROVIDER)
+    MEDALLION_LLM_NLG_MODEL     NLG-model identifier      (unset = same as LLM_MODEL)
+    MEDALLION_LLM_NLG_API_KEY   NLG-model API key         (unset = same as LLM_API_KEY)
+    MEDALLION_LLM_NLG_BASE_URL  NLG-model endpoint URL    (unset = same as LLM_BASE_URL)
     MEDALLION_OLLAMA_URL      Ollama base URL             (default: http://localhost:11434)
     MEDALLION_PROJECTS_ROOT   Parent dir of project dirs  (default: .)
     MEDALLION_API_KEY         Bearer token for neuron     (unset = auth disabled)
@@ -72,6 +82,15 @@ LLM_MODEL    : str        = _env("MEDALLION_LLM_MODEL")    or _llm.get("model", 
 LLM_API_KEY  : str | None = _env("MEDALLION_LLM_API_KEY")  or _llm.get("api_key")
 LLM_BASE_URL : str | None = _env("MEDALLION_LLM_BASE_URL") or _llm.get("base_url")
 OLLAMA_URL   : str        = _env("MEDALLION_OLLAMA_URL")    or _llm.get("ollama_url", "http://localhost:11434")
+
+# NLG model (recommend() + schema/meta-question answers) — each knob falls
+# back to its SQL-model counterpart above when unset, so this is fully
+# optional; CerebrumPipeline only builds a distinct NLG client when at
+# least one of these differs from the SQL model's settings.
+LLM_NLG_PROVIDER : str | None = _env("MEDALLION_LLM_NLG_PROVIDER") or _llm.get("nlg_provider")
+LLM_NLG_MODEL    : str | None = _env("MEDALLION_LLM_NLG_MODEL")    or _llm.get("nlg_model")
+LLM_NLG_API_KEY  : str | None = _env("MEDALLION_LLM_NLG_API_KEY")  or _llm.get("nlg_api_key")
+LLM_NLG_BASE_URL : str | None = _env("MEDALLION_LLM_NLG_BASE_URL") or _llm.get("nlg_base_url")
 
 # ── Neuron server ─────────────────────────────────────────────────────────────
 PROJECTS_ROOT : str        = _env("MEDALLION_PROJECTS_ROOT") or _nrn.get("projects_root", ".")

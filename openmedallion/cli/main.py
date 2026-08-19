@@ -22,18 +22,30 @@ medallion run <project> [--layer LAYER] [--projects PATH] [--no-explore]
     --projects  Override the project root directory (default: . — current directory).
 
 medallion query <project> "<question>" [--projects PATH] [--model MODEL] [--provider PROVIDER]
+                [--detect-ambiguity] [--decompose] [--use-templates] [--user NAME]
     Ask a natural-language question directly in the terminal — no server needed.
+    Every question is logged to <project>/chat_history/<user>.jsonl (audit
+    only, never fed back into the LLM prompt).
     Requires: openmedallion[cerebrum]
 
-    --projects  Project root directory (default: . — current directory).
-    --model     Model identifier (default: from settings / llama3.2).
-    --provider  LLM backend: ollama | openrouter | openai | custom
-                (default: from settings / ollama).
+    --projects           Project root directory (default: . — current directory).
+    --model              Model identifier (default: from settings / llama3.2).
+    --provider           LLM backend: ollama | openrouter | openai | custom
+                         (default: from settings / ollama).
+    --detect-ambiguity   One extra LLM call checks if the question is ambiguous
+                         before generating SQL (default: off).
+    --decompose          One extra LLM call checks if the question decomposes
+                         into independent sub-questions (default: off).
+    --use-templates      A high-confidence match to a curated templated:true
+                         example skips SQL generation entirely, filling params
+                         instead (Template-Routed Query Layer roadmap, default: off).
+    --user               Display name chat history is recorded under
+                         (default: OS username via getpass.getuser()).
 
 medallion metadata generate <project> [--projects PATH] [--model MODEL] [--provider PROVIDER]
     LLM-draft metadata.yaml for silver/gold tables not yet status: approved.
     Approved tables are left completely untouched. Part of the RAG accuracy
-    roadmap (see CLAUDE.md) — `metadata refresh` is not yet built.
+    roadmap (see CLAUDE.md).
     Requires: openmedallion[cerebrum]
 
     --projects  Project root directory (default: . — current directory).
@@ -48,6 +60,22 @@ medallion metadata approve <project> [--projects PATH]
     never loses already-approved tables.
 
     --projects  Project root directory (default: . — current directory).
+
+medallion metadata refresh <project> [--projects PATH] [--model MODEL] [--provider PROVIDER] [--check]
+    Detect schema drift (live Parquet vs. the schema_hash stored in
+    metadata.yaml) and re-draft only affected/unapproved tables. An approved
+    table that drifts is flipped to status: stale WITHOUT a new LLM draft —
+    review it again with `metadata approve` or re-run `refresh` to redraft it.
+    Dropped tables (Parquet file no longer exists) are flagged, never deleted.
+    --check runs drift detection only (no LLM call, no write); exits 1 if any
+    table is drifted or dropped — CI-friendly.
+    Requires: openmedallion[cerebrum]
+
+    --projects  Project root directory (default: . — current directory).
+    --model     Model identifier (default: from settings / llama3.2).
+    --provider  LLM backend: ollama | openrouter | openai | custom
+                (default: from settings / ollama).
+    --check     Detect drift only; no LLM call, no write, exit code reflects result.
 
 medallion relationships generate <project> [--projects PATH]
     Detect silver/gold table relationships via three deterministic rules —
@@ -101,7 +129,9 @@ medallion examples harvest <project> [--projects PATH]
     `examples approve` before becoming a few-shot example. Promoted
     candidates are marked status: harvested so re-running never
     double-promotes them; duplicates of existing synthetic.jsonl entries
-    are skipped.
+    are skipped. harvested.jsonl/failures.jsonl are now written at
+    session-end curation (cortex's End Session / idle timeout / tab-close),
+    not at the moment of a thumbs click — see chat_history in CLAUDE.md.
 
     --projects  Project root directory (default: . — current directory).
 
@@ -112,8 +142,24 @@ medallion examples review <project> [--projects PATH]
 
     --projects  Project root directory (default: . — current directory).
 
+medallion examples eval <project> [--projects PATH] [--model MODEL] [--provider PROVIDER]
+    Admin regression check: re-run every verified: true example's question
+    through the current pipeline and compare the freshly-generated SQL's
+    EXECUTED RESULT against the stored golden SQL's result (not raw SQL
+    text — syntactically different SQL can be semantically identical).
+    Prints a match/mismatch per question. No model retraining happens
+    anywhere in this project — this checks whether a curation change
+    (new metadata/examples/relationships) helped or hurt.
+    Requires: openmedallion[cerebrum]
+
+    --projects  Project root directory (default: . — current directory).
+    --model     Model identifier (default: from settings / llama3.2).
+    --provider  LLM backend: ollama | openrouter | openai | custom
+                (default: from settings / ollama).
+
 medallion ask <project> [--projects PATH] [--port PORT] [--model MODEL] [--provider PROVIDER]
-    Start the cerebrum LLM engine + neuron FastAPI server on :8000.
+    Start the cerebrum LLM engine + neuron FastAPI server on :8000. Exposes
+    /query, /feedback, /history, /session/end, /health, /docs.
     Requires: openmedallion[cerebrum]
 
     --projects  Project root directory (default: . — current directory).
@@ -140,8 +186,10 @@ Examples
     medallion query     sales_project "What are the top 5 products by revenue?"
     medallion query     sales_project "Show monthly trends" --model mistral
     medallion query     sales_project "Top revenue" --provider openrouter --model openai/gpt-4o
+    medallion query     sales_project "Which rep leads?" --user alice
     medallion metadata generate sales_project
     medallion metadata approve  sales_project
+    medallion metadata refresh  sales_project
     medallion relationships generate sales_project
     medallion relationships approve  sales_project
     medallion relationships erd      sales_project
@@ -149,6 +197,7 @@ Examples
     medallion examples approve  sales_project
     medallion examples harvest  sales_project
     medallion examples review   sales_project
+    medallion examples eval     sales_project
     medallion ask       sales_project
     medallion ask       sales_project --model mistral --port 8001
     medallion ask       sales_project --provider openrouter --model openai/gpt-4o
@@ -156,7 +205,9 @@ Examples
     medallion cortex    sales_project --neuron-url http://localhost:8001 --debug
 """
 import argparse
+import getpass
 import sys
+import uuid
 from pathlib import Path
 from openmedallion.scaffold.templates import init_project
 from openmedallion.config.loader      import load_project
@@ -248,8 +299,10 @@ def cmd_query(args: argparse.Namespace) -> None:
     from openmedallion.config import settings
     from openmedallion.metadata.loader import load_metadata
 
-    provider = args.provider or settings.LLM_PROVIDER
-    model    = args.model    or settings.LLM_MODEL
+    provider     = args.provider     or settings.LLM_PROVIDER
+    model        = args.model        or settings.LLM_MODEL
+    nlg_provider = args.nlg_provider or settings.LLM_NLG_PROVIDER
+    nlg_model    = args.nlg_model    or settings.LLM_NLG_MODEL
     cfg          = load_project(args.project, args.projects)
     silver_dir   = Path(cfg["paths"]["silver"])
     examples_dir = Path(args.projects) / args.project / "examples"
@@ -259,13 +312,32 @@ def cmd_query(args: argparse.Namespace) -> None:
         print(f"       Run: medallion run {args.project}")
         sys.exit(1)
 
-    print(f"  🤖  provider →  {provider}")
-    print(f"  🤖  model    →  {model}")
-    print(f"  🗂️   silver   →  {silver_dir}")
-    print(f"  ❓  question  →  {args.question}\n")
+    print(f"  🤖  provider     →  {provider}")
+    print(f"  🤖  model        →  {model}")
+    if nlg_provider or nlg_model:
+        print(f"  🤖  nlg provider →  {nlg_provider or provider}")
+        print(f"  🤖  nlg model    →  {nlg_model or model}")
+    print(f"  🗂️   silver       →  {silver_dir}")
+    print(f"  ❓  question      →  {args.question}\n")
 
     def _on_step(msg: str) -> None:
         print(f"  ·  {msg}...", flush=True)
+
+    from openmedallion.neuron.chat_history import record_chat_turn
+
+    username   = args.user or getpass.getuser()
+    session_id = uuid.uuid4().hex  # one per CLI invocation — no thumbs-up UI here to group multiple
+
+    def _log_failed(error: str) -> None:
+        try:
+            record_chat_turn(
+                args.project, args.projects, username,
+                question=args.question, sql="", answer=error,
+                row_count=0, columns=[], session_id=session_id,
+                response_generated=False,
+            )
+        except Exception:
+            pass  # chat history is best-effort — never mask the real error
 
     try:
         import httpx
@@ -278,22 +350,31 @@ def cmd_query(args: argparse.Namespace) -> None:
             provider=provider,
             api_key=settings.LLM_API_KEY,
             base_url=settings.LLM_BASE_URL,
+            nlg_model=nlg_model,
+            nlg_provider=nlg_provider,
+            nlg_api_key=settings.LLM_NLG_API_KEY,
+            nlg_base_url=settings.LLM_NLG_BASE_URL,
             detect_ambiguity=args.detect_ambiguity,
             decompose_queries=args.decompose,
+            use_templates=args.use_templates,
         )
         qr = pipeline.ask(args.question, on_step=_on_step)
     except AmbiguousQuestionError as exc:
         print(f"\n  ❓  Your question is ambiguous: {exc.clarification}")
         print("       Try rephrasing with more specifics.")
+        _log_failed(f"Ambiguous: {exc.clarification}")
         sys.exit(1)
     except (httpx.ConnectError, httpx.ConnectTimeout):
         if provider == "ollama":
             _url = settings.LLM_BASE_URL or settings.OLLAMA_URL
             print(f"\n  ❌  Ollama is not reachable at {_url}")
             print("       Start it with: ollama serve")
+            detail = f"Ollama not reachable at {_url}"
         else:
             print(f"\n  ❌  LLM provider '{provider}' is not reachable.")
             print("       Check your base_url and network connection.")
+            detail = f"LLM provider '{provider}' not reachable"
+        _log_failed(detail)
         sys.exit(1)
     except ModuleNotFoundError as exc:
         if exc.name == "chromadb":
@@ -301,10 +382,29 @@ def cmd_query(args: argparse.Namespace) -> None:
             print("       Run: pip install 'openmedallion[cerebrum]'")
         else:
             print(f"\n  ❌  {exc}")
+        _log_failed(str(exc))
         sys.exit(1)
     except Exception as exc:
         print(f"\n  ❌  {exc}")
+        _log_failed(str(exc))
         sys.exit(1)
+
+    def _record(single_qr) -> None:
+        rows = single_qr.result.to_dicts()
+        answer = single_qr.answer or (
+            f"Found {len(rows)} row(s) for: {single_qr.question}"
+            if rows
+            else f"No results found for: {single_qr.question}"
+        )
+        try:
+            record_chat_turn(
+                args.project, args.projects, username,
+                question=single_qr.question, sql=single_qr.sql, answer=answer,
+                row_count=len(rows), columns=single_qr.result.columns,
+                session_id=session_id,
+            )
+        except Exception:
+            pass  # chat history is best-effort — never break a successful answer
 
     if isinstance(qr, MultiQueryResult):
         print(f"  🧩  Question decomposed into {len(qr.sub_questions)} sub-questions\n")
@@ -312,13 +412,22 @@ def cmd_query(args: argparse.Namespace) -> None:
             print(f"  {'═' * (_W - 2)}")
             print(f"  Sub-question {i}: {sub_result.question}")
             _print_query_result(sub_result, _W)
+            _record(sub_result)
     else:
         _print_query_result(qr, _W)
+        _record(qr)
 
     print(f"\n{'━' * _W}\n")
 
 
 def _print_query_result(qr, _W: int) -> None:
+    if qr.answer is not None:
+        # Schema/meta-question — answered directly by the NLG model, no
+        # SQL/table to print.
+        print(f"  Answer\n  {'─' * (_W - 2)}")
+        print(f"  {qr.answer}")
+        return
+
     rows = qr.result.to_dicts()
 
     print(f"  SQL\n  {'─' * (_W - 2)}")
@@ -357,6 +466,8 @@ def cmd_metadata(args: argparse.Namespace) -> None:
         cmd_metadata_generate(args)
     elif args.metadata_command == "approve":
         cmd_metadata_approve(args)
+    elif args.metadata_command == "refresh":
+        cmd_metadata_refresh(args)
 
 
 def cmd_metadata_generate(args: argparse.Namespace) -> None:
@@ -377,12 +488,16 @@ def cmd_metadata_generate(args: argparse.Namespace) -> None:
     def _on_step(msg: str) -> None:
         print(f"  ·  {msg}", flush=True)
 
+    if args.profile:
+        print("  📊  ydata-profiling enrichment enabled (dtype / stats / accepted_values)\n")
+
     try:
         import httpx
         result = generate_metadata(
             args.project, args.projects,
             model=model, provider=provider,
             api_key=settings.LLM_API_KEY, base_url=settings.LLM_BASE_URL,
+            use_profiling=args.profile,
             on_step=_on_step,
         )
     except (httpx.ConnectError, httpx.ConnectTimeout):
@@ -393,6 +508,13 @@ def cmd_metadata_generate(args: argparse.Namespace) -> None:
         else:
             print(f"\n  ❌  LLM provider '{provider}' is not reachable.")
             print("       Check your base_url and network connection.")
+        sys.exit(1)
+    except ModuleNotFoundError as exc:
+        if exc.name == "ydata_profiling":
+            print("\n  ❌  --profile requires ydata-profiling.")
+            print("       Run: pip install 'openmedallion[profile]'")
+        else:
+            print(f"\n  ❌  {exc}")
         sys.exit(1)
     except Exception as exc:
         print(f"\n  ❌  {exc}")
@@ -450,6 +572,83 @@ def cmd_metadata_approve(args: argparse.Namespace) -> None:
 
     print(f"  {'─' * (_W - 2)}")
     print(f"  {n_approved} table(s) approved this session.")
+    print(f"\n{'━' * _W}\n")
+
+
+def cmd_metadata_refresh(args: argparse.Namespace) -> None:
+    from openmedallion.metadata.drift import detect_drift
+
+    _W = 58
+    print(f"\n{'━' * _W}")
+    print(f"  medallion  ·  metadata refresh  ·  {args.project}")
+    print(f"{'━' * _W}\n")
+
+    try:
+        drift, dropped = detect_drift(args.project, args.projects)
+    except Exception as exc:
+        print(f"  ❌  {exc}")
+        sys.exit(1)
+
+    if args.check:
+        if not drift and not dropped:
+            print("  ✅  No schema drift detected.")
+            print(f"\n{'━' * _W}\n")
+            return
+        for name, reason in drift.items():
+            print(f"  ⚠️   {name} — {reason}")
+        for name in dropped:
+            print(f"  ⚠️   {name} — Parquet file no longer found")
+        print(f"\n{'━' * _W}\n")
+        sys.exit(1)
+
+    from openmedallion.config import settings
+    from openmedallion.metadata.generator import refresh_metadata
+
+    provider = args.provider or settings.LLM_PROVIDER
+    model    = args.model    or settings.LLM_MODEL
+
+    print(f"  🤖  provider →  {provider}")
+    print(f"  🤖  model    →  {model}\n")
+
+    if args.profile:
+        print("  📊  ydata-profiling enrichment enabled (dtype / stats / accepted_values)\n")
+
+    def _on_step(msg: str) -> None:
+        print(f"  ·  {msg}", flush=True)
+
+    try:
+        import httpx
+        result = refresh_metadata(
+            args.project, args.projects,
+            model=model, provider=provider,
+            api_key=settings.LLM_API_KEY, base_url=settings.LLM_BASE_URL,
+            use_profiling=args.profile,
+            on_step=_on_step,
+        )
+    except (httpx.ConnectError, httpx.ConnectTimeout):
+        if provider == "ollama":
+            _url = settings.LLM_BASE_URL or settings.OLLAMA_URL
+            print(f"\n  ❌  Ollama is not reachable at {_url}")
+            print("       Start it with: ollama serve")
+        else:
+            print(f"\n  ❌  LLM provider '{provider}' is not reachable.")
+            print("       Check your base_url and network connection.")
+        sys.exit(1)
+    except ModuleNotFoundError as exc:
+        if exc.name == "ydata_profiling":
+            print("\n  ❌  --profile requires ydata-profiling.")
+            print("       Run: pip install 'openmedallion[profile]'")
+        else:
+            print(f"\n  ❌  {exc}")
+        sys.exit(1)
+    except Exception as exc:
+        print(f"\n  ❌  {exc}")
+        sys.exit(1)
+
+    n_stale = sum(1 for t in result.tables.values() if t.status == "stale")
+    print(f"\n  ✅  {len(drift)} table(s) drifted, {n_stale} now stale, {len(dropped)} dropped table(s) flagged")
+    print(f"  📄  Written to: {Path(args.projects) / args.project / 'metadata.yaml'}")
+    print(f"       Review with: medallion metadata approve {args.project}")
     print(f"\n{'━' * _W}\n")
 
 
@@ -560,6 +759,8 @@ def cmd_examples(args: argparse.Namespace) -> None:
         cmd_examples_harvest(args)
     elif args.examples_command == "review":
         cmd_examples_review(args)
+    elif args.examples_command == "eval":
+        cmd_examples_eval(args)
 
 
 def cmd_examples_generate(args: argparse.Namespace) -> None:
@@ -610,6 +811,10 @@ def cmd_examples_generate(args: argparse.Namespace) -> None:
 
 
 def cmd_examples_approve(args: argparse.Namespace) -> None:
+    if args.template:
+        _cmd_examples_approve_template(args)
+        return
+
     from openmedallion.examples.approve import approve_examples, content_hash, list_reviewable_examples
 
     _W = 58
@@ -649,6 +854,61 @@ def cmd_examples_approve(args: argparse.Namespace) -> None:
 
     print(f"  {'─' * (_W - 2)}")
     print(f"  {n_approved} example(s) approved this session.")
+    print(f"\n{'━' * _W}\n")
+
+
+def _cmd_examples_approve_template(args: argparse.Namespace) -> None:
+    """`medallion examples approve --template` — Template-Routed Query Layer
+    roadmap (see CLAUDE.md), build order step 2. Reviews already-`verified:
+    true` examples for promotion to `templated: true`, a separate and
+    stricter pass than verification itself.
+    """
+    import re
+
+    from openmedallion.examples.approve import approve_examples, content_hash, list_templatable_examples
+
+    _W = 58
+    print(f"\n{'━' * _W}")
+    print(f"  medallion  ·  examples approve --template  ·  {args.project}")
+    print(f"{'━' * _W}\n")
+
+    try:
+        templatable = list_templatable_examples(args.project, args.projects)
+    except (FileNotFoundError, ValueError) as exc:
+        print(f"  ❌  {exc}")
+        sys.exit(1)
+
+    if not templatable:
+        print("  ✅  Nothing to review — no verified, untemplated examples in synthetic.jsonl.")
+        print(f"\n{'━' * _W}\n")
+        return
+
+    print(f"  {len(templatable)} example(s) to review — [t]emplate / [s]kip (default) / [q]uit\n")
+    n_templated = 0
+    for example in templatable:
+        print(f"  {'─' * (_W - 2)}")
+        print(f"  question : {example.question}")
+        print(f"  sql      : {example.sql}")
+
+        choice = input("\n  promote to template? [t/s/q] ").strip().lower()
+        if choice in ("q", "quit"):
+            print("\n  Stopping review — remaining examples left as-is.")
+            break
+        if choice in ("t", "template"):
+            slot_names = sorted(set(re.findall(r"\{(\w+)\}", example.sql)))
+            params: dict[str, str] = {}
+            for slot in slot_names:
+                desc = input(f"    describe param '{slot}' (e.g. 'ISO date range, e.g. 2026-Q1'): ").strip()
+                params[slot] = desc
+            key = content_hash(example.question, example.sql)
+            approve_examples(args.project, args.projects, {key: {"templated": True, "params": params}})
+            n_templated += 1
+            print("  ✅  templated\n")
+        else:
+            print("  ⏭️   skipped (left as-is, reviewable again later)\n")
+
+    print(f"  {'─' * (_W - 2)}")
+    print(f"  {n_templated} example(s) templated this session.")
     print(f"\n{'━' * _W}\n")
 
 
@@ -697,6 +957,90 @@ def cmd_examples_review(args: argparse.Namespace) -> None:
         print(f"  {i}. question : {failure.question}")
         print(f"     sql      : {failure.sql}")
 
+    print(f"\n{'━' * _W}\n")
+
+
+def cmd_examples_eval(args: argparse.Namespace) -> None:
+    """Admin regression check — maps onto the roadmap's flagged-but-unbuilt
+    "RAG eval set" idea, reframed as an admin-triggered command per request:
+    re-run every verified synthetic.jsonl question through the current
+    pipeline and compare its EXECUTED RESULT against the stored golden SQL's
+    result. No model retraining happens anywhere in this project — this
+    checks whether a curation change (new metadata/examples/relationships)
+    improved or regressed answers."""
+    _W = 58
+    print(f"\n{'━' * _W}")
+    print(f"  medallion  ·  examples eval  ·  {args.project}")
+    print(f"{'━' * _W}\n")
+
+    from openmedallion.config import settings
+    from openmedallion.config.loader import load_project
+    from openmedallion.examples.eval import run_eval
+
+    provider = args.provider or settings.LLM_PROVIDER
+    model    = args.model    or settings.LLM_MODEL
+
+    cfg          = load_project(args.project, args.projects)
+    silver_dir   = Path(cfg["paths"]["silver"])
+    examples_dir = Path(args.projects) / args.project / "examples"
+
+    print(f"  🤖  provider →  {provider}")
+    print(f"  🤖  model    →  {model}\n")
+
+    def _on_step(msg: str) -> None:
+        print(f"  ·  {msg}", flush=True)
+
+    try:
+        import httpx
+        results = run_eval(
+            silver_dir, examples_dir,
+            model=model, provider=provider,
+            api_key=settings.LLM_API_KEY, base_url=settings.LLM_BASE_URL,
+            on_step=_on_step,
+            use_templates=args.use_templates,
+        )
+    except (httpx.ConnectError, httpx.ConnectTimeout):
+        if provider == "ollama":
+            _url = settings.LLM_BASE_URL or settings.OLLAMA_URL
+            print(f"\n  ❌  Ollama is not reachable at {_url}")
+            print("       Start it with: ollama serve")
+        else:
+            print(f"\n  ❌  LLM provider '{provider}' is not reachable.")
+            print("       Check your base_url and network connection.")
+        sys.exit(1)
+    except Exception as exc:
+        print(f"\n  ❌  {exc}")
+        sys.exit(1)
+
+    if not results:
+        print("  ✅  Nothing to evaluate — no verified examples in synthetic.jsonl.")
+        print(f"\n{'━' * _W}\n")
+        return
+
+    n_match = sum(1 for r in results if r.match)
+    for r in results:
+        icon = "✅" if r.match else "❌"
+        print(f"  {icon}  {r.question}")
+        if not r.match:
+            print(f"       golden : {r.golden_sql}")
+            print(f"       new    : {r.new_sql}")
+            if r.error:
+                print(f"       error  : {r.error}")
+        if args.use_templates:
+            t_icon = "✅" if r.templated_match else "❌"
+            changed = r.templated_match != r.match
+            flag = "  ⚠️  template-routing changed the result" if changed else ""
+            print(f"       {t_icon}  templated : {r.templated_sql or '(no template matched)'}{flag}")
+            if r.templated_error:
+                print(f"           error  : {r.templated_error}")
+
+    print(f"\n  {'─' * (_W - 2)}")
+    print(f"  {n_match}/{len(results)} matched")
+    if args.use_templates:
+        n_templated_match = sum(1 for r in results if r.templated_match)
+        n_changed = sum(1 for r in results if r.templated_match != r.match)
+        print(f"  {n_templated_match}/{len(results)} matched with use_templates=True")
+        print(f"  {n_changed} question(s) where template-routing changed the result")
     print(f"\n{'━' * _W}\n")
 
 
@@ -836,12 +1180,29 @@ def _build_parser() -> argparse.ArgumentParser:
         help="LLM backend: ollama | openrouter | openai | custom (default: from settings / ollama)",
     )
     p_query.add_argument(
+        "--nlg-model", default=None, metavar="MODEL",
+        help="Model for recommend() + schema/meta-question answers (default: same as --model)",
+    )
+    p_query.add_argument(
+        "--nlg-provider", default=None, metavar="PROVIDER",
+        help="LLM backend for --nlg-model (default: same as --provider)",
+    )
+    p_query.add_argument(
         "--detect-ambiguity", action="store_true", default=False,
         help="One extra LLM call checks if the question is ambiguous before generating SQL (default: off)",
     )
     p_query.add_argument(
         "--decompose", action="store_true", default=False,
         help="One extra LLM call checks if the question decomposes into independent sub-questions (default: off)",
+    )
+    p_query.add_argument(
+        "--use-templates", action="store_true", default=False,
+        help="A high-confidence match to a curated templated:true example skips SQL generation "
+             "entirely, filling params instead (Template-Routed Query Layer roadmap, default: off)",
+    )
+    p_query.add_argument(
+        "--user", default=None, metavar="NAME",
+        help="Display name chat history is recorded under (default: OS username)",
     )
 
     # metadata
@@ -869,6 +1230,10 @@ def _build_parser() -> argparse.ArgumentParser:
         "--provider", default=None, metavar="PROVIDER",
         help="LLM backend: ollama | openrouter | openai | custom (default: from settings / ollama)",
     )
+    p_meta_generate.add_argument(
+        "--profile", action="store_true", default=False,
+        help="Enrich columns with ydata-profiling dtype/stats/accepted_values (requires openmedallion[profile])",
+    )
 
     p_meta_approve = meta_sub.add_parser(
         "approve",
@@ -878,6 +1243,32 @@ def _build_parser() -> argparse.ArgumentParser:
     p_meta_approve.add_argument(
         "--projects", default=".", metavar="PATH",
         help="Parent directory containing the project folder (default: .)",
+    )
+
+    p_meta_refresh = meta_sub.add_parser(
+        "refresh",
+        help="Detect schema drift and re-draft only affected/unapproved tables",
+    )
+    p_meta_refresh.add_argument("project", help="Project name")
+    p_meta_refresh.add_argument(
+        "--projects", default=".", metavar="PATH",
+        help="Parent directory containing the project folder (default: .)",
+    )
+    p_meta_refresh.add_argument(
+        "--model", default=None, metavar="MODEL",
+        help="Model identifier (default: from settings.yaml / MEDALLION_LLM_MODEL / llama3.2)",
+    )
+    p_meta_refresh.add_argument(
+        "--provider", default=None, metavar="PROVIDER",
+        help="LLM backend: ollama | openrouter | openai | custom (default: from settings / ollama)",
+    )
+    p_meta_refresh.add_argument(
+        "--check", action="store_true", default=False,
+        help="Only detect drift (no LLM call, no write); exit 1 if any table is drifted/dropped",
+    )
+    p_meta_refresh.add_argument(
+        "--profile", action="store_true", default=False,
+        help="Enrich re-drafted columns with ydata-profiling dtype/stats/accepted_values (requires openmedallion[profile])",
     )
 
     # relationships
@@ -961,6 +1352,11 @@ def _build_parser() -> argparse.ArgumentParser:
         "--projects", default=".", metavar="PATH",
         help="Parent directory containing the project folder (default: .)",
     )
+    p_ex_approve.add_argument(
+        "--template", action="store_true",
+        help="Review verified examples for promotion to templated:true "
+             "(Template-Routed Query Layer roadmap) instead of reviewing unverified ones",
+    )
 
     p_ex_harvest = ex_sub.add_parser(
         "harvest",
@@ -980,6 +1376,29 @@ def _build_parser() -> argparse.ArgumentParser:
     p_ex_review.add_argument(
         "--projects", default=".", metavar="PATH",
         help="Parent directory containing the project folder (default: .)",
+    )
+
+    p_ex_eval = ex_sub.add_parser(
+        "eval",
+        help="Admin regression check: re-run verified examples, compare results against golden SQL",
+    )
+    p_ex_eval.add_argument("project", help="Project name")
+    p_ex_eval.add_argument(
+        "--projects", default=".", metavar="PATH",
+        help="Parent directory containing the project folder (default: .)",
+    )
+    p_ex_eval.add_argument(
+        "--model", default=None, metavar="MODEL",
+        help="Model identifier (default: from settings.yaml / MEDALLION_LLM_MODEL / llama3.2)",
+    )
+    p_ex_eval.add_argument(
+        "--provider", default=None, metavar="PROVIDER",
+        help="LLM backend: ollama | openrouter | openai | custom (default: from settings / ollama)",
+    )
+    p_ex_eval.add_argument(
+        "--use-templates", action="store_true", default=False,
+        help="Additionally re-run each question with use_templates=True and report "
+             "where template-routing changed the result (Template-Routed Query Layer roadmap, default: off)",
     )
 
     # ask
