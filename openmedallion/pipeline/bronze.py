@@ -261,12 +261,15 @@ class BronzeLoader:
 
         # Normalise legacy source: + destination: to sources: list.
         if cfg.get("sources"):
-            self.sources: list[dict] = cfg["sources"]
             if cfg.get("destination"):
                 # top-level destination is shared by every source that
-                # doesn't declare its own
+                # doesn't declare its own; copy first so we don't mutate
+                # the caller's cfg dict in place
+                self.sources: list[dict] = [dict(src) for src in cfg["sources"]]
                 for src in self.sources:
                     src.setdefault("destination", cfg["destination"])
+            else:
+                self.sources = cfg["sources"]
         elif cfg.get("source"):
             src = dict(cfg["source"])
             if cfg.get("destination"):
