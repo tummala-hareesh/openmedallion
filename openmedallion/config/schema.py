@@ -65,7 +65,7 @@ class IncrementalBlock(_Base):
     cursor_column: str | None = None
     initial_value: Any = None
     primary_key: str | list[str] | None = None
-    merge_key: str | None = None
+    merge_key: str | list[str] | None = None
 
 
 class DestinationBlock(BaseModel):
@@ -259,7 +259,7 @@ class MetricSpec(_Base):
 
 class SortSpec(_Base):
     columns: list[str] = Field(min_length=1)
-    descending: bool | None = None
+    descending: bool | list[bool] | None = None
 
 
 class PreAggUdf(_Base):
@@ -313,6 +313,7 @@ class ProjectConfig(_Base):
     paths: PathsBlock
     source: SourceBlock | None = None
     sources: list[SourceBlock] | None = None
+    destination: DestinationBlock | None = None  # legacy top-level sibling of `source:`, see bronze.py
     bronze_to_silver: BronzeToSilver | None = None
     silver_to_gold: SilverToGold | None = None
     bi_export: BiExport | None = None

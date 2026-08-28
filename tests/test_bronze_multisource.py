@@ -152,6 +152,36 @@ class TestLegacySourceNormalisation:
         loader = BronzeLoader(cfg)
         assert loader.sources[0].get("destination") == {"type": "filesystem", "bucket_url": "data"}
 
+    def test_top_level_destination_shared_across_sources_list(self, tmp_path):
+        cfg = {
+            "pipeline": {"name": "t"},
+            "paths": {"bronze": "b", "silver": "s", "gold": "g", "export": "e"},
+            "sources": [
+                {"type": "local_files", "tables": []},
+                {"type": "local_files", "tables": []},
+            ],
+            "destination": {"type": "filesystem", "bucket_url": "shared"},
+        }
+        loader = BronzeLoader(cfg)
+        assert loader.sources[0]["destination"] == {"type": "filesystem", "bucket_url": "shared"}
+        assert loader.sources[1]["destination"] == {"type": "filesystem", "bucket_url": "shared"}
+
+    def test_top_level_destination_does_not_override_per_source_destination(self, tmp_path):
+        cfg = {
+            "pipeline": {"name": "t"},
+            "paths": {"bronze": "b", "silver": "s", "gold": "g", "export": "e"},
+            "sources": [
+                {
+                    "type": "local_files",
+                    "tables": [],
+                    "destination": {"type": "duckdb", "db_path": "own.duckdb"},
+                },
+            ],
+            "destination": {"type": "filesystem", "bucket_url": "shared"},
+        }
+        loader = BronzeLoader(cfg)
+        assert loader.sources[0]["destination"] == {"type": "duckdb", "db_path": "own.duckdb"}
+
 
 # ---------------------------------------------------------------------------
 # src / dst pre-populated from first source at construction time

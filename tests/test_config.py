@@ -392,6 +392,60 @@ class TestPydanticSchema:
         with pytest.raises(ValueError, match="limit"):
             _validate_config(cfg)
 
+    def test_incremental_merge_key_accepts_string(self):
+        cfg = _valid_cfg(**{"source.type": "sql_database"})
+        cfg["source"]["tables"] = [{
+            "name": "folderprocess",
+            "incremental": {"mode": "merge", "merge_key": "folderrsn"},
+        }]
+        _validate_config(cfg)
+
+    def test_incremental_merge_key_accepts_list(self):
+        cfg = _valid_cfg(**{"source.type": "sql_database"})
+        cfg["source"]["tables"] = [{
+            "name": "folderprocess",
+            "incremental": {
+                "mode": "merge",
+                "merge_key": ["folderrsn", "infocode"],
+            },
+        }]
+        _validate_config(cfg)
+
+    def test_sort_descending_accepts_bool(self):
+        cfg = _valid_cfg()
+        cfg["silver_to_gold"]["projects"] = [{
+            "name": "p",
+            "aggregations": [{
+                "sort": {"columns": ["total"], "descending": True},
+            }],
+        }]
+        _validate_config(cfg)
+
+    def test_sort_descending_accepts_list_of_bools(self):
+        cfg = _valid_cfg()
+        cfg["silver_to_gold"]["projects"] = [{
+            "name": "p",
+            "aggregations": [{
+                "sort": {
+                    "columns": ["col1", "col2"],
+                    "descending": [False, True],
+                },
+            }],
+        }]
+        _validate_config(cfg)
+
+    def test_top_level_destination_accepted_with_source(self):
+        cfg = _valid_cfg(**{"source.type": "sql_database"})
+        cfg["destination"] = {"type": "filesystem", "bucket_url": "data/bronze"}
+        _validate_config(cfg)
+
+    def test_top_level_destination_accepted_with_sources_list(self):
+        cfg = _valid_cfg()
+        cfg.pop("source", None)
+        cfg["sources"] = [{"type": "sql_database", "tables": [{"name": "t"}]}]
+        cfg["destination"] = {"type": "filesystem", "bucket_url": "data/bronze"}
+        _validate_config(cfg)
+
 
 class TestFilterDefsSchema:
     """Coverage for T-TODO-3: named filter fragments (filter_defs + {ref:name})."""

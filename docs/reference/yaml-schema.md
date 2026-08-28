@@ -135,6 +135,26 @@ sources:
       bucket_url: "data"
 ```
 
+A top-level `destination:` (sibling of `sources:`) is also accepted and applied to every
+source that doesn't declare its own — useful when several sources should land in the same
+destination:
+
+```yaml
+sources:
+  - type: sql_database
+    dialect: sqlite
+    connection_string: "sqlite:///data/orders.db"
+    tables: [{name: orders}]
+  - type: sql_database
+    dialect: sqlite
+    connection_string: "sqlite:///data/customers.db"
+    tables: [{name: customers}]
+
+destination:                # shared by both sources above; a source's own
+  type: filesystem           # destination:, if set, always wins.
+  bucket_url: "data"
+```
+
 | Key | Type | Required | Description |
 | --- | --- | --- | --- |
 | `type` | enum | ✅ | `sql_database`, `rest_api`, `filesystem`, or `local_files`. |
@@ -523,6 +543,15 @@ silver_to_gold:
           limit: 100
           output_file: customer_summary.parquet
 
+        - source_file: orders.parquet
+          group_by: [region, status]
+          metrics:
+            - {column: amount, agg: sum, alias: total_revenue}
+          sort:
+            columns: [region, total_revenue]
+            descending: [false, true]      # per-column direction, one bool per `columns` entry
+          output_file: region_status_summary.parquet
+
         - source_file: orders.parquet     # pass-through (no group_by)
           select: [order_id, amount, status]
           output_file: orders_flat.parquet
@@ -555,7 +584,7 @@ Optional block. Same semantics as [`bronze_to_silver.duckdb`](#bronze_to_silverd
 | `metrics` | list | — | Metric specs. Required unless `select` is used. |
 | `select` | list[string] | — | Pass-through mode: select columns without aggregating. |
 | `having` | string | — | SQL expression to filter rows **after** aggregation (equivalent to SQL `HAVING`). Applied before `sort` and `limit`. |
-| `sort` | object | — | Sort the result. Keys: `columns` (list[string], required) and `descending` (bool, default `false`). |
+| `sort` | object | — | Sort the result. Keys: `columns` (list[string], required) and `descending` (bool or list[bool], default `false`). A list must match `columns` in length, giving a direction per column. |
 | `limit` | int | — | Keep only the top N rows. Applied after `sort`. |
 | `output_file` | string | ✅ | Parquet filename to write under `paths.gold/<project>/`. |
 | `explore` | list | — | List of report specs to generate after this aggregation is written. See [Inline explore](#inline-explore). |
